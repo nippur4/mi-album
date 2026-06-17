@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Hanken+Grotesque:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes figShake { 0%,100%{transform:rotate(0) translateY(0)} 15%{transform:rotate(-5deg) translateY(-3px)} 30%{transform:rotate(5deg)} 45%{transform:rotate(-7deg) translateY(-5px)} 60%{transform:rotate(6deg)} 75%{transform:rotate(-3deg)} }
+  @keyframes figFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+  @keyframes figGlow { 0%,100%{box-shadow:0 0 0 0 rgba(232,178,74,.0)} 50%{box-shadow:0 0 34px 6px rgba(232,178,74,.55)} }
+  @keyframes figShine { 0%{transform:translateX(-120%) rotate(18deg)} 100%{transform:translateX(220%) rotate(18deg)} }
+  @keyframes figPop { 0%{transform:scale(.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+  @keyframes figSpin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#221A13;background-image:radial-gradient(circle at 20% 0%, #2c2218 0%, #1c150f 60%);font-family:'Hanken Grotesque',sans-serif;color:#FBF3E2;padding:54px 40px 90px">
+
+  <div style="max-width:1500px;margin:0 auto 56px">
+    <div style="display:flex;align-items:center;gap:12px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#E8B24A;margin-bottom:18px">
+      <span style="width:30px;height:1px;background:#E8B24A;display:inline-block"></span>App m&oacute;vil &middot; iOS / Android &middot; Alta fidelidad
+    </div>
+    <h1 style="font-family:'Anton',sans-serif;font-weight:400;font-size:74px;line-height:.92;letter-spacing:.01em;margin:0;text-transform:uppercase">Mi &Aacute;lbum de<br><span style="color:#D23A2E">Figuritas</span></h1>
+    <p style="max-width:640px;margin:20px 0 0;font-size:17px;line-height:1.5;color:#C9B79A">El ritual del &aacute;lbum Panini, social y digital. Arm&aacute;s tu colecci&oacute;n, abr&iacute;s sobres, peg&aacute;s figuritas y las cambi&aacute;s. Pantallas de ejemplo sobre el &aacute;lbum <strong style="color:#FBF3E2">El Gran Bestiario</strong>.</p>
+  </div>
+
+  <!-- ===================== SECCION 1 ===================== -->
+  <div style="max-width:1500px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">01</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">Entrar y coleccionar</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">LANDING &middot; GRILLA &middot; FIGURITA</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 01 LANDING ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">01</span> &nbsp;Landing / Home</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+
+            <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+              <!-- top bar -->
+              <div style="padding:6px 20px 12px;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.16em;color:#B89B6E;text-transform:uppercase">Hola de nuevo</div>
+                  <div style="font-family:'Anton',sans-serif;font-size:23px;color:#2A1E16;letter-spacing:.01em">SOFI</div>
+                </div>
+                <div style="width:42px;height:42px;border-radius:50%;background:#3FB6A8;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:18px;box-shadow:0 4px 0 rgba(42,30,22,.12)">S</div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:0 0 14px">
+                <!-- destacados -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px 10px">
+                  <div style="font-weight:800;font-size:16px;color:#2A1E16">&Aacute;lbumes p&uacute;blicos</div>
+                  <div style="font-family:'Space Mono',monospace;font-size:10px;color:#D23A2E;letter-spacing:.08em">CURADOS</div>
+                </div>
+                <div style="display:flex;gap:12px;overflow-x:auto;padding:0 20px 6px;scrollbar-width:none">
+                  <div style="flex:0 0 196px;border-radius:22px;overflow:hidden;background:linear-gradient(150deg,#D23A2E,#A4271F);position:relative;box-shadow:0 12px 22px -10px rgba(164,39,31,.6)">
+                    <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 9px,transparent 9px 18px)"></div>
+                    <div style="position:relative;padding:16px 16px 15px;display:flex;flex-direction:column;height:158px;justify-content:space-between">
+                      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#FBE9C9;background:rgba(0,0,0,.22);padding:4px 8px;border-radius:20px;letter-spacing:.1em">P&Uacute;BLICO</div>
+                        <div style="font-family:'Anton';font-size:13px;color:#E8B24A">200</div>
+                      </div>
+                      <div>
+                        <div style="font-family:'Anton';font-size:22px;color:#fff;line-height:.95;text-transform:uppercase">El Gran<br>Bestiario</div>
+                        <div style="margin-top:8px;height:6px;border-radius:6px;background:rgba(0,0,0,.25);overflow:hidden"><div style="width:73%;height:100%;background:#E8B24A"></div></div>
+                        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#FBE9C9;margin-top:5px">147/200 &middot; 73%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="flex:0 0 196px;border-radius:22px;overflow:hidden;background:linear-gradient(150deg,#3563B0,#274a86);position:relative;box-shadow:0 12px 22px -10px rgba(39,74,134,.6)">
+                    <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 9px,transparent 9px 18px)"></div>
+                    <div style="position:relative;padding:16px 16px 15px;display:flex;flex-direction:column;height:158px;justify-content:space-between">
+                      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#dbe7ff;background:rgba(0,0,0,.22);padding:4px 8px;border-radius:20px;letter-spacing:.1em">P&Uacute;BLICO</div>
+                        <div style="font-family:'Anton';font-size:13px;color:#9fc0ff">150</div>
+                      </div>
+                      <div>
+                        <div style="font-family:'Anton';font-size:22px;color:#fff;line-height:.95;text-transform:uppercase">Flota<br>Estelar</div>
+                        <div style="margin-top:8px;height:6px;border-radius:6px;background:rgba(0,0,0,.25);overflow:hidden"><div style="width:21%;height:100%;background:#9fc0ff"></div></div>
+                        <div style="font-family:'Space Mono',monospace;font-size:9px;color:#dbe7ff;margin-top:5px">31/150 &middot; 21%</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- mis albumes -->
+                <div style="font-weight:800;font-size:16px;color:#2A1E16;padding:18px 20px 10px">Mis &aacute;lbumes</div>
+                <div style="display:flex;flex-direction:column;gap:9px;padding:0 20px">
+                  <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:11px 13px">
+                    <div style="width:46px;height:46px;border-radius:13px;background:linear-gradient(150deg,#D23A2E,#A4271F);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#E8B24A;font-size:11px">EGB</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:700;font-size:14px;color:#2A1E16">El Gran Bestiario</div>
+                      <div style="height:5px;border-radius:5px;background:rgba(42,30,22,.1);margin-top:6px;overflow:hidden"><div style="width:73%;height:100%;background:#D23A2E"></div></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#7C6A52;text-align:right">147<br><span style="color:#B89B6E">/200</span></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:11px 13px">
+                    <div style="width:46px;height:46px;border-radius:13px;background:linear-gradient(150deg,#7FB83E,#5b8a26);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#eaffcf;font-size:11px">JDB</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-weight:700;font-size:14px;color:#2A1E16">Jard&iacute;n de Bichos</div>
+                      <div style="height:5px;border-radius:5px;background:rgba(42,30,22,.1);margin-top:6px;overflow:hidden"><div style="width:44%;height:100%;background:#7FB83E"></div></div>
+                    </div>
+                    <div style="font-family:'Space Mono',monospace;font-size:11px;color:#7C6A52;text-align:right">39<br><span style="color:#B89B6E">/88</span></div>
+                  </div>
+                </div>
+
+                <!-- unirse por codigo -->
+                <div style="margin:16px 20px 0;background:#2A1E16;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                  <div style="font-weight:700;font-size:13px;color:#FBF3E2">&iquest;Te pasaron un c&oacute;digo?</div>
+                  <div style="display:flex;gap:8px">
+                    <div style="flex:1;background:rgba(255,255,255,.08);border:1px dashed rgba(232,178,74,.5);border-radius:12px;padding:11px 13px;font-family:'Space Mono',monospace;font-size:12px;color:#C9B79A">peg&aacute; el link o c&oacute;digo</div>
+                    <button style="background:#E8B24A;border:none;border-radius:12px;padding:0 16px;font-family:'Hanken Grotesque';font-weight:800;font-size:13px;color:#2A1E16;cursor:pointer">Unirme</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- tab bar -->
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:700 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:600 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:600 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="font:600 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 02 GRILLA ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">02</span> &nbsp;Detalle de &aacute;lbum &mdash; la grilla</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+
+            <!-- header album -->
+            <div style="padding:2px 18px 12px;display:flex;align-items:center;gap:12px">
+              <div style="width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid rgba(42,30,22,.12);display:flex;align-items:center;justify-content:center;color:#2A1E16"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div style="flex:1"><div style="font-family:'Anton';font-size:19px;color:#2A1E16;text-transform:uppercase;line-height:1">El Gran Bestiario</div></div>
+              <div style="width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid rgba(42,30,22,.12);display:flex;align-items:center;justify-content:center;color:#2A1E16"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></div>
+            </div>
+
+            <!-- progreso -->
+            <div style="margin:0 18px 12px;background:linear-gradient(150deg,#2A1E16,#3a2a1d);border-radius:18px;padding:14px 16px;color:#FBF3E2;display:flex;align-items:center;gap:16px">
+              <div><div style="font-family:'Anton';font-size:30px;line-height:.9;color:#E8B24A">147<span style="font-size:16px;color:#C9B79A">/200</span></div><div style="font-family:'Space Mono',monospace;font-size:10px;color:#C9B79A;letter-spacing:.06em;margin-top:3px">PEGADAS &middot; 73%</div></div>
+              <div style="flex:1"><div style="height:9px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden"><div style="width:73%;height:100%;background:linear-gradient(90deg,#E8B24A,#D23A2E)"></div></div><div style="display:flex;gap:14px;margin-top:9px"><div style="font-family:'Space Mono',monospace;font-size:10px;color:#7FB83E">28 repetidas</div><div style="font-family:'Space Mono',monospace;font-size:10px;color:#C9B79A">53 faltan</div></div></div>
+            </div>
+
+            <!-- chips -->
+            <div style="display:flex;gap:8px;padding:0 18px 12px">
+              <div style="background:#D23A2E;color:#fff;font-weight:700;font-size:12px;padding:7px 15px;border-radius:30px">Todas</div>
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.14);color:#5C4E3C;font-weight:600;font-size:12px;padding:7px 15px;border-radius:30px">Faltan 53</div>
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.14);color:#5C4E3C;font-weight:600;font-size:12px;padding:7px 15px;border-radius:30px">Repes 28</div>
+            </div>
+
+            <!-- grilla -->
+            <div style="flex:1;overflow-y:auto;padding:0 18px 12px">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+                <sc-for list="{{ albumCells }}" as="cell" hint-placeholder-count="18">
+                  <div style="position:relative;aspect-ratio:.82;border-radius:14px;overflow:hidden">
+                    <sc-if value="{{ cell.pegada }}" hint-placeholder-val="{{ true }}">
+                      <div style="position:absolute;inset:0;background:{{ cell.bg }};display:flex;align-items:center;justify-content:center">
+                        <div style="position:relative;width:54%;aspect-ratio:1;background:{{ cell.color }};border-radius:{{ cell.radius }};box-shadow:inset 0 -6px 0 rgba(0,0,0,.13)">
+                          <div style="position:absolute;top:30%;left:0;right:0;display:flex;justify-content:center;gap:14%">
+                            <sc-for list="{{ cell.eyeArr }}" as="e" hint-placeholder-count="2">
+                              <div style="width:8px;height:8px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:3.5px;height:3.5px;background:#2A1E16;border-radius:50%"></div></div>
+                            </sc-for>
+                          </div>
+                          <div style="position:absolute;bottom:24%;left:50%;transform:translateX(-50%);width:30%;height:5px;background:rgba(0,0,0,.32);border-radius:0 0 6px 6px"></div>
+                        </div>
+                      </div>
+                      <div style="position:absolute;top:5px;left:6px;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:rgba(255,255,255,.85)">{{ cell.num }}</div>
+                      <sc-if value="{{ cell.repe }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;bottom:5px;right:5px;background:#7FB83E;color:#1e3a05;font-family:'Space Mono',monospace;font-weight:700;font-size:9px;padding:2px 5px;border-radius:6px">REPE</div>
+                      </sc-if>
+                    </sc-if>
+                    <sc-if value="{{ cell.faltante }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;inset:0;background:#EDE0C6;border:1px dashed rgba(42,30,22,.18);display:flex;align-items:center;justify-content:center">
+                        <div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.13);border-radius:46% 46% 50% 50%"></div>
+                        <div style="position:absolute;font-family:'Anton';font-size:15px;color:rgba(42,30,22,.32)">{{ cell.num }}</div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- CTA abrir + tab -->
+            <div style="padding:10px 18px 6px;flex-shrink:0;background:linear-gradient(180deg,rgba(251,243,226,0),#FBF3E2 40%)">
+              <button style="width:100%;background:#D23A2E;border:none;border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 6px 0 #8f2019">
+                <span style="font-family:'Anton';font-size:17px;color:#fff;text-transform:uppercase;letter-spacing:.02em">Ten&eacute;s 2 sobres</span>
+                <span style="background:#E8B24A;color:#2A1E16;font-family:'Hanken Grotesque';font-weight:800;font-size:12px;padding:4px 10px;border-radius:20px">Abrir</span>
+              </button>
+            </div>
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:600 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:700 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:600 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="font:600 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 03 FIGURITA DETALLE ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">03</span> &nbsp;Figurita &mdash; vista grande</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#2A1E16;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#FBF3E2">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #FBF3E2;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#FBF3E2;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:4px 20px 0;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">FIGURITA 112 / 200</div>
+              <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#FBF3E2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+            </div>
+
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px">
+              <!-- foil card -->
+              <div style="position:relative;width:230px;aspect-ratio:.7;border-radius:24px;overflow:hidden;background:linear-gradient(135deg,#E8B24A,#f6d98a 40%,#c98f2a 60%,#E8B24A);box-shadow:0 24px 50px -18px rgba(232,178,74,.6);animation:figFloat 4s ease-in-out infinite">
+                <div style="position:absolute;inset:0;background:conic-gradient(from 0deg,rgba(255,255,255,.0),rgba(255,255,255,.5),rgba(255,255,255,0),rgba(255,255,255,.4),rgba(255,255,255,0));mix-blend-mode:overlay"></div>
+                <div style="position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,rgba(255,255,255,.7),transparent);transform:rotate(18deg);animation:figShine 3.4s linear infinite"></div>
+                <div style="position:absolute;inset:9px;border-radius:17px;background:linear-gradient(160deg,#fff7e6,#ffe6c2);display:flex;flex-direction:column">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 13px 0">
+                    <div style="font-family:'Anton';font-size:24px;color:#A4271F">#112</div>
+                    <div style="font-family:'Space Mono',monospace;font-size:8px;font-weight:700;color:#fff;background:linear-gradient(90deg,#c98f2a,#E8B24A);padding:4px 8px;border-radius:20px;letter-spacing:.08em">LEGENDARIA</div>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+                    <div style="position:relative;width:120px;height:120px;background:#B36BD4;border-radius:46% 46% 50% 50%;box-shadow:inset 0 -12px 0 rgba(0,0,0,.14)">
+                      <div style="position:absolute;top:-12px;left:24px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:22px solid #B36BD4"></div>
+                      <div style="position:absolute;top:-12px;right:24px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:22px solid #B36BD4"></div>
+                      <div style="position:absolute;top:34%;left:0;right:0;display:flex;justify-content:center;gap:16px">
+                        <div style="width:24px;height:24px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:#2A1E16;border-radius:50%"></div></div>
+                        <div style="width:24px;height:24px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;background:#2A1E16;border-radius:50%"></div></div>
+                      </div>
+                      <div style="position:absolute;bottom:24%;left:50%;transform:translateX(-50%);width:34px;height:16px;background:#2A1E16;border-radius:0 0 18px 18px"></div>
+                    </div>
+                  </div>
+                  <div style="padding:0 13px 14px">
+                    <div style="font-family:'Anton';font-size:21px;color:#2A1E16;text-transform:uppercase;line-height:1">Glorp el Voraz</div>
+                    <div style="font-family:'Space Mono',monospace;font-size:9px;color:#8a6f3f;margin-top:2px">CLASE: DEVORADOR &middot; H&Aacute;BITAT: PANTANO</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:18px;display:flex;align-items:center;gap:8px">
+                <div style="background:rgba(127,184,62,.2);color:#9fe05a;font-weight:700;font-size:12px;padding:6px 13px;border-radius:30px;display:flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg>Pegada</div>
+                <div style="background:rgba(255,255,255,.1);color:#C9B79A;font-weight:600;font-size:12px;padding:6px 13px;border-radius:30px">Ten&eacute;s 3 &middot; 2 repes</div>
+              </div>
+            </div>
+
+            <div style="padding:0 24px 30px;display:flex;flex-direction:column;gap:9px">
+              <button style="width:100%;background:#D23A2E;border:none;border-radius:15px;padding:14px;font-family:'Anton';font-size:16px;color:#fff;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #8f2019">Proponer cambio</button>
+              <div style="display:flex;justify-content:center;gap:7px">
+                <div style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25)"></div>
+                <div style="width:18px;height:7px;border-radius:7px;background:#E8B24A"></div>
+                <div style="width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25)"></div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(255,255,255,.4)"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SECCION 2 ===================== -->
+  <div style="max-width:1500px;margin:64px auto 0">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">02</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">El momento &mdash; dopamina</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">ABRIR SOBRE (INTERACTIVO) &middot; CONSEGUIR &middot; QR</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 04 ABRIR SOBRE (INTERACTIVO) ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">04</span> &nbsp;Abrir sobre &middot; <span style="color:#7FB83E">toc&aacute; el sobre &rarr;</span></div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:radial-gradient(circle at 50% 38%,#3a2a1d,#1c150f);border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#FBF3E2">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #FBF3E2;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#FBF3E2;border-radius:1px"></div></div></div>
+            </div>
+
+            <div style="text-align:center;padding:6px 24px 0">
+              <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.18em;color:#E8B24A;text-transform:uppercase">El Gran Bestiario</div>
+              <div style="font-family:'Anton';font-size:13px;color:#C9B79A;margin-top:2px;opacity:{{ idleOp }}">1 sobre disponible</div>
+            </div>
+
+            <div style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center">
+
+              <!-- resultado header -->
+              <div style="position:absolute;top:6px;left:0;right:0;text-align:center">
+                <div style="{{ resultStyle }}">
+                  <div style="font-family:'Anton';font-size:26px;color:#fff;text-transform:uppercase">&iexcl;5 figuritas!</div>
+                  <div style="font-family:'Space Mono',monospace;font-size:11px;color:#7FB83E">3 nuevas &middot; 2 repetidas</div>
+                </div>
+              </div>
+
+              <!-- PACK -->
+              <div onClick="{{ onReveal }}" style="position:absolute;cursor:pointer;display:flex;flex-direction:column;align-items:center">
+                <div style="{{ packStyle }}">
+                  <div style="position:relative;width:172px;height:230px;border-radius:18px;background:linear-gradient(150deg,#D23A2E,#A4271F);box-shadow:0 22px 40px -14px rgba(164,39,31,.7);overflow:hidden">
+                    <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(48deg,rgba(255,255,255,.07) 0 10px,transparent 10px 20px)"></div>
+                    <div style="position:absolute;top:0;bottom:0;left:0;width:42%;background:linear-gradient(90deg,rgba(255,255,255,.55),transparent);transform:rotate(18deg);animation:figShine 3.6s linear infinite"></div>
+                    <div style="position:absolute;left:0;right:0;top:64px;height:36px;background:rgba(0,0,0,.16);display:flex;align-items:center;justify-content:center">
+                      <div style="font-family:'Anton';font-size:24px;color:#E8B24A;letter-spacing:.04em;text-transform:uppercase">Bestiario</div>
+                    </div>
+                    <div style="position:absolute;top:14px;left:0;right:0;text-align:center;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.2em;color:#FBE9C9">SOBRE OFICIAL</div>
+                    <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-family:'Space Mono',monospace;font-size:10px;color:#FBE9C9;opacity:.8">5 figuritas</div>
+                    <div style="position:absolute;top:0;left:0;right:0;height:14px;background:repeating-linear-gradient(90deg,#E8B24A 0 6px,#A4271F 6px 12px)"></div>
+                  </div>
+                </div>
+                <div style="margin-top:20px;font-family:'Hanken Grotesque';font-weight:700;font-size:13px;color:#E8B24A;opacity:{{ idleOp }};display:flex;align-items:center;gap:7px">
+                  <span style="width:9px;height:9px;border-radius:50%;background:#E8B24A;animation:figGlow 1.6s infinite"></span>Toc&aacute; para abrir
+                </div>
+                <!-- glow burst -->
+                <div style="{{ glowStyle }}"></div>
+              </div>
+
+              <!-- REVEAL CARDS -->
+              <div style="position:absolute;width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:0 26px;top:74px">
+                <sc-for list="{{ revealCards }}" as="rc" hint-placeholder-count="5">
+                  <div style="{{ rc.style }}">
+                    <div style="position:relative;width:84px;border-radius:12px;background:linear-gradient(160deg,#fff7e6,#ffe6c2);box-shadow:0 8px 18px -6px rgba(0,0,0,.5);overflow:hidden;border:2px solid {{ rc.rarColor }}">
+                      <div style="height:5px;background:{{ rc.rarColor }}"></div>
+                      <div style="position:relative;height:78px;display:flex;align-items:center;justify-content:center">
+                        <div style="position:relative;width:46px;height:46px;background:{{ rc.color }};border-radius:46% 46% 50% 50%;box-shadow:inset 0 -5px 0 rgba(0,0,0,.14)">
+                          <div style="position:absolute;top:30%;left:0;right:0;display:flex;justify-content:center;gap:5px">
+                            <sc-for list="{{ rc.eyeArr }}" as="e" hint-placeholder-count="2">
+                              <div style="width:9px;height:9px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:4px;height:4px;background:#2A1E16;border-radius:50%"></div></div>
+                            </sc-for>
+                          </div>
+                          <div style="position:absolute;bottom:24%;left:50%;transform:translateX(-50%);width:13px;height:6px;background:#2A1E16;border-radius:0 0 7px 7px"></div>
+                        </div>
+                        <sc-if value="{{ rc.pegada }}" hint-placeholder-val="{{ false }}">
+                          <div style="position:absolute;inset:0;background:rgba(127,184,62,.85);display:flex;align-items:center;justify-content:center;color:#fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4"><path d="M5 12l4 4 10-10"/></svg></div>
+                        </sc-if>
+                      </div>
+                      <div style="padding:0 6px 6px;text-align:center"><div style="font-family:'Anton';font-size:12px;color:#2A1E16">{{ rc.name }}</div><div style="font-family:'Space Mono',monospace;font-size:8px;color:#8a6f3f">#{{ rc.num }}</div></div>
+                      <sc-if value="{{ rc.isNew }}" hint-placeholder-val="{{ true }}">
+                        <div style="position:absolute;top:8px;right:-1px;background:#7FB83E;color:#173405;font-family:'Space Mono',monospace;font-weight:700;font-size:7px;padding:2px 5px;border-radius:5px 0 0 5px;letter-spacing:.06em">NUEVA</div>
+                      </sc-if>
+                      <sc-if value="{{ rc.isRepe }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;top:8px;right:-1px;background:#8a6f3f;color:#fff;font-family:'Space Mono',monospace;font-weight:700;font-size:7px;padding:2px 5px;border-radius:5px 0 0 5px;letter-spacing:.06em">REPE</div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- actions -->
+            <div style="padding:0 24px 26px;flex-shrink:0;min-height:96px;display:flex;flex-direction:column;justify-content:flex-end;gap:9px">
+              <sc-if value="{{ packOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <button onClick="{{ onPegar }}" style="width:100%;background:#7FB83E;border:none;border-radius:15px;padding:14px;font-family:'Anton';font-size:16px;color:#173405;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #5b8a26">
+                    <sc-if value="{{ pegadasDone }}" hint-placeholder-val="{{ false }}">&iexcl;Listo, pegadas!</sc-if>
+                    <sc-if value="{{ pegadasDone }}" hint-placeholder-val="{{ true }}">Pegar {{ nuevasCount }} nuevas</sc-if>
+                  </button>
+                  <button onClick="{{ onReset }}" style="width:100%;background:rgba(255,255,255,.1);border:none;border-radius:13px;padding:11px;font-family:'Hanken Grotesque';font-weight:700;font-size:13px;color:#C9B79A;cursor:pointer">Abrir otro sobre</button>
+                </div>
+              </sc-if>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(255,255,255,.4)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 05 CONSEGUIR SOBRES ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">05</span> &nbsp;Conseguir sobres</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:4px 22px 12px"><div style="font-family:'Anton';font-size:24px;color:#2A1E16;text-transform:uppercase">Conseguir sobres</div></div>
+
+            <div style="flex:1;overflow-y:auto;padding:0 22px 16px;display:flex;flex-direction:column;gap:13px">
+              <!-- disponibles -->
+              <div style="background:linear-gradient(150deg,#D23A2E,#A4271F);border-radius:20px;padding:17px;color:#fff;position:relative;overflow:hidden">
+                <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 9px,transparent 9px 18px)"></div>
+                <div style="position:relative;display:flex;align-items:center;gap:14px">
+                  <div style="font-family:'Anton';font-size:52px;line-height:.8;color:#E8B24A">2</div>
+                  <div><div style="font-weight:800;font-size:16px">sobres listos</div><div style="font-size:12px;color:#FBE9C9;opacity:.85">para abrir ahora mismo</div></div>
+                </div>
+                <button style="position:relative;margin-top:14px;width:100%;background:#E8B24A;border:none;border-radius:13px;padding:12px;font-family:'Anton';font-size:15px;color:#2A1E16;text-transform:uppercase;cursor:pointer">Abrir ahora</button>
+              </div>
+
+              <!-- countdown -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:15px;display:flex;align-items:center;gap:14px">
+                <div style="width:48px;height:48px;border-radius:14px;background:#FCEFD9;display:flex;align-items:center;justify-content:center;color:#D23A2E;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M9 2h6"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:14px;color:#2A1E16">Sobre diario gratis</div><div style="font-family:'Space Mono',monospace;font-size:10px;color:#9C8E79">pr&oacute;ximo en</div></div>
+                <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:20px;color:#D23A2E">{{ countdown }}</div>
+              </div>
+
+              <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.14em;color:#B89B6E;text-transform:uppercase;padding:4px 2px 0">Otras formas</div>
+
+              <!-- QR scan -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:15px;display:flex;align-items:center;gap:14px">
+                <div style="width:48px;height:48px;border-radius:14px;background:#E2EBFB;display:flex;align-items:center;justify-content:center;color:#3563B0;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2M20 14v6M14 20h6"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:14px;color:#2A1E16">Escanear QR del owner</div><div style="font-size:11px;color:#9C8E79">en eventos o puntos f&iacute;sicos</div></div>
+                <div style="color:#9C8E79"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></div>
+              </div>
+
+              <!-- canjear codigo -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:15px;display:flex;align-items:center;gap:14px">
+                <div style="width:48px;height:48px;border-radius:14px;background:#EAF3DC;display:flex;align-items:center;justify-content:center;color:#5b8a26;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 9h16v9H4z"/><path d="M4 9l4-5h8l4 5"/><path d="M12 4v14"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:14px;color:#2A1E16">Canjear c&oacute;digo</div><div style="font-size:11px;color:#9C8E79">sobre de bienvenida, promos</div></div>
+                <div style="color:#9C8E79"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:600 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:600 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:700 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="font:600 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 06 ESCANEAR QR ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">06</span> &nbsp;Escanear QR &middot; c&aacute;mara</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#0c0a08;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,#241c14,#0c0a08),repeating-linear-gradient(120deg,rgba(255,255,255,.02) 0 3px,transparent 3px 7px);background-blend-mode:overlay"></div>
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#000;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="position:relative;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;z-index:5">
+              <span style="font-weight:700;font-size:14px;color:#fff">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #fff;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#fff;border-radius:1px"></div></div></div>
+            </div>
+            <div style="position:relative;z-index:5;display:flex;align-items:center;gap:12px;padding:4px 20px 0">
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div style="font-weight:700;font-size:15px;color:#fff">Escane&aacute; el QR del owner</div>
+            </div>
+
+            <div style="position:relative;z-index:5;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="position:relative;width:212px;height:212px">
+                <div style="position:absolute;top:0;left:0;width:42px;height:42px;border-top:4px solid #E8B24A;border-left:4px solid #E8B24A;border-radius:14px 0 0 0"></div>
+                <div style="position:absolute;top:0;right:0;width:42px;height:42px;border-top:4px solid #E8B24A;border-right:4px solid #E8B24A;border-radius:0 14px 0 0"></div>
+                <div style="position:absolute;bottom:0;left:0;width:42px;height:42px;border-bottom:4px solid #E8B24A;border-left:4px solid #E8B24A;border-radius:0 0 0 14px"></div>
+                <div style="position:absolute;bottom:0;right:0;width:42px;height:42px;border-bottom:4px solid #E8B24A;border-right:4px solid #E8B24A;border-radius:0 0 14px 0"></div>
+                <div style="position:absolute;left:10px;right:10px;top:50%;height:2px;background:linear-gradient(90deg,transparent,#E8B24A,transparent);box-shadow:0 0 12px 2px rgba(232,178,74,.7)"></div>
+              </div>
+              <div style="margin-top:24px;font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;text-align:center;max-width:240px;line-height:1.5">Apunt&aacute; al c&oacute;digo que te muestra el owner<br>para sumar el sobre a tu cuenta</div>
+            </div>
+
+            <div style="position:relative;z-index:5;padding:0 24px 30px;display:flex;flex-direction:column;gap:10px">
+              <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:13px;display:flex;align-items:center;gap:11px">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(232,178,74,.18);display:flex;align-items:center;justify-content:center;color:#E8B24A"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 7h3l2-2h4l2 2h3v12H5z"/><circle cx="12" cy="13" r="3.4"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:13px;color:#fff">&iquest;No funciona la c&aacute;mara?</div><div style="font-size:11px;color:#C9B79A">Ingres&aacute; el c&oacute;digo a mano</div></div>
+              </div>
+              <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(255,255,255,.4)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SECCION 3 ===================== -->
+  <div style="max-width:1500px;margin:64px auto 0">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">03</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">Intercambio &mdash; asincr&oacute;nico</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">REPES / FALTANTES &middot; CREAR OFERTA &middot; BANDEJA</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 07 REPES / FALTANTES ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">07</span> &nbsp;Mis repes &middot; coleccionistas</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:4px 22px 10px"><div style="font-family:'Anton';font-size:24px;color:#2A1E16;text-transform:uppercase">Intercambio</div></div>
+            <!-- segment -->
+            <div style="margin:0 22px 12px;background:#EDE0C6;border-radius:13px;padding:4px;display:flex">
+              <div style="flex:1;text-align:center;background:#fff;border-radius:10px;padding:8px;font-weight:800;font-size:13px;color:#D23A2E;box-shadow:0 2px 4px rgba(0,0,0,.06)">Mis repes &middot; 28</div>
+              <div style="flex:1;text-align:center;padding:8px;font-weight:600;font-size:13px;color:#9C8E79">Me faltan &middot; 53</div>
+            </div>
+            <!-- repes grid -->
+            <div style="padding:0 22px 8px"><div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase">Para dar (toc&aacute; para ofrecer)</div></div>
+            <div style="padding:0 22px 12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="position:relative;aspect-ratio:.82;border-radius:12px;background:#FCE6E1;display:flex;align-items:center;justify-content:center"><div style="width:50%;aspect-ratio:1;background:#E85D4E;border-radius:46% 46% 50% 50%"></div><div style="position:absolute;top:3px;right:3px;background:#7FB83E;color:#173405;font-family:'Space Mono';font-weight:700;font-size:8px;padding:1px 4px;border-radius:5px">&times;3</div></div>
+              <div style="position:relative;aspect-ratio:.82;border-radius:12px;background:#E2EBFB;display:flex;align-items:center;justify-content:center"><div style="width:50%;aspect-ratio:1;background:#5B8DEF;border-radius:50%"></div><div style="position:absolute;top:3px;right:3px;background:#7FB83E;color:#173405;font-family:'Space Mono';font-weight:700;font-size:8px;padding:1px 4px;border-radius:5px">&times;2</div></div>
+              <div style="position:relative;aspect-ratio:.82;border-radius:12px;background:#EAF3DC;display:flex;align-items:center;justify-content:center"><div style="width:50%;aspect-ratio:1;background:#7FB83E;border-radius:40% 40% 48% 48%"></div><div style="position:absolute;top:3px;right:3px;background:#7FB83E;color:#173405;font-family:'Space Mono';font-weight:700;font-size:8px;padding:1px 4px;border-radius:5px">&times;2</div></div>
+              <div style="position:relative;aspect-ratio:.82;border-radius:12px;background:#FBE4EE;display:flex;align-items:center;justify-content:center"><div style="width:50%;aspect-ratio:1;background:#EE6FA0;border-radius:46% 46% 50% 50%"></div><div style="position:absolute;top:3px;right:3px;background:#7FB83E;color:#173405;font-family:'Space Mono';font-weight:700;font-size:8px;padding:1px 4px;border-radius:5px">&times;4</div></div>
+            </div>
+            <!-- coincidencias -->
+            <div style="padding:6px 22px 8px"><div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase">Coincidencias para vos</div></div>
+            <div style="flex:1;overflow-y:auto;padding:0 22px 14px;display:flex;flex-direction:column;gap:9px">
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;background:#F2A03D;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:16px;flex-shrink:0">M</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Mateo</div><div style="font-size:11px;color:#7C6A52">le das <strong style="color:#D23A2E">#30</strong> &middot; te da <strong style="color:#7FB83E">#12</strong></div></div>
+                <button style="background:#D23A2E;border:none;color:#fff;font-family:'Hanken Grotesque';font-weight:800;font-size:12px;padding:8px 13px;border-radius:11px;cursor:pointer">Ofrecer</button>
+              </div>
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;background:#B36BD4;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:16px;flex-shrink:0">V</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Valen</div><div style="font-size:11px;color:#7C6A52">le das <strong style="color:#D23A2E">#88</strong> &middot; te da <strong style="color:#7FB83E">#05</strong></div></div>
+                <button style="background:#D23A2E;border:none;color:#fff;font-family:'Hanken Grotesque';font-weight:800;font-size:12px;padding:8px 13px;border-radius:11px;cursor:pointer">Ofrecer</button>
+              </div>
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;background:#3FB6A8;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:16px;flex-shrink:0">L</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Luc&iacute;a</div><div style="font-size:11px;color:#7C6A52">le das <strong style="color:#D23A2E">#41</strong> &middot; te da <strong style="color:#7FB83E">#73</strong></div></div>
+                <button style="background:#D23A2E;border:none;color:#fff;font-family:'Hanken Grotesque';font-weight:800;font-size:12px;padding:8px 13px;border-radius:11px;cursor:pointer">Ofrecer</button>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:600 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:600 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:600 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="font:700 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 08 CREAR OFERTA ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">08</span> &nbsp;Crear oferta</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#EDE0C6;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:2px 22px 0;display:flex;align-items:center;gap:12px">
+              <div style="width:34px;height:34px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;color:#2A1E16"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div style="flex:1"><div style="font-family:'Anton';font-size:18px;color:#2A1E16;text-transform:uppercase;line-height:1">Proponer a Mateo</div></div>
+              <div style="width:38px;height:38px;border-radius:50%;background:#F2A03D;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:15px">M</div>
+            </div>
+
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 26px;gap:14px">
+              <!-- vos das -->
+              <div style="background:#fff;border-radius:20px;padding:15px;box-shadow:0 8px 20px -12px rgba(0,0,0,.3)">
+                <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.12em;color:#D23A2E;text-transform:uppercase;margin-bottom:10px">Vos das</div>
+                <div style="display:flex;align-items:center;gap:13px">
+                  <div style="width:64px;height:84px;border-radius:12px;background:linear-gradient(160deg,#fff7e6,#ffe6c2);border:2px solid #B89B6E;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:38px;height:38px;background:#E85D4E;border-radius:46% 46% 50% 50%"></div></div>
+                  <div style="flex:1"><div style="font-family:'Anton';font-size:20px;color:#2A1E16">&Ntilde;AM #30</div><div style="font-size:11px;color:#7FB83E;font-weight:700">Ten&eacute;s 3 &middot; te sobran 2</div></div>
+                  <div style="color:#9C8E79;font-weight:700;font-size:13px">Cambiar</div>
+                </div>
+              </div>
+              <!-- swap -->
+              <div style="display:flex;justify-content:center"><div style="width:42px;height:42px;border-radius:50%;background:#2A1E16;display:flex;align-items:center;justify-content:center;color:#E8B24A"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 4v13l-3-3"/><path d="M17 20V7l3 3"/></svg></div></div>
+              <!-- recibis -->
+              <div style="background:#fff;border-radius:20px;padding:15px;box-shadow:0 8px 20px -12px rgba(0,0,0,.3)">
+                <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.12em;color:#7FB83E;text-transform:uppercase;margin-bottom:10px">Recib&iacute;s</div>
+                <div style="display:flex;align-items:center;gap:13px">
+                  <div style="width:64px;height:84px;border-radius:12px;background:linear-gradient(160deg,#fff7e6,#ffe6c2);border:2px solid #5B8DEF;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:38px;height:38px;background:#5B8DEF;border-radius:50%"></div></div>
+                  <div style="flex:1"><div style="font-family:'Anton';font-size:20px;color:#2A1E16">BLIP #12</div><div style="font-size:11px;color:#D23A2E;font-weight:700">Te falta &middot; &iexcl;la necesit&aacute;s!</div></div>
+                  <div style="color:#9C8E79;font-weight:700;font-size:13px">Cambiar</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:0 26px 30px;display:flex;flex-direction:column;gap:9px">
+              <button style="width:100%;background:#D23A2E;border:none;border-radius:15px;padding:15px;font-family:'Anton';font-size:17px;color:#fff;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #8f2019">Enviar oferta</button>
+              <div style="text-align:center;font-size:11px;color:#7C6A52">Mateo recibe una notificaci&oacute;n &middot; pod&eacute;s cancelar mientras est&eacute; pendiente</div>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(42,30,22,.25)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 09 BANDEJA DE OFERTAS ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">09</span> &nbsp;Bandeja de ofertas</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:4px 22px 10px"><div style="font-family:'Anton';font-size:24px;color:#2A1E16;text-transform:uppercase">Ofertas</div></div>
+            <div style="margin:0 22px 12px;background:#EDE0C6;border-radius:13px;padding:4px;display:flex">
+              <div style="flex:1;text-align:center;background:#fff;border-radius:10px;padding:8px;font-weight:800;font-size:13px;color:#D23A2E;box-shadow:0 2px 4px rgba(0,0,0,.06)">Recibidas &middot; 2</div>
+              <div style="flex:1;text-align:center;padding:8px;font-weight:600;font-size:13px;color:#9C8E79">Enviadas &middot; 3</div>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;padding:0 22px 14px;display:flex;flex-direction:column;gap:11px">
+              <!-- pendiente -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:13px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:#3FB6A8;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#fff;font-size:13px">L</div>
+                  <div style="flex:1"><span style="font-weight:700;font-size:13px;color:#2A1E16">Luc&iacute;a</span> <span style="font-size:12px;color:#7C6A52">te ofrece</span></div>
+                  <div style="background:#FCEFD9;color:#C77E1A;font-family:'Space Mono';font-weight:700;font-size:9px;padding:4px 8px;border-radius:20px;letter-spacing:.06em">PENDIENTE</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;background:#FBF3E2;border-radius:13px;padding:9px;margin-bottom:11px">
+                  <div style="text-align:center"><div style="width:38px;height:50px;border-radius:9px;background:#fff;border:1.5px solid #5B8DEF;display:flex;align-items:center;justify-content:center;margin-bottom:3px"><div style="width:22px;height:22px;background:#5B8DEF;border-radius:50%"></div></div><div style="font-family:'Space Mono';font-size:8px;color:#7C6A52">recib&iacute;s</div></div>
+                  <div style="color:#9C8E79"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg></div>
+                  <div style="text-align:center"><div style="width:38px;height:50px;border-radius:9px;background:#fff;border:1.5px solid #E85D4E;display:flex;align-items:center;justify-content:center;margin-bottom:3px"><div style="width:22px;height:22px;background:#E85D4E;border-radius:46% 46% 50% 50%"></div></div><div style="font-family:'Space Mono';font-size:8px;color:#7C6A52">das #30</div></div>
+                  <div style="flex:1"></div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button style="flex:1;background:#7FB83E;border:none;color:#173405;font-family:'Hanken Grotesque';font-weight:800;font-size:13px;padding:11px;border-radius:12px;cursor:pointer">Aceptar</button>
+                  <button style="flex:1;background:#fff;border:1px solid rgba(42,30,22,.15);color:#7C6A52;font-family:'Hanken Grotesque';font-weight:700;font-size:13px;padding:11px;border-radius:12px;cursor:pointer">Rechazar</button>
+                </div>
+              </div>
+              <!-- aceptada -->
+              <div style="background:#F2FAE9;border:1px solid rgba(127,184,62,.4);border-radius:18px;padding:13px;display:flex;align-items:center;gap:11px">
+                <div style="width:34px;height:34px;border-radius:50%;background:#7FB83E;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:13px;color:#2A1E16">Cambio con Valen aceptado</div><div style="font-size:11px;color:#5b8a26">#88 por #05 &middot; ya en tu &aacute;lbum</div></div>
+                <div style="background:#7FB83E;color:#fff;font-family:'Space Mono';font-weight:700;font-size:9px;padding:4px 8px;border-radius:20px">HECHO</div>
+              </div>
+              <!-- rechazada -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:18px;padding:13px;display:flex;align-items:center;gap:11px;opacity:.72">
+                <div style="width:34px;height:34px;border-radius:50%;background:#C9B79A;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+                <div style="flex:1"><div style="font-weight:700;font-size:13px;color:#2A1E16">Tom rechaz&oacute; tu oferta</div><div style="font-size:11px;color:#9C8E79">#41 por #73 &middot; prob&aacute; con otra figu</div></div>
+                <div style="background:#EDE0C6;color:#9C8E79;font-family:'Space Mono';font-weight:700;font-size:9px;padding:4px 8px;border-radius:20px">RECHAZADA</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:600 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:600 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:600 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E;position:relative"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="position:absolute;top:-3px;right:8px;width:14px;height:14px;background:#D23A2E;border-radius:50%;color:#fff;font:700 8px 'Hanken Grotesque';display:flex;align-items:center;justify-content:center">2</span><span style="font:700 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SECCION 4 ===================== -->
+  <div style="max-width:1500px;margin:64px auto 0">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">04</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">Owner &mdash; crear y administrar</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">CONFIGURAR &Aacute;LBUM (FREE) &middot; PANEL ADMIN</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 10 CREAR / CONFIGURAR ALBUM ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">10</span> &nbsp;Configurar &aacute;lbum &middot; <span style="color:#B89B6E">owner free</span></div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:2px 22px 12px;display:flex;align-items:center;justify-content:space-between">
+              <div style="font-family:'Anton';font-size:22px;color:#2A1E16;text-transform:uppercase">Nuevo &aacute;lbum</div>
+              <div style="background:#EDE0C6;color:#9C8E79;font-family:'Space Mono';font-weight:700;font-size:9px;padding:5px 9px;border-radius:20px;letter-spacing:.06em">PLAN FREE</div>
+            </div>
+
+            <div style="flex:1;overflow-y:auto;padding:0 22px 14px;display:flex;flex-direction:column;gap:14px">
+              <!-- nombre -->
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Nombre</div>
+                <div style="background:#fff;border:1px solid rgba(42,30,22,.14);border-radius:13px;padding:13px 14px;font-weight:700;font-size:15px;color:#2A1E16">El Gran Bestiario<span style="display:inline-block;width:2px;height:17px;background:#D23A2E;margin-left:2px;vertical-align:-3px"></span></div>
+              </div>
+              <!-- privacidad -->
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Privacidad</div>
+                <div style="display:flex;gap:8px">
+                  <div style="flex:1;background:#2A1E16;color:#FBF3E2;border-radius:13px;padding:11px;text-align:center"><div style="font-weight:800;font-size:13px">Privado</div><div style="font-size:10px;color:#C9B79A">solo con link</div></div>
+                  <div style="flex:1;background:#fff;border:1px solid rgba(42,30,22,.14);color:#7C6A52;border-radius:13px;padding:11px;text-align:center"><div style="font-weight:700;font-size:13px">P&uacute;blico</div><div style="font-size:10px;color:#9C8E79">lo decide el admin</div></div>
+                </div>
+              </div>
+              <!-- cantidad -->
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Cantidad de figuritas</div>
+                <div style="background:#fff;border:1px solid rgba(42,30,22,.14);border-radius:13px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between">
+                  <div style="width:32px;height:32px;border-radius:9px;background:#FBF3E2;display:flex;align-items:center;justify-content:center;color:#2A1E16;font-weight:800;font-size:18px">&minus;</div>
+                  <div style="font-family:'Anton';font-size:26px;color:#2A1E16">200</div>
+                  <div style="width:32px;height:32px;border-radius:9px;background:#D23A2E;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px">+</div>
+                </div>
+              </div>
+              <!-- sobres -->
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">C&oacute;mo se consiguen sobres</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="background:#fff;border:1.5px solid #7FB83E;border-radius:13px;padding:12px;display:flex;align-items:center;gap:11px">
+                    <div style="width:20px;height:20px;border-radius:50%;background:#7FB83E;display:flex;align-items:center;justify-content:center;color:#fff"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l4 4 10-10"/></svg></div>
+                    <div style="flex:1"><div style="font-weight:700;font-size:13px;color:#2A1E16">Sobre diario gratis</div><div style="font-size:11px;color:#9C8E79">1 por d&iacute;a, 5 figuritas c/u</div></div>
+                  </div>
+                  <!-- locked QR feature -->
+                  <div style="position:relative;background:#F6EFE0;border:1.5px dashed rgba(42,30,22,.2);border-radius:13px;padding:12px;display:flex;align-items:center;gap:11px;overflow:hidden">
+                    <div style="width:36px;height:36px;border-radius:10px;background:#EDE0C6;display:flex;align-items:center;justify-content:center;color:#B89B6E;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></div>
+                    <div style="flex:1"><div style="font-weight:700;font-size:13px;color:#7C6A52">QR de sobres <span style="color:#C77E1A;font-family:'Space Mono';font-size:9px;font-weight:700">PRO</span></div><div style="font-size:11px;color:#9C8E79">entreg&aacute; sobres escaneando un QR</div></div>
+                    <div style="background:#E8B24A;color:#2A1E16;font-family:'Hanken Grotesque';font-weight:800;font-size:11px;padding:7px 11px;border-radius:10px">Desbloquear</div>
+                  </div>
+                </div>
+              </div>
+              <!-- cargar figuritas -->
+              <div>
+                <div style="font-family:'Space Mono',monospace;font-size:10px;color:#B89B6E;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Figuritas cargadas &middot; 200/200</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+                  <div style="aspect-ratio:.82;border-radius:9px;background:#FCE6E1;display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:#E85D4E;border-radius:46% 46% 50% 50%"></div></div>
+                  <div style="aspect-ratio:.82;border-radius:9px;background:#E2EBFB;display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:#5B8DEF;border-radius:50%"></div></div>
+                  <div style="aspect-ratio:.82;border-radius:9px;background:#EAF3DC;display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:#7FB83E;border-radius:40% 40% 48% 48%"></div></div>
+                  <div style="aspect-ratio:.82;border-radius:9px;background:#EFE3F6;display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:#B36BD4;border-radius:46% 46% 50% 50%"></div></div>
+                  <div style="aspect-ratio:.82;border-radius:9px;background:#2A1E16;display:flex;align-items:center;justify-content:center;color:#E8B24A;font-size:18px;font-weight:300">+</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:10px 22px 6px;flex-shrink:0;background:linear-gradient(180deg,rgba(251,243,226,0),#FBF3E2 40%);display:flex;gap:8px">
+              <button style="flex:1;background:#fff;border:1px solid rgba(42,30,22,.15);border-radius:15px;padding:14px;font-family:'Hanken Grotesque';font-weight:800;font-size:14px;color:#2A1E16;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h6v6h-6z"/></svg>Compartir</button>
+              <button style="flex:2;background:#D23A2E;border:none;border-radius:15px;padding:14px;font-family:'Anton';font-size:16px;color:#fff;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #8f2019">Publicar &aacute;lbum</button>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(42,30,22,.25)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 11 PANEL ADMIN ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">11</span> &nbsp;Panel admin</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:2px 22px 12px;display:flex;align-items:center;gap:9px">
+              <div style="width:30px;height:30px;border-radius:9px;background:#2A1E16;display:flex;align-items:center;justify-content:center;color:#E8B24A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l8 4v5c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V7z"/></svg></div>
+              <div style="font-family:'Anton';font-size:22px;color:#2A1E16;text-transform:uppercase">Admin &middot; p&uacute;blicos</div>
+            </div>
+            <div style="padding:0 22px 12px"><div style="background:#FCEFD9;border-radius:13px;padding:11px 13px;font-size:12px;color:#8a6f3f;line-height:1.45">Activ&aacute; los &aacute;lbumes que aparecen en la landing principal.</div></div>
+
+            <div style="flex:1;overflow-y:auto;padding:0 22px 14px;display:flex;flex-direction:column;gap:9px">
+              <!-- ON -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(150deg,#D23A2E,#A4271F);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#E8B24A;font-size:10px">EGB</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">El Gran Bestiario</div><div style="font-size:11px;color:#9C8E79">200 figus &middot; @sofi &middot; 1.2k jugando</div></div>
+                <div style="width:46px;height:27px;border-radius:27px;background:#7FB83E;position:relative;flex-shrink:0"><div style="position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+              </div>
+              <!-- ON -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(150deg,#3563B0,#274a86);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#9fc0ff;font-size:11px">FE</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Flota Estelar</div><div style="font-size:11px;color:#9C8E79">150 figus &middot; @nico &middot; 840 jugando</div></div>
+                <div style="width:46px;height:27px;border-radius:27px;background:#7FB83E;position:relative;flex-shrink:0"><div style="position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+              </div>
+              <!-- OFF -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px;opacity:.82">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(150deg,#7FB83E,#5b8a26);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#eaffcf;font-size:11px">JB</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Jard&iacute;n de Bichos</div><div style="font-size:11px;color:#9C8E79">88 figus &middot; @meli &middot; 210 jugando</div></div>
+                <div style="width:46px;height:27px;border-radius:27px;background:#D8CDB8;position:relative;flex-shrink:0"><div style="position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+              </div>
+              <!-- OFF -->
+              <div style="background:#fff;border:1px solid rgba(42,30,22,.1);border-radius:16px;padding:12px;display:flex;align-items:center;gap:12px;opacity:.82">
+                <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(150deg,#B36BD4,#854ba1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton';color:#f0dcff;font-size:11px">MM</div>
+                <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#2A1E16">Mundo Monstruo</div><div style="font-size:11px;color:#9C8E79">120 figus &middot; @juli &middot; 95 jugando</div></div>
+                <div style="width:46px;height:27px;border-radius:27px;background:#D8CDB8;position:relative;flex-shrink:0"><div style="position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff"></div></div>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(42,30,22,.25)"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SECCION 5 ===================== -->
+  <div style="max-width:1500px;margin:64px auto 0">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">05</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">Suscripci&oacute;n &mdash; solo owner</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">PAYWALL &middot; CONFIRMACI&Oacute;N PRO</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 12 PAYWALL ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">12</span> &nbsp;Planes / Paywall</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:radial-gradient(circle at 50% 12%,#3a2a1d,#1c150f);border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#FBF3E2">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #FBF3E2;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#FBF3E2;border-radius:1px"></div></div></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;padding:0 20px"><div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#FBF3E2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 6l12 12M18 6L6 18"/></svg></div></div>
+
+            <div style="flex:1;overflow-y:auto;padding:4px 24px 14px">
+              <div style="text-align:center;margin-bottom:18px">
+                <div style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(90deg,#c98f2a,#E8B24A);color:#2A1E16;font-family:'Space Mono';font-weight:700;font-size:10px;padding:6px 12px;border-radius:20px;letter-spacing:.1em;margin-bottom:14px">&#9733; OWNER PRO</div>
+                <div style="font-family:'Anton';font-size:30px;color:#fff;text-transform:uppercase;line-height:.95">Cre&aacute; sin<br>l&iacute;mites</div>
+                <div style="font-size:13px;color:#C9B79A;margin-top:8px">Tus coleccionistas siguen jugando gratis. Siempre.</div>
+              </div>
+
+              <!-- comparativa -->
+              <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:18px">
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border-radius:13px;padding:12px 14px">
+                  <div style="color:#7FB83E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg></div>
+                  <div style="flex:1"><span style="font-weight:700;font-size:14px;color:#fff">&Aacute;lbumes ilimitados</span></div>
+                  <div style="font-family:'Space Mono';font-size:10px;color:#9C8E79">free: 1</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(232,178,74,.12);border:1px solid rgba(232,178,74,.35);border-radius:13px;padding:12px 14px">
+                  <div style="color:#E8B24A"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h6v6h-6z"/></svg></div>
+                  <div style="flex:1"><span style="font-weight:700;font-size:14px;color:#fff">QR de sobres</span><div style="font-size:10px;color:#E8B24A">la feature estrella pro</div></div>
+                  <div style="font-family:'Space Mono';font-size:10px;color:#C77E1A">free: &#10007;</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border-radius:13px;padding:12px 14px">
+                  <div style="color:#7FB83E"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg></div>
+                  <div style="flex:1"><span style="font-weight:700;font-size:14px;color:#fff">Figuritas ilimitadas</span></div>
+                  <div style="font-family:'Space Mono';font-size:10px;color:#9C8E79">free: &#10003;</div>
+                </div>
+              </div>
+
+              <!-- precios -->
+              <div style="display:flex;gap:10px">
+                <div style="flex:1;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;text-align:center">
+                  <div style="font-family:'Space Mono';font-size:10px;color:#C9B79A;letter-spacing:.08em;text-transform:uppercase">Mensual</div>
+                  <div style="font-family:'Anton';font-size:28px;color:#fff;margin-top:4px">$4.99</div>
+                  <div style="font-size:10px;color:#9C8E79">por mes</div>
+                </div>
+                <div style="flex:1;position:relative;background:linear-gradient(160deg,#E8B24A,#c98f2a);border-radius:16px;padding:14px;text-align:center;box-shadow:0 10px 24px -10px rgba(232,178,74,.6)">
+                  <div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#7FB83E;color:#173405;font-family:'Space Mono';font-weight:700;font-size:8px;padding:3px 8px;border-radius:20px;white-space:nowrap">AHORR&Aacute;S 33%</div>
+                  <div style="font-family:'Space Mono';font-size:10px;color:#5c4310;letter-spacing:.08em;text-transform:uppercase">Anual</div>
+                  <div style="font-family:'Anton';font-size:28px;color:#2A1E16;margin-top:4px">$39.99</div>
+                  <div style="font-size:10px;color:#5c4310">$3.33 / mes</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:6px 24px 30px">
+              <button style="width:100%;background:#E8B24A;border:none;border-radius:15px;padding:15px;font-family:'Anton';font-size:17px;color:#2A1E16;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #a9802f">Suscribirme &mdash; anual</button>
+              <div style="text-align:center;font-size:10px;color:#9C8E79;margin-top:10px">Pago seguro v&iacute;a App Store / Google Play &middot; cancel&aacute; cuando quieras</div>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(255,255,255,.4)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 13 CONFIRMACION PRO ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">13</span> &nbsp;&iexcl;Bienvenido a Pro!</div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:radial-gradient(circle at 50% 40%,#3a2a1d,#1c150f);border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#FBF3E2">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #FBF3E2;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#FBF3E2;border-radius:1px"></div></div></div>
+            </div>
+
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center">
+              <div style="position:relative;width:130px;height:130px;margin-bottom:8px">
+                <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(232,178,74,.4),transparent 70%);animation:figGlow 2s infinite"></div>
+                <div style="position:absolute;inset:18px;border-radius:50%;background:linear-gradient(150deg,#E8B24A,#c98f2a);display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px -10px rgba(232,178,74,.7)">
+                  <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4 10-11"/></svg>
+                </div>
+                <div style="position:absolute;top:6px;right:6px;font-size:18px">&#10024;</div>
+                <div style="position:absolute;bottom:10px;left:0;font-size:14px">&#10024;</div>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(90deg,#c98f2a,#E8B24A);color:#2A1E16;font-family:'Space Mono';font-weight:700;font-size:10px;padding:5px 11px;border-radius:20px;letter-spacing:.1em;margin:14px 0 12px">&#9733; OWNER PRO ACTIVO</div>
+              <div style="font-family:'Anton';font-size:32px;color:#fff;text-transform:uppercase;line-height:.95">&iexcl;Ya sos Pro!</div>
+              <div style="font-size:14px;color:#C9B79A;margin-top:10px;line-height:1.5;max-width:250px">Cre&aacute; &aacute;lbumes ilimitados y activ&aacute; el <strong style="color:#E8B24A">QR de sobres</strong> cuando quieras.</div>
+
+              <div style="display:flex;gap:8px;margin-top:22px">
+                <div style="background:rgba(255,255,255,.07);border-radius:12px;padding:11px 15px;text-align:center"><div style="font-family:'Anton';font-size:20px;color:#E8B24A">&infin;</div><div style="font-size:9px;color:#9C8E79;font-family:'Space Mono'">&Aacute;LBUMES</div></div>
+                <div style="background:rgba(255,255,255,.07);border-radius:12px;padding:11px 15px;text-align:center"><div style="font-family:'Anton';font-size:20px;color:#E8B24A">QR</div><div style="font-size:9px;color:#9C8E79;font-family:'Space Mono'">SOBRES</div></div>
+                <div style="background:rgba(255,255,255,.07);border-radius:12px;padding:11px 15px;text-align:center"><div style="font-family:'Anton';font-size:20px;color:#E8B24A">PRO</div><div style="font-size:9px;color:#9C8E79;font-family:'Space Mono'">BADGE</div></div>
+              </div>
+            </div>
+
+            <div style="padding:0 24px 30px">
+              <button style="width:100%;background:#E8B24A;border:none;border-radius:15px;padding:15px;font-family:'Anton';font-size:17px;color:#2A1E16;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #a9802f">Crear mi 2&deg; &aacute;lbum</button>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(255,255,255,.4)"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== SECCION 6 ===================== -->
+  <div style="max-width:1500px;margin:64px auto 0">
+    <div style="display:flex;align-items:baseline;gap:16px;margin-bottom:26px;border-bottom:1px solid rgba(232,178,74,.18);padding-bottom:14px">
+      <span style="font-family:'Anton',sans-serif;font-size:22px;color:#D23A2E">06</span>
+      <h2 style="font-family:'Hanken Grotesque';font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em">Estados vac&iacute;os &mdash; primer impulso</h2>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:#C9B79A;letter-spacing:.1em">&Aacute;LBUM VAC&Iacute;O (OWNER) &middot; REC&Iacute;EN UNIDO (USUARIO)</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:46px;align-items:flex-start">
+
+      <!-- ============ 14 ALBUM VACIO (OWNER) ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">14</span> &nbsp;&Aacute;lbum vac&iacute;o &middot; <span style="color:#B89B6E">owner reci&eacute;n creado</span></div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:2px 22px 12px;display:flex;align-items:center;gap:12px">
+              <div style="width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid rgba(42,30,22,.12);display:flex;align-items:center;justify-content:center;color:#2A1E16"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div style="flex:1"><div style="font-family:'Anton';font-size:19px;color:#2A1E16;text-transform:uppercase;line-height:1">El Gran Bestiario</div></div>
+              <div style="background:#EDE0C6;color:#9C8E79;font-family:'Space Mono';font-weight:700;font-size:9px;padding:5px 9px;border-radius:20px;letter-spacing:.06em">BORRADOR</div>
+            </div>
+
+            <!-- setup checklist -->
+            <div style="margin:0 22px 14px;background:linear-gradient(150deg,#2A1E16,#3a2a1d);border-radius:18px;padding:15px;color:#FBF3E2">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+                <div style="font-weight:800;font-size:14px">Para publicar tu &aacute;lbum</div>
+                <div style="font-family:'Space Mono';font-size:11px;color:#E8B24A">3/5</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border-radius:50%;background:#7FB83E;display:flex;align-items:center;justify-content:center;color:#fff"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l4 4 10-10"/></svg></div><span style="font-size:12px;color:#C9B79A;text-decoration:line-through">Nombre del &aacute;lbum</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border-radius:50%;background:#7FB83E;display:flex;align-items:center;justify-content:center;color:#fff"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l4 4 10-10"/></svg></div><span style="font-size:12px;color:#C9B79A;text-decoration:line-through">Cantidad: 200 figuritas</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border-radius:50%;background:#7FB83E;display:flex;align-items:center;justify-content:center;color:#fff"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12l4 4 10-10"/></svg></div><span style="font-size:12px;color:#C9B79A;text-decoration:line-through">Sobres: diario gratis</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border-radius:50%;border:2px solid #E8B24A;flex-shrink:0"></div><span style="font-size:12px;color:#fff;font-weight:700">Cargar figuritas</span><span style="margin-left:auto;font-family:'Space Mono';font-size:10px;color:#E8B24A">ahora</span></div>
+                <div style="display:flex;align-items:center;gap:9px"><div style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.25);flex-shrink:0"></div><span style="font-size:12px;color:#9C8E79">Compartir el link</span></div>
+              </div>
+            </div>
+
+            <!-- empty grid state -->
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 30px;text-align:center">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:100%;margin-bottom:22px;opacity:.6">
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2)"></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2)"></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2)"></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2);display:flex;align-items:center;justify-content:center;color:#C9B79A;font-size:28px;font-weight:300">+</div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2)"></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1.5px dashed rgba(42,30,22,.2)"></div>
+              </div>
+              <div style="font-family:'Anton';font-size:22px;color:#2A1E16;text-transform:uppercase;line-height:1">A&uacute;n no hay<br>figuritas</div>
+              <div style="font-size:13px;color:#7C6A52;margin-top:9px;line-height:1.5;max-width:250px">Sub&iacute; las im&aacute;genes y asign&aacute; n&uacute;mero y nombre. Reci&eacute;n ah&iacute; tus jugadores pueden empezar a coleccionar.</div>
+            </div>
+
+            <div style="padding:10px 22px 6px;flex-shrink:0;background:linear-gradient(180deg,rgba(251,243,226,0),#FBF3E2 40%)">
+              <button style="width:100%;background:#D23A2E;border:none;border-radius:16px;padding:15px;font-family:'Anton';font-size:17px;color:#fff;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #8f2019;display:flex;align-items:center;justify-content:center;gap:9px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 7h3l2-2h4l2 2h3v12H5z"/><circle cx="12" cy="13" r="3.4"/></svg>Cargar figuritas</button>
+            </div>
+            <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:118px;height:5px;border-radius:5px;background:rgba(42,30,22,.25)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 15 ALBUM RECIEN UNIDO (USUARIO) ============ -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C9B79A"><span style="color:#E8B24A">15</span> &nbsp;Reci&eacute;n unido &middot; <span style="color:#7FB83E">0 pegadas &rarr; abr&iacute; un sobre</span></div>
+        <div style="background:#0e0b08;padding:11px;border-radius:48px;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.05) inset">
+          <div style="position:relative;width:346px;height:756px;background:#FBF3E2;border-radius:38px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);width:118px;height:26px;background:#0e0b08;border-radius:0 0 17px 17px;z-index:30"></div>
+            <div style="height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0">
+              <span style="font-weight:700;font-size:14px;color:#2A1E16">9:41</span>
+              <div style="display:flex;gap:5px;align-items:center"><div style="width:17px;height:11px;border:1.6px solid #2A1E16;border-radius:3px;position:relative"><div style="position:absolute;inset:1.5px;width:9px;background:#2A1E16;border-radius:1px"></div></div></div>
+            </div>
+            <div style="padding:2px 18px 10px;display:flex;align-items:center;gap:12px">
+              <div style="width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid rgba(42,30,22,.12);display:flex;align-items:center;justify-content:center;color:#2A1E16"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg></div>
+              <div style="flex:1"><div style="font-family:'Anton';font-size:19px;color:#2A1E16;text-transform:uppercase;line-height:1">El Gran Bestiario</div></div>
+            </div>
+
+            <!-- welcome banner -->
+            <div style="margin:0 18px 12px;background:linear-gradient(150deg,#D23A2E,#A4271F);border-radius:18px;padding:15px 16px;color:#fff;position:relative;overflow:hidden">
+              <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 9px,transparent 9px 18px)"></div>
+              <div style="position:relative"><div style="font-family:'Space Mono';font-size:10px;letter-spacing:.12em;color:#FBE9C9">&iexcl;TE UNISTE!</div><div style="font-family:'Anton';font-size:21px;text-transform:uppercase;line-height:1;margin-top:3px">Empez&aacute; tu colecci&oacute;n</div></div>
+            </div>
+
+            <!-- progress 0 -->
+            <div style="margin:0 18px 12px;display:flex;align-items:center;gap:12px;padding:0 2px">
+              <div style="font-family:'Anton';font-size:24px;color:#2A1E16">0<span style="font-size:15px;color:#B89B6E">/200</span></div>
+              <div style="flex:1;height:8px;border-radius:8px;background:rgba(42,30,22,.1);overflow:hidden"><div style="width:1%;height:100%;background:#D23A2E"></div></div>
+              <div style="font-family:'Space Mono';font-size:10px;color:#9C8E79">0%</div>
+            </div>
+
+            <!-- ghost grid -->
+            <div style="flex:1;position:relative;overflow:hidden;padding:0 18px">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:46% 46% 50% 50%"></div></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:50%"></div></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:40% 40% 48% 48%"></div></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:46% 46% 50% 50%"></div></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:50%"></div></div>
+                <div style="aspect-ratio:.82;border-radius:13px;background:#EDE0C6;border:1px dashed rgba(42,30,22,.16);display:flex;align-items:center;justify-content:center"><div style="width:52%;aspect-ratio:1;background:rgba(42,30,22,.1);border-radius:40% 40% 48% 48%"></div></div>
+              </div>
+              <!-- fade + nudge overlay -->
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(251,243,226,0) 20%,rgba(251,243,226,.85) 60%,#FBF3E2 80%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:14px;text-align:center">
+                <div style="position:relative;width:104px;height:140px;margin-bottom:16px;animation:figFloat 3.5s ease-in-out infinite">
+                  <div style="position:absolute;inset:0;border-radius:14px;background:linear-gradient(150deg,#D23A2E,#A4271F);box-shadow:0 16px 30px -12px rgba(164,39,31,.7);overflow:hidden">
+                    <div style="position:absolute;top:0;left:0;right:0;height:9px;background:repeating-linear-gradient(90deg,#E8B24A 0 5px,#A4271F 5px 10px)"></div>
+                    <div style="position:absolute;top:0;bottom:0;left:0;width:42%;background:linear-gradient(90deg,rgba(255,255,255,.5),transparent);transform:rotate(18deg);animation:figShine 3.4s linear infinite"></div>
+                    <div style="position:absolute;left:0;right:0;top:48px;text-align:center;font-family:'Anton';font-size:14px;color:#E8B24A;text-transform:uppercase">Sobre</div>
+                  </div>
+                </div>
+                <div style="font-family:'Anton';font-size:20px;color:#2A1E16;text-transform:uppercase;line-height:1">Ten&eacute;s 1 sobre<br>de bienvenida</div>
+                <div style="font-size:12px;color:#7C6A52;margin-top:7px">Abrilo y peg&aacute; tus primeras figuritas</div>
+              </div>
+            </div>
+
+            <div style="padding:8px 18px 6px;flex-shrink:0">
+              <button style="width:100%;background:#D23A2E;border:none;border-radius:16px;padding:15px;font-family:'Anton';font-size:18px;color:#fff;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;box-shadow:0 5px 0 #8f2019;display:flex;align-items:center;justify-content:center;gap:9px"><span style="width:10px;height:10px;border-radius:50%;background:#E8B24A;animation:figGlow 1.6s infinite"></span>Abr&iacute; tu primer sobre</button>
+            </div>
+            <div style="display:flex;justify-content:space-around;align-items:center;padding:9px 6px 7px;background:#fff;border-top:1px solid rgba(42,30,22,.1);flex-shrink:0">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 11l8-6 8 6"/><path d="M6 10v8h12v-8"/></svg><span style="font:600 9px 'Hanken Grotesque'">Inicio</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#D23A2E"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span style="font:700 9px 'Hanken Grotesque'">&Aacute;lbum</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 9l8 5 8-5"/></svg><span style="font:600 9px 'Hanken Grotesque'">Sobres</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span style="font:600 9px 'Hanken Grotesque'">Cambios</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#9C8E79"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 19a6.5 6.5 0 0113 0"/></svg><span style="font:600 9px 'Hanken Grotesque'">Perfil</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1500,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { pack: 'idle', pegadas: {}, countdown: 0 };
+
+  componentDidMount() {
+    this._target = Date.now() + (3 * 3600 + 12 * 60 + 5) * 1000;
+    this.setState({ countdown: this._target - Date.now() });
+    this._tick = setInterval(() => {
+      this.setState({ countdown: Math.max(0, this._target - Date.now()) });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this._tick); }
+
+  COLORS() { return ['#E85D4E','#F2A03D','#3FB6A8','#5B8DEF','#B36BD4','#7FB83E','#EE6FA0','#4FC0DA']; }
+  TINTS() { return ['#FCE6E1','#FCEFD9','#DEF1EE','#E2EBFB','#EFE3F6','#EAF3DC','#FBE4EE','#DFF1F7']; }
+
+  buildCells() {
+    const pal = this.COLORS(), tint = this.TINTS();
+    const recipe = ['p2','p1r','f','p3','p2','f','p2','p1','f','p3r','p2','f','p1','p2','f','p3','p2r','f'];
+    return recipe.map((code, idx) => {
+      const num = String(idx + 1).padStart(3, '0');
+      if (code[0] === 'f') return { num, faltante: true, pegada: false };
+      const eyes = parseInt(code[1] || '2', 10);
+      const radius = idx % 3 === 0 ? '46% 46% 50% 50%' : (idx % 3 === 1 ? '50%' : '40% 40% 48% 48%');
+      return { num, pegada: true, faltante: false, repe: code.includes('r'),
+        color: pal[idx % pal.length], bg: tint[idx % tint.length], eyes,
+        eyeArr: Array.from({ length: eyes }, (_, i) => i), radius };
+    });
+  }
+
+  revealRaw() {
+    return [
+      { id: 'r1', num: '112', name: 'GLORP', color: '#B36BD4', eyes: 2, rarity: 'LEGENDARIA', rarColor: '#E8B24A', isNew: true, rot: -8 },
+      { id: 'r2', num: '058', name: 'BLIP', color: '#3FB6A8', eyes: 3, rarity: 'RARA', rarColor: '#5B8DEF', isNew: true, rot: -3 },
+      { id: 'r3', num: '009', name: '&Ntilde;AM', color: '#E85D4E', eyes: 1, rarity: 'COM&Uacute;N', rarColor: '#B89B6E', isNew: false, rot: 2 },
+      { id: 'r4', num: '141', name: 'ZURP', color: '#F2A03D', eyes: 2, rarity: 'COM&Uacute;N', rarColor: '#B89B6E', isNew: true, rot: 6 },
+      { id: 'r5', num: '073', name: 'TOTO', color: '#7FB83E', eyes: 2, rarity: 'RARA', rarColor: '#5B8DEF', isNew: false, rot: 9 }
+    ];
+  }
+
+  fmt(ms) {
+    const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    const p = n => String(n).padStart(2, '0');
+    return p(h) + ':' + p(m) + ':' + p(ss);
+  }
+
+  reveal() {
+    if (this.state.pack !== 'idle') return;
+    this.setState({ pack: 'shaking' });
+    setTimeout(() => this.setState({ pack: 'open' }), 650);
+  }
+  resetPack() { this.setState({ pack: 'idle', pegadas: {} }); }
+  pegarNuevas() {
+    const p = { ...this.state.pegadas };
+    this.revealRaw().forEach(c => { if (c.isNew) p[c.id] = true; });
+    this.setState({ pegadas: p });
+  }
+
+  renderVals() {
+    const pack = this.state.pack;
+    const shown = pack === 'open';
+    const cards = this.revealRaw().map((c, i) => ({
+      ...c,
+      eyeArr: Array.from({ length: c.eyes }, (_, k) => k),
+      isRepe: !c.isNew,
+      pegada: !!this.state.pegadas[c.id],
+      style: {
+        opacity: shown ? 1 : 0,
+        transform: shown ? ('translateY(0) rotate(' + c.rot + 'deg)') : 'translateY(34px) scale(.6) rotate(0deg)',
+        transition: 'opacity .5s ease, transform .55s cubic-bezier(.2,1.3,.4,1)',
+        transitionDelay: (i * 110) + 'ms'
+      }
+    }));
+    const nuevasCount = this.revealRaw().filter(c => c.isNew && !this.state.pegadas[c.id]).length;
+    const pegadasDone = Object.keys(this.state.pegadas).length > 0;
+
+    let packStyle;
+    if (pack === 'shaking') packStyle = { animation: 'figShake .6s ease-in-out' };
+    else if (pack === 'open') packStyle = { opacity: 0, transform: 'scale(1.6) translateY(-20px)', transition: 'all .5s ease', pointerEvents: 'none' };
+    else packStyle = { animation: 'figFloat 3.5s ease-in-out infinite' };
+
+    return {
+      albumCells: this.buildCells(),
+      packIdle: pack === 'idle',
+      idleOp: pack === 'idle' ? 1 : 0,
+      packOpen: shown,
+      packStyle,
+      glowStyle: { position: 'absolute', top: '90px', left: '50%', width: '280px', height: '280px', marginLeft: '-140px', marginTop: '-140px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(232,178,74,.7),transparent 65%)', pointerEvents: 'none', opacity: pack === 'shaking' ? 1 : 0, transition: 'opacity .3s' },
+      revealCards: cards,
+      resultStyle: { opacity: shown ? 1 : 0, transform: shown ? 'translateY(0)' : 'translateY(-10px)', transition: 'all .5s ease .2s' },
+      nuevasCount,
+      pegadasDone,
+      onReveal: () => this.reveal(),
+      onReset: () => this.resetPack(),
+      onPegar: () => this.pegarNuevas(),
+      countdown: this.fmt(this.state.countdown)
+    };
+  }
+}
+</script>
+</body>
+</html>
