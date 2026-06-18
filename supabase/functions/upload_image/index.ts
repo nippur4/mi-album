@@ -1,15 +1,18 @@
 // Mi Álbum de Figuritas — Edge Function: upload de imágenes a R2
 //
 // Genera 2 tamaños WebP de la imagen original (sharp) y los sube a Cloudflare
-// R2 con el SDK de S3. Devuelve las URLs públicas para que el cliente las pase
-// al RPC correspondiente (fn_add_sticker / fn_update_album_content).
+// R2 con el SDK de S3. Devuelve las object keys (paths dentro del bucket) para
+// que el cliente las pase al RPC correspondiente (fn_add_sticker /
+// fn_update_album_content). La URL pública se arma en el cliente concatenando
+// EXPO_PUBLIC_R2_PUBLIC_BASE_URL + key, así si en el futuro migramos de r2.dev
+// a un dominio custom no hace falta UPDATE masivo de la DB.
 //
 // Contrato:
 //   POST  multipart/form-data:
 //     - file: imagen original (jpeg/png/webp/heic, ≤ 10 MB)
 //     - album_id: uuid
 //     - kind: 'cover' | 'pack' | 'sticker'
-//   200   { thumb_url, large_url }
+//   200   { thumb_key, large_key }
 //   4xx   { error: string }
 //
 // Reglas:
@@ -54,7 +57,6 @@ const r2 = new S3Client({
   },
 });
 const R2_BUCKET = Deno.env.get('R2_BUCKET_NAME')!;
-const R2_PUBLIC = Deno.env.get('R2_PUBLIC_BASE_URL')!.replace(/\/$/, '');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -156,8 +158,8 @@ serve(async (req) => {
   }
 
   return jsonOk({
-    thumb_url: `${R2_PUBLIC}/${thumbKey}`,
-    large_url: `${R2_PUBLIC}/${largeKey}`,
+    thumb_key: thumbKey,
+    large_key: largeKey,
   });
 });
 

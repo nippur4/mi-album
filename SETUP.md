@@ -151,8 +151,9 @@ supabase secrets set R2_ACCOUNT_ID="<de 2.2>"
 supabase secrets set R2_ACCESS_KEY_ID="<de 2.2>"
 supabase secrets set R2_SECRET_ACCESS_KEY="<de 2.2>"
 supabase secrets set R2_BUCKET_NAME="mi-album-figuritas"
-supabase secrets set R2_PUBLIC_BASE_URL="<de 2.3, sin slash al final>"
 ```
+
+> Nota: `R2_PUBLIC_BASE_URL` NO va en los secrets del backend (la Edge Function `upload_image` solo guarda object keys, no URLs completas). Va en `client/.env` como `EXPO_PUBLIC_R2_PUBLIC_BASE_URL` (paso 3.2).
 
 ---
 
@@ -178,9 +179,10 @@ Editar `client/.env`:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
+EXPO_PUBLIC_R2_PUBLIC_BASE_URL=https://pub-xxxxxx.r2.dev
 ```
 
-(Valores de 1.1.)
+(Los dos primeros vienen de 1.1, el último de 2.3.)
 
 ### 3.3 Instalar deps y arrancar
 

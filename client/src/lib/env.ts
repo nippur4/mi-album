@@ -22,4 +22,8 @@ export const env = {
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   ),
+  r2PublicBaseUrl: required(
+    'EXPO_PUBLIC_R2_PUBLIC_BASE_URL',
+    process.env.EXPO_PUBLIC_R2_PUBLIC_BASE_URL,
+  ).replace(/\/$/, ''),
 };
