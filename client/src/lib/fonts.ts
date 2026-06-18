@@ -1,20 +1,22 @@
 // Carga de fuentes del proyecto. Las 3 vienen de Google Fonts y se bundlean
 // con la app vía @expo-google-fonts/*.
 //
-// Deps requeridas:
-//   npm i @expo-google-fonts/anton @expo-google-fonts/hanken-grotesque @expo-google-fonts/space-mono
+// Nota: el handoff pide Hanken Grotesque pero ese paquete no existe en
+// @expo-google-fonts. Sustituimos por Manrope (grotesque similar con mismos
+// pesos). Si querés match exacto, hay que cargar los TTFs manualmente desde
+// fonts.google.com.
 
 import { useFonts } from 'expo-font';
 import {
   Anton_400Regular,
 } from '@expo-google-fonts/anton';
 import {
-  HankenGrotesque_400Regular,
-  HankenGrotesque_500Medium,
-  HankenGrotesque_600SemiBold,
-  HankenGrotesque_700Bold,
-  HankenGrotesque_800ExtraBold,
-} from '@expo-google-fonts/hanken-grotesque';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import {
   SpaceMono_400Regular,
   SpaceMono_700Bold,
@@ -24,11 +26,11 @@ import {
 export function useAppFonts() {
   return useFonts({
     Anton: Anton_400Regular,
-    HankenGrotesque: HankenGrotesque_400Regular,
-    'HankenGrotesque-Medium': HankenGrotesque_500Medium,
-    'HankenGrotesque-SemiBold': HankenGrotesque_600SemiBold,
-    'HankenGrotesque-Bold': HankenGrotesque_700Bold,
-    'HankenGrotesque-ExtraBold': HankenGrotesque_800ExtraBold,
+    Manrope: Manrope_400Regular,
+    'Manrope-Medium': Manrope_500Medium,
+    'Manrope-SemiBold': Manrope_600SemiBold,
+    'Manrope-Bold': Manrope_700Bold,
+    'Manrope-ExtraBold': Manrope_800ExtraBold,
     SpaceMono: SpaceMono_400Regular,
     'SpaceMono-Bold': SpaceMono_700Bold,
   });

@@ -73,9 +73,11 @@ export const RarityFrame: Record<'common' | 'rare' | 'epic' | 'legendary', strin
 
 // Las fuentes se cargan vía expo-font en _layout.tsx (ver lib/fonts.ts).
 // Estos nombres son los family names que registramos.
+// Nota: el handoff pide Hanken Grotesque pero ese paquete no existe en
+// @expo-google-fonts; usamos Manrope como sustituto cercano.
 export const FontFamily = {
   display: 'Anton',                // títulos, números grandes, nombres de figurita
-  body: 'HankenGrotesque',         // UI / cuerpo (regular y bold)
+  body: 'Manrope',                 // UI / cuerpo (regular, medium, semibold, bold, extrabold)
   mono: 'SpaceMono',               // labels técnicas, códigos, countdown
 } as const;
 
