@@ -40,6 +40,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="album" />
+        <Stack.Screen name="sticker" />
       </Stack>
     </>
   );
