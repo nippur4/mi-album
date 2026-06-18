@@ -10,6 +10,7 @@
 //   3. el hook actualiza session → el redirect del _layout lleva al user a /(tabs)
 
 import { useEffect, useState } from 'react';
+import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './supabase';
@@ -53,4 +54,26 @@ export async function signInWithMagicLink(email: string) {
 
 export async function signOut() {
   return supabase.auth.signOut();
+}
+
+// Captura deep links del magic link (mialbum://#access_token=...&refresh_token=...)
+// y registra la sesión en supabase-js. Llamar una vez en _layout.tsx root.
+export function useDeepLinkAuth() {
+  useEffect(() => {
+    const handle = async (url: string | null) => {
+      if (!url) return;
+      const fragment = url.split('#')[1];
+      if (!fragment) return;
+      const params = new URLSearchParams(fragment);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({ access_token, refresh_token });
+      }
+    };
+
+    Linking.getInitialURL().then(handle);
+    const sub = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => sub.remove();
+  }, []);
 }

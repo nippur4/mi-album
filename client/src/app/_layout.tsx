@@ -4,13 +4,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { useAppFonts } from '@/lib/fonts';
-import { useSession } from '@/lib/auth';
+import { useSession, useDeepLinkAuth } from '@/lib/auth';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useAppFonts();
+  useDeepLinkAuth();
   const { session, isLoading } = useSession();
   const segments = useSegments();
   const router = useRouter();
