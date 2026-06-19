@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   Share,
   StyleSheet,
@@ -14,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { Checklist, type ChecklistItem } from '@/components/checklist';
 import { ImageUploadCard } from '@/components/image-upload-card';
+import { PresetPickerModal } from '@/components/preset-picker-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import {
@@ -22,6 +24,7 @@ import {
   useAlbumDetail,
 } from '@/lib/queries/albums';
 import { uploadImage } from '@/lib/queries/uploads';
+import { makePresetKey } from '@/lib/storage';
 import { errorMessage } from '@/lib/errors';
 
 export default function AlbumDetailScreen() {
@@ -31,6 +34,7 @@ export default function AlbumDetailScreen() {
   const [coverBusy, setCoverBusy] = useState(false);
   const [packBusy, setPackBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -71,9 +75,13 @@ export default function AlbumDetailScreen() {
 
   async function onShare() {
     if (!album) return;
+    const link = `mialbum://join/${album.share_code}`;
     try {
       await Share.share({
-        message: `Unite a mi álbum "${album.name}" con el código ${album.share_code}.`,
+        message:
+          `Unite a mi álbum "${album.name}" en Mi Álbum de Figuritas:\n\n` +
+          `Código: ${album.share_code}\n` +
+          `Link directo: ${link}`,
       });
     } catch {}
   }
@@ -110,6 +118,27 @@ export default function AlbumDetailScreen() {
     } catch (err: any) {
       Alert.alert('Error', errorMessage(err));
     } finally {
+      setPackBusy(false);
+    }
+  }
+
+  async function onPresetSelected(presetId: string) {
+    if (!album || !presetFor) return;
+    const key = makePresetKey(presetId);
+    const patch =
+      presetFor === 'cover'
+        ? { cover_thumb_key: key, cover_large_key: key }
+        : { pack_thumb_key: key, pack_large_key: key };
+    if (presetFor === 'cover') setCoverBusy(true);
+    else setPackBusy(true);
+    try {
+      const { error: updErr } = await updateAlbumContent(album.id, patch);
+      if (updErr) throw updErr;
+      await refetch();
+    } catch (err: any) {
+      Alert.alert('Error', errorMessage(err));
+    } finally {
+      setCoverBusy(false);
       setPackBusy(false);
     }
   }
@@ -157,6 +186,9 @@ export default function AlbumDetailScreen() {
                     onPicked={onPickedCover}
                     busy={coverBusy}
                   />
+                  <Pressable onPress={() => setPresetFor('cover')} style={styles.presetBtn}>
+                    <Text style={styles.presetBtnText}>Usar plantilla</Text>
+                  </Pressable>
                 </View>
                 <View style={styles.imageCol}>
                   <ImageUploadCard
@@ -167,6 +199,9 @@ export default function AlbumDetailScreen() {
                     onPicked={onPickedPack}
                     busy={packBusy}
                   />
+                  <Pressable onPress={() => setPresetFor('pack')} style={styles.presetBtn}>
+                    <Text style={styles.presetBtnText}>Usar plantilla</Text>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -191,6 +226,12 @@ export default function AlbumDetailScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <PresetPickerModal
+        visible={presetFor !== null}
+        onClose={() => setPresetFor(null)}
+        onSelect={onPresetSelected}
+      />
 
       <View style={styles.footer}>
         <Button label="Compartir" variant="outline" onPress={onShare} />
@@ -263,7 +304,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.md,
   },
-  imageCol: { flex: 1 },
+  imageCol: { flex: 1, gap: Spacing.sm },
+  presetBtn: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  presetBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.red,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textDecorationLine: 'underline',
+  },
   stickersCard: {
     backgroundColor: Colors.paper2,
     borderRadius: Radius.cardLg,

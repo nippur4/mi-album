@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -19,6 +19,7 @@ import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { addSticker, type Rarity } from '@/lib/queries/stickers';
+import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
 import { errorMessage } from '@/lib/errors';
 
@@ -26,6 +27,7 @@ export default function NewStickerScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const router = useRouter();
   const { album, stickers } = useAlbumDetail(albumId);
+  const { isPro } = useIsPro();
 
   // Próximo número libre como sugerencia inicial
   const usedNumbers = new Set(stickers.map((s) => s.number));
@@ -37,6 +39,11 @@ export default function NewStickerScreen() {
   const [keys, setKeys] = useState<UploadedKeys | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Free no puede elegir rareza: forzamos a 'common'.
+  useEffect(() => {
+    if (!isPro && rarity !== 'common') setRarity('common');
+  }, [isPro, rarity]);
 
   const max = album?.total_stickers ?? 1;
   const numberTaken = usedNumbers.has(number);
@@ -118,10 +125,21 @@ export default function NewStickerScreen() {
           />
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>RAREZA</Text>
-          <RarityPills value={rarity} onChange={setRarity} />
-        </View>
+        {isPro ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>RAREZA</Text>
+            <RarityPills value={rarity} onChange={setRarity} />
+          </View>
+        ) : (
+          <View style={styles.field}>
+            <Text style={styles.label}>RAREZA</Text>
+            <Text style={styles.proHint}>
+              En el plan Free todas las figuritas son comunes. Suscribite a Pro
+              para definir rarezas (rara, épica, legendaria) y configurar las
+              probabilidades del sobre.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -166,6 +184,16 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,
     color: Colors.amberWarn,
+  },
+  proHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    backgroundColor: Colors.paper2,
+    borderRadius: 12,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   footer: {
     paddingHorizontal: Spacing.screenX,

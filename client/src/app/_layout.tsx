@@ -4,7 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { useAppFonts } from '@/lib/fonts';
-import { useSession, useDeepLinkAuth } from '@/lib/auth';
+import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useAppFonts();
   useDeepLinkAuth();
+  useJoinDeepLink();
   const { session, isLoading } = useSession();
   const segments = useSegments();
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="album" />
         <Stack.Screen name="sticker" />
+        <Stack.Screen name="join" />
       </Stack>
     </>
   );

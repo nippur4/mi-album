@@ -1,7 +1,11 @@
-// Mutations sobre stickers (RPCs del backend).
+// Mutations sobre stickers (RPCs del backend) + hook de lectura.
+
+import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { toAppError, type AppError } from '@/lib/errors';
 import type { Database } from '@/lib/database.types';
+import type { Sticker } from '@/lib/queries/albums';
 
 export type Rarity = Database['public']['Enums']['sticker_rarity'];
 

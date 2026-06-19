@@ -190,4 +190,12 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 
-export const errorMessage = (err: unknown): string => ERROR_COPY[toAppError(err).key];
+export const errorMessage = (err: unknown): string => {
+  const appErr = toAppError(err);
+  // Si no tenemos copy específico, mostramos el raw (más diagnóstico-friendly
+  // que un genérico "algo salió mal").
+  if (appErr.key === 'unknown' && appErr.raw) {
+    return appErr.raw;
+  }
+  return ERROR_COPY[appErr.key];
+};

@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './supabase';
@@ -76,4 +77,23 @@ export function useDeepLinkAuth() {
     const sub = Linking.addEventListener('url', ({ url }) => handle(url));
     return () => sub.remove();
   }, []);
+}
+
+// Captura links del tipo mialbum://join/<CODE> y redirige a la pantalla de
+// joinear con el código. Si no hay sesión, el redirect del _layout lleva
+// primero a login y se pierde el código (limitación conocida para MVP).
+export function useJoinDeepLink() {
+  const router = useRouter();
+  useEffect(() => {
+    const handle = (url: string | null) => {
+      if (!url) return;
+      const match = url.match(/^mialbum:\/\/join\/([A-Z0-9]+)/i);
+      if (match) {
+        router.push(`/join/${match[1].toUpperCase()}`);
+      }
+    };
+    Linking.getInitialURL().then(handle);
+    const sub = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => sub.remove();
+  }, [router]);
 }

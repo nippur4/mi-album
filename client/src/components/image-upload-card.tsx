@@ -3,8 +3,9 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PresetBackground } from '@/components/preset-background';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { r2Url } from '@/lib/storage';
+import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
 interface Props {
   // key actual de la imagen subida (thumb_key). null si no hay imagen.
@@ -39,7 +40,7 @@ export function ImageUploadCard({
     setPicking(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect,
         quality: 0.9,
@@ -47,19 +48,33 @@ export function ImageUploadCard({
       if (result.canceled) return;
       await onPicked(result.assets[0]);
     } catch (err: any) {
-      Alert.alert('Error', err?.error ?? err?.message ?? 'No pudimos subir la imagen.');
+      console.error('image-upload-card: pick/upload failed', err);
+      let msg: string;
+      if (typeof err === 'string') {
+        msg = err;
+      } else if (err && typeof err.error === 'string') {
+        msg = err.error;
+      } else if (err && typeof err.message === 'string') {
+        msg = err.message;
+      } else {
+        try { msg = JSON.stringify(err, null, 2); } catch { msg = '[error sin detalle]'; }
+      }
+      Alert.alert('Error', msg);
     } finally {
       setPicking(false);
     }
   }
 
   const url = r2Url(thumbKey);
+  const isPresetKey = isPreset(thumbKey);
   const showLoader = busy || picking;
   const ratio = aspect[0] / aspect[1];
 
   return (
     <Pressable onPress={pick} disabled={showLoader} style={[styles.card, { aspectRatio: ratio }]}>
-      {url ? (
+      {isPresetKey ? (
+        <PresetBackground id={presetIdFromKey(thumbKey!)} />
+      ) : url ? (
         <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <View style={styles.empty}>
