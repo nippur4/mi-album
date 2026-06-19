@@ -1,0 +1,239 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Button } from '@/components/button';
+import { ImageUploadCard } from '@/components/image-upload-card';
+import { RarityPills } from '@/components/rarity-pills';
+import { ScreenHeader } from '@/components/screen-header';
+import { TextInput } from '@/components/text-input';
+import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
+import {
+  deleteSticker,
+  updateSticker,
+  useSticker,
+  type Rarity,
+} from '@/lib/queries/stickers';
+import { useIsPro } from '@/lib/queries/subscriptions';
+import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
+import { errorMessage } from '@/lib/errors';
+
+export default function EditStickerScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { sticker, isLoading } = useSticker(id);
+  const { isPro } = useIsPro();
+
+  const [name, setName] = useState('');
+  const [rarity, setRarity] = useState<Rarity>('common');
+  const [pendingKeys, setPendingKeys] = useState<UploadedKeys | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (sticker) {
+      setName(sticker.name);
+      setRarity(sticker.rarity);
+    }
+  }, [sticker]);
+
+  useEffect(() => {
+    if (!isPro && rarity !== 'common') setRarity('common');
+  }, [isPro, rarity]);
+
+  if (isLoading && !sticker) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ScreenHeader title="Editar figurita" back />
+        <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!sticker) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ScreenHeader title="Editar figurita" back />
+        <View style={styles.center}>
+          <Text style={styles.errorText}>No encontramos la figurita.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const currentThumbKey = pendingKeys?.thumb_key ?? sticker.thumb_key;
+  const canSave = name.trim().length > 0 && !uploading && !saving && !deleting;
+
+  async function onPicked(asset: import('expo-image-picker').ImagePickerAsset) {
+    if (!sticker) return;
+    setUploading(true);
+    try {
+      const keys = await uploadImage(sticker.album_id, 'sticker', asset);
+      setPendingKeys(keys);
+    } catch (err: any) {
+      Alert.alert('Error', errorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onSave() {
+    if (!sticker) return;
+    Keyboard.dismiss();
+    setSaving(true);
+    const { error } = await updateSticker({
+      sticker_id: sticker.id,
+      name: name.trim(),
+      rarity,
+      thumb_key: pendingKeys?.thumb_key,
+      large_key: pendingKeys?.large_key,
+    });
+    setSaving(false);
+    if (error) {
+      Alert.alert('No se pudo guardar', errorMessage(error));
+      return;
+    }
+    router.back();
+  }
+
+  function onConfirmDelete() {
+    Alert.alert(
+      'Eliminar figurita',
+      `¿Borrar la #${sticker?.number ?? ''}? Esta acción no se puede deshacer.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+      ],
+    );
+  }
+
+  async function onDelete() {
+    if (!sticker) return;
+    setDeleting(true);
+    const { error } = await deleteSticker(sticker.id);
+    setDeleting(false);
+    if (error) {
+      Alert.alert('No se pudo eliminar', errorMessage(error));
+      return;
+    }
+    router.back();
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenHeader title={`Figurita #${sticker.number}`} back />
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.imageRow}>
+          <View style={{ width: 180 }}>
+            <ImageUploadCard
+              thumbKey={currentThumbKey}
+              label="Foto"
+              aspect={[4, 5]}
+              onPicked={onPicked}
+              busy={uploading}
+            />
+          </View>
+          {pendingKeys && (
+            <Text style={styles.pendingHint}>
+              Nueva foto subida. Tocá "Guardar cambios" para aplicarla.
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>NOMBRE</Text>
+          <TextInput value={name} onChangeText={setName} maxLength={60} />
+        </View>
+
+        {isPro ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>RAREZA</Text>
+            <RarityPills value={rarity} onChange={setRarity} />
+          </View>
+        ) : (
+          <View style={styles.field}>
+            <Text style={styles.label}>RAREZA</Text>
+            <Text style={styles.proHint}>
+              En el plan Free todas las figuritas son comunes.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Button
+          label={saving ? 'Guardando...' : 'Guardar cambios'}
+          onPress={onSave}
+          disabled={!canSave}
+          loading={saving}
+        />
+        <Button
+          label={deleting ? 'Eliminando...' : 'Eliminar figurita'}
+          variant="outline"
+          onPress={onConfirmDelete}
+          disabled={uploading || saving || deleting}
+        />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.paper },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    color: Colors.red,
+    padding: Spacing.xl,
+    textAlign: 'center',
+  },
+  scroll: {
+    paddingHorizontal: Spacing.screenX,
+    paddingTop: Spacing.md,
+    paddingBottom: 220,
+    gap: Spacing.xl,
+  },
+  imageRow: {
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  pendingHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.green,
+    textAlign: 'center',
+  },
+  field: { gap: Spacing.sm },
+  label: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+  },
+  proHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    backgroundColor: Colors.paper2,
+    borderRadius: 12,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  footer: {
+    paddingHorizontal: Spacing.screenX,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
+});
