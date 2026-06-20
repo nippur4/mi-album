@@ -17,22 +17,32 @@ import { Checklist, type ChecklistItem } from '@/components/checklist';
 import { EditTotalModal } from '@/components/edit-total-modal';
 import { ImageUploadCard } from '@/components/image-upload-card';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
+import { ProgressCard } from '@/components/progress-card';
 import { ScreenHeader } from '@/components/screen-header';
-import { StickerCell } from '@/components/sticker-cell';
+import { StatusBadge } from '@/components/status-badge';
+import { StickerCell, StickerCellEmpty, StickerCellMissing } from '@/components/sticker-cell';
 import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
+import { useSession } from '@/lib/auth';
 import {
   publishAlbum,
   updateAlbumContent,
   useAlbumDetail,
+  type Album,
+  type Sticker,
 } from '@/lib/queries/albums';
+import { useAvailablePacksCount, useUserCollection } from '@/lib/queries/collection';
+import { claimDailyPack, useDailyPackStatus } from '@/lib/queries/daily';
+import { pasteSticker } from '@/lib/queries/packs';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
 import { makePresetKey } from '@/lib/storage';
 import { errorMessage } from '@/lib/errors';
+import { Countdown } from '@/components/countdown';
 
 export default function AlbumDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useSession();
   const { album, stickers, isLoading, error, refetch } = useAlbumDetail(id);
   const { isPro } = useIsPro();
   const [coverBusy, setCoverBusy] = useState(false);
@@ -64,6 +74,9 @@ export default function AlbumDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  const isOwner = session?.user.id === album.owner_id;
+  if (!isOwner) return <UserAlbumView album={album} stickers={stickers} />;
 
   const items: ChecklistItem[] = [
     { label: 'Nombre y cantidad', done: true },
@@ -150,9 +163,7 @@ export default function AlbumDetailScreen() {
 
   async function onSaveTotal(newTotal: number) {
     if (!album) return;
-    const { error: updErr } = await updateAlbumContent(album.id, {
-      total_stickers: newTotal,
-    });
+    const { error: updErr } = await updateAlbumContent(album.id, { total_stickers: newTotal });
     if (updErr) {
       Alert.alert('No se pudo guardar', errorMessage(updErr));
       throw updErr;
@@ -172,15 +183,29 @@ export default function AlbumDetailScreen() {
     await refetch();
   }
 
+  // Grilla del owner: cargadas + placeholders dashed para los huecos
+  const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
+  const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title={album.name} back />
+      <ScreenHeader
+        title={album.name}
+        back
+        multiline
+        right={<StatusBadge variant={album.status as any} />}
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.statusBanner, { backgroundColor: statusBg(album.status) }]}>
-          <Text style={[styles.statusLabel, { color: statusFg(album.status) }]}>
-            {statusText(album.status)}
-          </Text>
-        </View>
+        <ProgressCard
+          current={stickers.length}
+          total={album.total_stickers}
+          caption="CARGADAS"
+          rightStat={
+            isDraft
+              ? `${album.total_stickers - stickers.length} para terminar`
+              : undefined
+          }
+        />
 
         {album.status === 'published' && (
           <View style={styles.codeCard}>
@@ -245,30 +270,53 @@ export default function AlbumDetailScreen() {
             )}
           </View>
 
-          {stickers.length === 0 ? (
-            <View style={styles.stickersCard}>
-              <Text style={styles.placeholderTitle}>Aún no hay figuritas.</Text>
-              {isDraft && (
-                <Button
-                  label="Cargar figurita"
-                  variant="outline"
-                  onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
-                />
-              )}
+          {stickers.length === 0 && isDraft ? (
+            <View style={styles.emptyHero}>
+              <View style={styles.grid}>
+                {gridCells.slice(0, 6).map((n) => (
+                  <View key={n} style={styles.gridCell}>
+                    <StickerCellEmpty number={n} showPlus={n === 1} />
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.emptyHeroTitle}>
+                AÚN NO HAY{'\n'}FIGURITAS
+              </Text>
+              <Text style={styles.emptyHeroBody}>
+                Subí las imágenes y a cada una asigná número y nombre.
+                Recién ahí tus jugadores pueden empezar a coleccionar.
+              </Text>
+              <Button
+                label="Cargar figuritas"
+                onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
+              />
             </View>
           ) : (
             <>
               <View style={styles.grid}>
-                {stickers.map((s) => (
-                  <View key={s.id} style={styles.gridCell}>
-                    <StickerCell
-                      sticker={s}
-                      onPress={isDraft ? () => router.push(`/sticker/${s.id}`) : undefined}
-                    />
-                  </View>
-                ))}
+                {gridCells.map((n) => {
+                  const s = stickerByNumber.get(n);
+                  if (s) {
+                    return (
+                      <View key={n} style={styles.gridCell}>
+                        <StickerCell
+                          sticker={s}
+                          onPress={isDraft ? () => router.push(`/sticker/${s.id}`) : undefined}
+                        />
+                      </View>
+                    );
+                  }
+                  return (
+                    <View key={n} style={styles.gridCell}>
+                      <StickerCellEmpty
+                        number={n}
+                        onPress={isDraft ? () => router.push(`/sticker/new?albumId=${album.id}`) : undefined}
+                      />
+                    </View>
+                  );
+                })}
               </View>
-              {isDraft && (
+              {isDraft && stickers.length < album.total_stickers && (
                 <Button
                   label={`Cargar otra (${stickers.length}/${album.total_stickers})`}
                   variant="outline"
@@ -324,64 +372,190 @@ export default function AlbumDetailScreen() {
   );
 }
 
-function statusText(s: string) {
-  switch (s) {
-    case 'draft': return 'BORRADOR · EN CONSTRUCCIÓN';
-    case 'published': return 'PUBLICADO';
-    case 'read_only': return 'PAUSADO';
-    case 'archived': return 'ARCHIVADO';
-    default: return s.toUpperCase();
+// ---------------------------------------------------------------------------
+// Vista del usuario (no-owner): banner de bienvenida + grilla con silhouettes.
+// ---------------------------------------------------------------------------
+
+function UserAlbumView({ album, stickers }: { album: Album; stickers: Sticker[] }) {
+  const router = useRouter();
+  const { collection, refetch: refetchCollection } = useUserCollection(album.id);
+  const { count: packsCount, refetch: refetchPacks } = useAvailablePacksCount(album.id);
+  const { status: daily, refetch: refetchDaily } = useDailyPackStatus(album.id);
+  const [claiming, setClaiming] = useState(false);
+
+  async function onClaimDaily() {
+    setClaiming(true);
+    const { error } = await claimDailyPack(album.id);
+    setClaiming(false);
+    if (error) {
+      Alert.alert('No se pudo reclamar', errorMessage(error));
+      return;
+    }
+    refetchPacks();
+    refetchDaily();
   }
-}
-function statusBg(s: string) {
-  switch (s) {
-    case 'draft': return Colors.paper3;
-    case 'published': return Colors.green;
-    case 'read_only': return Colors.amberWarnBg;
-    case 'archived': return Colors.paper3;
-    default: return Colors.paper3;
+
+  async function onPaste(stickerId: string) {
+    const { error } = await pasteSticker(stickerId);
+    if (error) {
+      Alert.alert('No se pudo pegar', errorMessage(error));
+      return;
+    }
+    refetchCollection();
   }
-}
-function statusFg(s: string) {
-  switch (s) {
-    case 'draft': return Colors.inkSoft;
-    case 'published': return Colors.greenTextDark;
-    case 'read_only': return Colors.amberWarn;
-    case 'archived': return Colors.muted;
-    default: return Colors.muted;
+
+  let myPastedCount = 0;
+  let repesCount = 0;
+  let toPasteCount = 0;
+  for (const entry of collection.values()) {
+    if (entry.pasted) {
+      myPastedCount += 1;
+      const extras = entry.quantity - 1;
+      if (extras > 0) repesCount += extras;
+    } else {
+      // Tengo la figurita pero falta pegarla. Si quantity > 1 hay repes adicionales.
+      toPasteCount += 1;
+      const extras = entry.quantity - 1;
+      if (extras > 0) repesCount += extras;
+    }
   }
+  const missingCount = album.total_stickers - myPastedCount - toPasteCount;
+  const isWelcome = myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
+
+  const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
+  const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenHeader title={album.name} back multiline />
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 140 }]}>
+        {isWelcome && (
+          <View style={styles.welcomeBanner}>
+            <Text style={styles.welcomeKicker}>¡TE UNISTE!</Text>
+            <Text style={styles.welcomeTitle}>EMPEZÁ TU{'\n'}COLECCIÓN</Text>
+          </View>
+        )}
+
+        <ProgressCard
+          current={myPastedCount}
+          total={album.total_stickers}
+          caption="PEGADAS"
+          rightStat={`${repesCount} repetidas · ${missingCount} faltan`}
+        />
+
+        {toPasteCount > 0 && (
+          <View style={styles.toPasteBanner}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toPasteBannerTitle}>
+                Tenés {toPasteCount} figurita{toPasteCount > 1 ? 's' : ''} sin pegar
+              </Text>
+              <Text style={styles.toPasteBannerSub}>
+                Tocá cada una en la grilla para pegarla.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            FIGURITAS · {myPastedCount} / {album.total_stickers}
+          </Text>
+          <View style={styles.grid}>
+            {gridCells.map((n) => {
+              const s = stickerByNumber.get(n);
+              if (!s) {
+                return (
+                  <View key={n} style={styles.gridCell}>
+                    <StickerCellMissing number={n} />
+                  </View>
+                );
+              }
+              const entry = collection.get(s.id);
+              if (!entry) {
+                return (
+                  <View key={n} style={styles.gridCell}>
+                    <StickerCellMissing number={n} />
+                  </View>
+                );
+              }
+              if (entry.pasted) {
+                const extras = entry.quantity - 1;
+                return (
+                  <View key={n} style={styles.gridCell}>
+                    <StickerCell sticker={s} extraCount={Math.max(0, extras)} />
+                  </View>
+                );
+              }
+              // Sin pegar: borde gold + tap → pega
+              return (
+                <View key={n} style={styles.gridCell}>
+                  <StickerCell
+                    sticker={s}
+                    state="to_paste"
+                    extraCount={Math.max(0, entry.quantity - 1)}
+                    onPress={() => onPaste(s.id)}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {(repesCount > 0 || missingCount > 0) && (
+          <Button
+            label="Ver cambios posibles"
+            variant="outline"
+            onPress={() => router.push(`/trade/matches?albumId=${album.id}`)}
+          />
+        )}
+      </ScrollView>
+
+      {/* CTA inferior con 3 estados: sobres listos, reclamar daily, countdown */}
+      {packsCount > 0 ? (
+        <Pressable
+          onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
+          style={({ pressed }) => [styles.packsCta, pressed && styles.packsCtaPressed]}
+        >
+          <Text style={styles.packsCtaLabel}>
+            TENÉS {packsCount}{'\n'}SOBRE{packsCount > 1 ? 'S' : ''}
+          </Text>
+          <View style={styles.packsCtaAction}>
+            <Text style={styles.packsCtaActionText}>Abrir</Text>
+          </View>
+        </Pressable>
+      ) : daily.canClaim ? (
+        <Pressable
+          onPress={onClaimDaily}
+          disabled={claiming}
+          style={({ pressed }) => [styles.packsCta, pressed && styles.packsCtaPressed]}
+        >
+          <Text style={styles.packsCtaLabel}>
+            SOBRE DIARIO{'\n'}DISPONIBLE
+          </Text>
+          <View style={styles.packsCtaAction}>
+            <Text style={styles.packsCtaActionText}>
+              {claiming ? '...' : 'Reclamar'}
+            </Text>
+          </View>
+        </Pressable>
+      ) : daily.enabled && daily.nextAvailableAt ? (
+        <View style={styles.dailyCard}>
+          <View style={styles.dailyCardLeft}>
+            <Text style={styles.dailyCardKicker}>SOBRE DIARIO GRATIS</Text>
+            <Text style={styles.dailyCardSub}>PRÓXIMO EN</Text>
+          </View>
+          <Countdown target={daily.nextAvailableAt} style={styles.dailyCountdown} />
+        </View>
+      ) : null}
+    </SafeAreaView>
+  );
 }
+
+// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  statusBanner: {
-    paddingVertical: Spacing.sm,
-    borderRadius: 999,
-    alignItems: 'center',
-  },
-  statusLabel: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.monoLabelSmall,
-    letterSpacing: 1.8,
-    fontWeight: '700',
-  },
-  gateHint: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.caption,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  pausedHint: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.amberWarn,
-    textAlign: 'center',
-    backgroundColor: Colors.amberWarnBg,
-    padding: Spacing.md,
-    borderRadius: 12,
-  },
   errorText: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,
@@ -444,17 +618,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textDecorationLine: 'underline',
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.gridGap,
-  },
-  gridCell: {
-    // 3 columnas con gap de 9px → cada celda ~31% para que entren con los gaps
-    flexBasis: '31.5%',
-    flexGrow: 0,
-    flexShrink: 0,
-  },
   imageGrid: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -472,19 +635,74 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textDecorationLine: 'underline',
   },
-  stickersCard: {
-    backgroundColor: Colors.paper2,
-    borderRadius: Radius.cardLg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.md,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.gridGap,
   },
-  placeholderTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
+  gridCell: {
+    flexBasis: '31.5%',
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  // Empty hero (draft sin figuritas)
+  emptyHero: {
+    gap: Spacing.lg,
+    alignItems: 'center',
+  },
+  emptyHeroTitle: {
+    fontFamily: FontFamily.display,
+    fontSize: 36,
     color: Colors.ink,
+    textAlign: 'center',
+    lineHeight: 38,
+    letterSpacing: 1,
+  },
+  emptyHeroBody: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  // Welcome banner (user recién unido)
+  welcomeBanner: {
+    backgroundColor: Colors.red,
+    borderRadius: Radius.cardLg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  welcomeKicker: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    color: Colors.paper,
+    letterSpacing: 2,
+    fontWeight: '700',
+    opacity: 0.9,
+  },
+  welcomeTitle: {
+    fontFamily: FontFamily.display,
+    fontSize: 30,
+    color: Colors.paper,
+    lineHeight: 32,
+    letterSpacing: 1,
+  },
+  gateHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  pausedHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.amberWarn,
+    textAlign: 'center',
+    backgroundColor: Colors.amberWarnBg,
+    padding: Spacing.md,
+    borderRadius: 12,
   },
   footer: {
     position: 'absolute',
@@ -492,5 +710,104 @@ const styles = StyleSheet.create({
     right: Spacing.screenX,
     bottom: Spacing.xl,
     gap: Spacing.sm,
+  },
+  packsCta: {
+    position: 'absolute',
+    left: Spacing.screenX,
+    right: Spacing.screenX,
+    bottom: Spacing.xl,
+    backgroundColor: Colors.red,
+    borderRadius: Radius.cardLg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: Colors.redShadow,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 5,
+  },
+  packsCtaPressed: {
+    transform: [{ translateY: 5 }],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  packsCtaLabel: {
+    fontFamily: FontFamily.display,
+    fontSize: 22,
+    color: Colors.paper,
+    lineHeight: 22,
+    letterSpacing: 0.5,
+  },
+  packsCtaAction: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+  },
+  packsCtaActionText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '800',
+    color: Colors.ink,
+    letterSpacing: 0.5,
+  },
+  dailyCard: {
+    position: 'absolute',
+    left: Spacing.screenX,
+    right: Spacing.screenX,
+    bottom: Spacing.xl,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dailyCardLeft: {
+    gap: 2,
+  },
+  dailyCardKicker: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.ink,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  dailyCardSub: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+  },
+  dailyCountdown: {
+    fontSize: 20,
+  },
+  toPasteBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.amberWarnBg,
+    borderRadius: Radius.card,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    gap: Spacing.sm,
+  },
+  toPasteBannerTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  toPasteBannerSub: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
   },
 });

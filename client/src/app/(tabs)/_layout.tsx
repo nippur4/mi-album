@@ -1,40 +1,68 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Feather } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, FontFamily } from '@/constants/theme';
 
-// Tab bar: 5 ítems del handoff — Inicio / Álbum / Sobres / Cambios / Perfil.
-// Iconos vía SF Symbols (iOS) y drawables nativos (Android). En Android sin
-// drawables matcheados se cae al default; aceptable para arrancar.
+// Tabs custom para tener control total del look (iconos lucide-style + labels
+// en Space Mono coherentes con el handoff).
 export default function TabsLayout() {
   return (
-    <NativeTabs
-      backgroundColor={Colors.paper}
-      labelStyle={{ selected: { color: Colors.red }, unselected: { color: Colors.muted } }}
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: Colors.red,
+        tabBarInactiveTintColor: Colors.muted,
+        tabBarStyle: {
+          backgroundColor: Colors.paper,
+          borderTopColor: Colors.border,
+          borderTopWidth: 1,
+          paddingTop: 6,
+          height: 64,
+        },
+        tabBarLabelStyle: {
+          fontFamily: FontFamily.mono,
+          fontSize: 9,
+          fontWeight: '700',
+          letterSpacing: 1,
+          marginTop: 2,
+        },
+      }}
     >
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Inicio</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" drawable="ic_home" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="album">
-        <NativeTabs.Trigger.Label>Álbum</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="square.grid.3x3.fill" drawable="ic_grid" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="packs">
-        <NativeTabs.Trigger.Label>Sobres</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="envelope.fill" drawable="ic_envelope" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="trades">
-        <NativeTabs.Trigger.Label>Cambios</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="arrow.left.arrow.right" drawable="ic_swap" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="person.fill" drawable="ic_person" />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'INICIO',
+          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="album"
+        options={{
+          title: 'ÁLBUM',
+          tabBarIcon: ({ color }) => <Feather name="grid" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="packs"
+        options={{
+          title: 'SOBRES',
+          tabBarIcon: ({ color }) => <Feather name="mail" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trades"
+        options={{
+          title: 'CAMBIOS',
+          tabBarIcon: ({ color }) => <Feather name="repeat" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'PERFIL',
+          tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }

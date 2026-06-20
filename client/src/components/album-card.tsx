@@ -1,104 +1,101 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { Avatar } from '@/components/avatar';
+import { ProgressBar } from '@/components/progress-bar';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Album } from '@/lib/queries/albums';
 
 interface Props {
   album: Album;
+  // 0..1 — progreso (pegadas o cargadas según role)
+  progress?: number;
+  // Contador "X / N"
+  counter?: { current: number; total: number };
+  // Etiqueta de rol opcional ("TUYO", "JUGÁS")
+  roleTag?: string;
   onPress?: () => void;
 }
 
-const STATUS_LABEL: Record<Album['status'], string> = {
-  draft: 'BORRADOR',
-  published: 'PUBLICADO',
-  read_only: 'PAUSADO',
-  archived: 'ARCHIVADO',
-};
-
-const STATUS_BG: Record<Album['status'], string> = {
-  draft: Colors.paper3,
-  published: Colors.green,
-  read_only: Colors.amberWarnBg,
-  archived: Colors.paper3,
-};
-
-const STATUS_FG: Record<Album['status'], string> = {
-  draft: Colors.inkSoft,
-  published: Colors.greenTextDark,
-  read_only: Colors.amberWarn,
-  archived: Colors.muted,
-};
-
-export function AlbumCard({ album, onPress }: Props) {
+// Lista compacta del Landing: avatar + nombre + barra + contador mono.
+// Refleja el diseño del handoff (screen 01, "Mis álbumes").
+export function AlbumCard({ album, progress, counter, roleTag, onPress }: Props) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <View style={styles.headRow}>
-        <View style={[styles.badge, { backgroundColor: STATUS_BG[album.status] }]}>
-          <Text style={[styles.badgeText, { color: STATUS_FG[album.status] }]}>
-            {STATUS_LABEL[album.status]}
-          </Text>
+      <Avatar source={album.name} />
+      <View style={styles.center}>
+        <View style={styles.titleRow}>
+          <Text style={styles.name} numberOfLines={1}>{album.name}</Text>
+          {roleTag && <Text style={styles.roleTag}>{roleTag}</Text>}
         </View>
-        <Text style={styles.share}>{album.share_code}</Text>
+        {progress !== undefined && (
+          <ProgressBar value={progress} variant="gold" />
+        )}
       </View>
-      <Text style={styles.name} numberOfLines={2}>{album.name}</Text>
-      <Text style={styles.meta}>
-        <Text style={styles.metaNum}>{album.total_stickers}</Text>{' figuritas'}
-      </Text>
+      {counter && (
+        <View style={styles.counter}>
+          <Text style={styles.counterCurrent}>{counter.current}</Text>
+          <Text style={styles.counterTotal}>/{counter.total}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.paper2,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.paper,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     borderRadius: Radius.cardLg,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    ...Shadow.card,
   },
   pressed: {
-    opacity: 0.85,
+    backgroundColor: Colors.paper2,
   },
-  headRow: {
+  center: {
+    flex: 1,
+    gap: 6,
+  },
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.sm,
   },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.pill,
-  },
-  badgeText: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.monoLabelSmall,
+  name: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    color: Colors.ink,
   },
-  share: {
+  roleTag: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: '700',
+  },
+  counter: {
+    alignItems: 'flex-end',
+  },
+  counterCurrent: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.ink,
+    lineHeight: 14,
+  },
+  counterTotal: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabel,
     color: Colors.muted,
-    letterSpacing: 1.2,
-  },
-  name: {
-    fontFamily: FontFamily.display,
-    fontSize: 28,
-    color: Colors.ink,
-    lineHeight: 30,
-  },
-  meta: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-  },
-  metaNum: {
-    fontFamily: FontFamily.display,
-    color: Colors.ink,
+    lineHeight: 12,
   },
 });

@@ -1,65 +1,159 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
+import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { JoinCodeInput } from '@/components/join-code-input';
+import { PublicAlbumCard } from '@/components/public-album-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
-import { useMyOwnedAlbums } from '@/lib/queries/albums';
+import { useSession } from '@/lib/auth';
+import {
+  useAlbumsProgress,
+  useMyMemberAlbums,
+  useMyOwnedAlbums,
+  usePublicAlbums,
+  type Album,
+} from '@/lib/queries/albums';
 
 export default function HomeTab() {
   const router = useRouter();
-  const { albums, isLoading, refetch } = useMyOwnedAlbums();
+  const { session } = useSession();
+  const { albums: owned, refetch: refetchOwned, isLoading: loadingOwned } = useMyOwnedAlbums();
+  const { albums: joined, refetch: refetchJoined, isLoading: loadingJoined } = useMyMemberAlbums();
+  const { albums: publics, refetch: refetchPublics, isLoading: loadingPublics } = usePublicAlbums();
 
-  // Re-fetchear cuando la pantalla vuelve a foco (ej. tras crear un álbum)
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  // Pedimos progreso de TODOS los ids visibles
+  const allIds = useMemo(
+    () => Array.from(new Set([...owned.map((a) => a.id), ...joined.map((a) => a.id), ...publics.map((a) => a.id)])),
+    [owned, joined, publics],
+  );
+  const progressMap = useAlbumsProgress(allIds);
+
+  const refreshAll = useCallback(() => {
+    refetchOwned();
+    refetchJoined();
+    refetchPublics();
+  }, [refetchOwned, refetchJoined, refetchPublics]);
+
+  useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
+
+  // "Mis álbumes" = owned + joined (unificado, owned primero)
+  const ownedIds = new Set(owned.map((a) => a.id));
+  const mine: Array<{ album: Album; role: 'owner' | 'member' }> = [
+    ...owned.map((a) => ({ album: a, role: 'owner' as const })),
+    ...joined.filter((a) => !ownedIds.has(a.id)).map((a) => ({ album: a, role: 'member' as const })),
+  ];
+
+  const displayName =
+    (session?.user.user_metadata?.display_name as string | undefined) ??
+    session?.user.email?.split('@')[0] ??
+    '';
+
+  const isLoading = loadingOwned || loadingJoined || loadingPublics;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <FlatList
-        data={albums}
-        keyExtractor={(a) => a.id}
-        renderItem={({ item }) => (
-          <AlbumCard
-            album={item}
-            onPress={() => router.push(`/album/${item.id}`)}
-          />
-        )}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <View style={styles.header}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refreshAll} tintColor={Colors.red} />
+        }
+      >
+        {/* Header con avatar del user */}
+        <View style={styles.header}>
+          <View style={styles.headerText}>
             <Text style={styles.kicker}>HOLA DE NUEVO</Text>
-            <Text style={styles.title}>Inicio</Text>
+            <Text style={styles.greeting}>{displayName.toUpperCase()}</Text>
           </View>
-        }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Todavía no creaste ningún álbum.</Text>
-              <Text style={styles.emptyBody}>Arrancá creando uno para coleccionistas.</Text>
+          <Avatar source={displayName || 'Vos'} size={48} />
+        </View>
+
+        {/* Álbumes públicos */}
+        {publics.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionLabel}>Álbumes públicos</Text>
+              <Text style={styles.sectionTag}>CURADOS</Text>
             </View>
-          ) : null
-        }
-        ItemSeparatorComponent={() => <View style={{ height: Spacing.listGap }} />}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />}
-      />
-      <View style={styles.footer}>
-        <Button label="Crear álbum" onPress={() => router.push('/album/new')} />
-      </View>
+            <FlatList
+              data={publics}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(a) => a.id}
+              renderItem={({ item }) => {
+                const p = progressMap[item.id];
+                return (
+                  <PublicAlbumCard
+                    album={item}
+                    progress={p ? p.my_pasted_count / Math.max(1, p.total_stickers) : 0}
+                    counter={p ? { current: p.my_pasted_count, total: p.total_stickers } : undefined}
+                    onPress={() => router.push(`/album/${item.id}`)}
+                  />
+                );
+              }}
+              contentContainerStyle={styles.carouselContent}
+              ItemSeparatorComponent={() => <View style={{ width: Spacing.md }} />}
+            />
+          </View>
+        )}
+
+        {/* Mis álbumes */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Mis álbumes</Text>
+          {mine.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Todavía no tenés álbumes.</Text>
+              <Text style={styles.emptyBody}>Creá uno o unite con un código.</Text>
+            </View>
+          ) : (
+            <View style={{ gap: Spacing.listGap }}>
+              {mine.map(({ album, role }) => {
+                const p = progressMap[album.id];
+                const current = role === 'owner'
+                  ? (p?.stickers_loaded ?? 0)
+                  : (p?.my_pasted_count ?? 0);
+                const total = p?.total_stickers ?? album.total_stickers;
+                const progress = total > 0 ? current / total : 0;
+                return (
+                  <AlbumCard
+                    key={album.id}
+                    album={album}
+                    progress={progress}
+                    counter={{ current, total }}
+                    roleTag={role === 'owner' ? 'TUYO' : 'JUGÁS'}
+                    onPress={() => router.push(`/album/${album.id}`)}
+                  />
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        <JoinCodeInput onJoined={(albumId) => router.push(`/album/${albumId}`)} />
+
+        <Button label="Crear álbum nuevo" variant="outline" onPress={() => router.push('/album/new')} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
-  list: {
+  scroll: {
     paddingHorizontal: Spacing.screenX,
-    paddingBottom: 120,
-    flexGrow: 1,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.xl,
   },
   header: {
-    paddingVertical: Spacing.lg,
+    paddingTop: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerText: {
     gap: Spacing.xs,
   },
   kicker: {
@@ -69,33 +163,50 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
-  title: {
+  greeting: {
     fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
+    fontSize: 32,
+    color: Colors.ink,
+    letterSpacing: 1,
+  },
+  section: {
+    gap: Spacing.sm,
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  sectionLabel: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
     color: Colors.ink,
   },
+  sectionTag: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.muted,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  carouselContent: {
+    paddingVertical: Spacing.xs,
+  },
   empty: {
-    paddingTop: Spacing.xxl * 2,
+    paddingVertical: Spacing.xl,
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   emptyTitle: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,
     fontWeight: '700',
     color: Colors.ink,
-    textAlign: 'center',
   },
   emptyBody: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,
     color: Colors.inkSoft,
-    textAlign: 'center',
-  },
-  footer: {
-    position: 'absolute',
-    left: Spacing.screenX,
-    right: Spacing.screenX,
-    bottom: Spacing.xl,
   },
 });

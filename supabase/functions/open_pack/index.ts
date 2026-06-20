@@ -6,7 +6,7 @@
 //
 // Contrato:
 //   POST  body: { pack_id: string }
-//   200   { stickers: [{ sticker_id, number, name, rarity, large_url, was_new }] }
+//   200   { stickers: [{ sticker_id, number, name, rarity, large_key, was_new }] }
 //   4xx   { error: string }
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
@@ -30,12 +30,12 @@ interface Sticker {
   number: number;
   name: string;
   rarity: Rarity;
-  large_url: string;
+  large_key: string;
 }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -99,7 +99,7 @@ serve(async (req) => {
   // 3. Cargar todos los stickers del álbum.
   const { data: stickers, error: stkErr } = await supabase
     .from('stickers')
-    .select('id, number, name, rarity, large_url')
+    .select('id, number, name, rarity, large_key')
     .eq('album_id', pack.album_id);
 
   if (stkErr) return jsonError(stkErr.message, 500);
@@ -138,7 +138,7 @@ serve(async (req) => {
     number: s.number,
     name: s.name,
     rarity: s.rarity,
-    large_url: s.large_url,
+    large_key: s.large_key,
     was_new: appliedArr[i].was_new,
   }));
 

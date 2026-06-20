@@ -14,6 +14,103 @@ import type { Database } from '@/lib/database.types';
 export type Album = Database['public']['Tables']['albums']['Row'];
 export type Sticker = Database['public']['Tables']['stickers']['Row'];
 
+export interface AlbumProgress {
+  album_id: string;
+  total_stickers: number;
+  stickers_loaded: number;
+  my_pasted_count: number;
+}
+
+// Hook que devuelve un map albumId → progress para los IDs pasados.
+// Re-fetcha cuando cambia la lista de IDs.
+export function useAlbumsProgress(ids: string[]) {
+  const [progress, setProgress] = useState<Record<string, AlbumProgress>>({});
+  const key = ids.slice().sort().join(',');
+
+  useEffect(() => {
+    let mounted = true;
+    if (ids.length === 0) {
+      setProgress({});
+      return;
+    }
+    supabase.rpc('fn_album_progress', { p_album_ids: ids }).then(({ data }) => {
+      if (!mounted) return;
+      const map: Record<string, AlbumProgress> = {};
+      for (const row of (data ?? []) as AlbumProgress[]) {
+        map[row.album_id] = row;
+      }
+      setProgress(map);
+    });
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return progress;
+}
+
+// Álbumes públicos publicados (RLS los expone a todos).
+export function usePublicAlbums() {
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true);
+    const { data } = await supabase
+      .from('albums')
+      .select('*')
+      .eq('is_public', true)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(20);
+    setAlbums((data ?? []) as Album[]);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { albums, isLoading, refetch };
+}
+
+// Álbumes donde el usuario se unió (membership) pero NO es el owner.
+export function useMyMemberAlbums() {
+  const { session } = useSession();
+  const uid = session?.user.id;
+
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refetch = useCallback(async () => {
+    if (!uid) {
+      setAlbums([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    const { data: memberships } = await supabase
+      .from('user_album_membership')
+      .select('album_id')
+      .eq('user_id', uid);
+    const ids = (memberships ?? []).map((m: any) => m.album_id);
+    if (ids.length === 0) {
+      setAlbums([]);
+      setIsLoading(false);
+      return;
+    }
+    const { data: albumsData } = await supabase
+      .from('albums')
+      .select('*')
+      .in('id', ids)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false });
+    setAlbums((albumsData ?? []) as Album[]);
+    setIsLoading(false);
+  }, [uid]);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { albums, isLoading, refetch };
+}
+
 // Los álbumes que el usuario actual creó (es decir, donde es owner).
 export function useMyOwnedAlbums() {
   const { session } = useSession();
@@ -80,6 +177,24 @@ export async function updateAlbumContent(albumId: string, patch: UpdateAlbumCont
 
 export async function publishAlbum(albumId: string) {
   return supabase.rpc('fn_publish_album', { p_album_id: albumId });
+}
+
+// Unirse a un álbum por código. Acepta el código solo o el deep link completo.
+export async function joinAlbumByCode(rawInput: string) {
+  const code = extractShareCode(rawInput);
+  if (!code) return { data: null, error: { code: 'P0080', message: 'share_code_required' } as any };
+  return supabase.rpc('fn_join_album', { p_share_code: code });
+}
+
+function extractShareCode(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  // mialbum://join/CODE  or  https://.../join/CODE
+  const m = trimmed.match(/(?:join\/)([A-Z0-9]+)/i);
+  if (m) return m[1].toUpperCase();
+  // Código suelto: chars válidos del alfabeto definido en fn_gen_share_code
+  if (/^[A-Z0-9]+$/i.test(trimmed)) return trimmed.toUpperCase();
+  return null;
 }
 
 // Detalle de un álbum: el album + sus stickers cargados (por número).

@@ -82,14 +82,20 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: Radius.button,
-    backgroundColor: Colors.paper2,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.red,
     alignItems: 'center',
     justifyContent: 'center',
+    // sombra dura estilo CTA
+    shadowColor: Colors.redShadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
   btnPressed: {
-    backgroundColor: Colors.paper3,
+    transform: [{ translateY: 4 }],
+    shadowOpacity: 0,
+    elevation: 0,
   },
   btnDisabled: {
     opacity: 0.4,
@@ -97,7 +103,7 @@ const styles = StyleSheet.create({
   btnLabel: {
     fontFamily: FontFamily.display,
     fontSize: 28,
-    color: Colors.ink,
+    color: '#FFFFFF',
     lineHeight: 30,
   },
   valueInput: {
@@ -107,5 +113,9 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: Colors.ink,
     padding: 0,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.button,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
 });

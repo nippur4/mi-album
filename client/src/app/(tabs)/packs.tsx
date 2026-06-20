@@ -1,5 +1,172 @@
-import { ScreenPlaceholder } from '@/components/screen-placeholder';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Avatar } from '@/components/avatar';
+import { DailyAlbumRow } from '@/components/daily-album-row';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
+import { useMyOpenPacksByAlbum } from '@/lib/queries/packs-by-album';
 
 export default function PacksTab() {
-  return <ScreenPlaceholder title="Sobres" subtitle="Conseguir + abrir sobres" />;
+  const router = useRouter();
+  const { items, refetch: refetchPending } = useMyOpenPacksByAlbum();
+  const { albums: joined, refetch: refetchJoined } = useMyMemberAlbums();
+  const { albums: owned } = useMyOwnedAlbums();
+
+  // El daily aplica solo a álbumes donde el caller NO es owner (el owner
+  // no juega su propio álbum). Member > owner siempre.
+  const playable = joined.filter(
+    (a) => !owned.some((o) => o.id === a.id) && a.status === 'published',
+  );
+
+  useFocusEffect(useCallback(() => {
+    refetchPending();
+    refetchJoined();
+  }, [refetchPending, refetchJoined]));
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.header}>
+          <Text style={styles.kicker}>SOBRES</Text>
+          <Text style={styles.title}>POR ABRIR</Text>
+        </View>
+
+        {/* Sobres pendientes (sin abrir) por álbum */}
+        {items.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No tenés sobres pendientes.</Text>
+            <Text style={styles.emptyBody}>
+              Reclamá tu sobre diario o escaneá el QR de un álbum.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: Spacing.listGap }}>
+            {items.map(({ album, count }) => (
+              <Pressable
+                key={album.id}
+                style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
+                onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
+              >
+                <Avatar source={album.name} />
+                <View style={styles.center}>
+                  <Text style={styles.name} numberOfLines={1}>{album.name}</Text>
+                  <Text style={styles.subPending}>
+                    {count} sobre{count > 1 ? 's' : ''} sin abrir
+                  </Text>
+                </View>
+                <View style={styles.actionRed}>
+                  <Text style={styles.actionLabelLight}>Abrir</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* Sobre diario por álbum jugable */}
+        {playable.length > 0 && (
+          <View style={{ gap: Spacing.sm }}>
+            <Text style={styles.sectionLabel}>SOBRE DIARIO GRATIS</Text>
+            <View style={{ gap: Spacing.listGap }}>
+              {playable.map((a) => (
+                <DailyAlbumRow
+                  key={a.id}
+                  album={a}
+                  onClaimed={() => refetchPending()}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.paper },
+  scroll: {
+    paddingHorizontal: Spacing.screenX,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.xl,
+  },
+  header: { gap: Spacing.xs },
+  kicker: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  title: {
+    fontFamily: FontFamily.display,
+    fontSize: 32,
+    color: Colors.ink,
+    letterSpacing: 1,
+  },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+  },
+  empty: {
+    paddingTop: Spacing.lg,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  emptyTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  emptyBody: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+  },
+  pressed: { opacity: 0.85 },
+  center: { flex: 1, gap: 2 },
+  name: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  subPending: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    color: Colors.red,
+    letterSpacing: 1.2,
+    fontWeight: '700',
+  },
+  actionRed: {
+    backgroundColor: Colors.red,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+  },
+  actionLabelLight: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '800',
+    color: Colors.paper,
+    letterSpacing: 0.5,
+  },
+});

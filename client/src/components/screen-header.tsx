@@ -6,14 +6,16 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 interface Props {
   title: string;
   back?: boolean;
+  // Si true, deja partir el título en hasta 2 líneas (estilo handoff con Anton)
+  multiline?: boolean;
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ScreenHeader({ title, back, right, style }: Props) {
+export function ScreenHeader({ title, back, multiline, right, style }: Props) {
   const router = useRouter();
   return (
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, multiline && styles.rowMultiline, style]}>
       <View style={styles.side}>
         {back && router.canGoBack() && (
           <Pressable onPress={router.back} hitSlop={12} style={styles.backHit}>
@@ -21,7 +23,12 @@ export function ScreenHeader({ title, back, right, style }: Props) {
           </Pressable>
         )}
       </View>
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text
+        style={multiline ? styles.titleMultiline : styles.title}
+        numberOfLines={multiline ? 2 : 1}
+      >
+        {title.toUpperCase()}
+      </Text>
       <View style={[styles.side, { alignItems: 'flex-end' }]}>{right}</View>
     </View>
   );
@@ -34,6 +41,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     minHeight: 48,
     gap: Spacing.sm,
+  },
+  rowMultiline: {
+    alignItems: 'flex-start',
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
   },
   side: {
     width: 40,
@@ -57,5 +69,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.screenTitle,
     color: Colors.ink,
     textAlign: 'center',
+  },
+  titleMultiline: {
+    flex: 1,
+    fontFamily: FontFamily.display,
+    fontSize: 26,
+    lineHeight: 28,
+    color: Colors.ink,
+    letterSpacing: 0.5,
   },
 });

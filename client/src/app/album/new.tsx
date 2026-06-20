@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
+import { StatusBadge } from '@/components/status-badge';
 import { Stepper } from '@/components/stepper';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
@@ -25,8 +26,6 @@ export default function NewAlbumScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // Si el plan cambia (load tardío de useIsPro) y el total supera el cap nuevo,
-  // bajarlo al cap.
   useEffect(() => {
     if (total > maxStickers) setTotal(maxStickers);
   }, [maxStickers, total]);
@@ -49,8 +48,13 @@ export default function NewAlbumScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title="Nuevo álbum" back />
+      <ScreenHeader title="" back right={<StatusBadge variant={isPro ? 'pro' : 'free'} />} />
+
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.hero}>
+          <Text style={styles.heroTitle}>NUEVO{'\n'}ÁLBUM</Text>
+        </View>
+
         <View style={styles.field}>
           <Text style={styles.label}>NOMBRE</Text>
           <TextInput
@@ -67,7 +71,7 @@ export default function NewAlbumScreen() {
           <Stepper value={total} onChange={setTotal} min={1} max={maxStickers} step={5} />
           <Text style={styles.hint}>
             {isPro
-              ? 'Hasta 1000 figuritas (Pro).'
+              ? `Hasta ${PRO_MAX} figuritas (Pro).`
               : `Free: máximo ${FREE_MAX}. Pro permite hasta ${PRO_MAX}.`}
           </Text>
         </View>
@@ -78,7 +82,7 @@ export default function NewAlbumScreen() {
       <View style={styles.footer}>
         <Button label="Crear borrador" onPress={onSubmit} disabled={!canSubmit} loading={submitting} />
         <Text style={styles.fineprint}>
-          Vas a poder cargar las figuritas y la carátula en el siguiente paso.
+          Después vas a poder cargar las figuritas y la carátula.
         </Text>
       </View>
     </SafeAreaView>
@@ -89,13 +93,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   scroll: {
     paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.md,
     paddingBottom: 200,
     gap: Spacing.xl,
   },
-  field: {
-    gap: Spacing.sm,
+  hero: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
   },
+  heroTitle: {
+    fontFamily: FontFamily.display,
+    fontSize: 48,
+    lineHeight: 48,
+    color: Colors.ink,
+    letterSpacing: 1,
+  },
+  field: { gap: Spacing.sm },
   label: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,
