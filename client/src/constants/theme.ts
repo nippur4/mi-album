@@ -35,6 +35,7 @@ export const Colors = {
 
   // Éxito
   green: '#7FB83E',
+  greenLight: '#EAF3DC',         // tint para cards aceptadas / fondos suaves verdes
   greenTextDark: '#173405',
   greenTextSoft: '#5B8A26',
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, FontFamily } from '@/constants/theme';
@@ -38,8 +39,11 @@ function initials(s: string, max = 3): string {
 }
 
 export function Avatar({ source, size = 46, bgColor, style }: Props) {
-  const bg = bgColor ?? BG_PALETTE[hash(source) % BG_PALETTE.length];
-  const initialsText = initials(source);
+  const bg = useMemo(
+    () => bgColor ?? BG_PALETTE[hash(source) % BG_PALETTE.length],
+    [bgColor, source],
+  );
+  const initialsText = useMemo(() => initials(source), [source]);
   return (
     <View
       style={[

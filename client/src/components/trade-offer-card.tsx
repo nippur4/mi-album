@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   cardAccepted: {
-    backgroundColor: '#EAF3DC',
+    backgroundColor: Colors.greenLight,
     borderColor: Colors.green,
   },
   cardRejected: {

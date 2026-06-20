@@ -65,3 +65,39 @@ export function useDailyPackStatus(albumId: string | undefined) {
 export async function claimDailyPack(albumId: string) {
   return supabase.rpc('fn_claim_daily_pack', { p_album_id: albumId });
 }
+
+// Batch: una sola RPC para varios álbumes. Útil en el tab Sobres para evitar
+// N+1 (el hook singular hace 2 queries por álbum).
+export function useMyDailyStatusBatch(albumIds: string[]) {
+  const [byAlbum, setByAlbum] = useState<Map<string, DailyPackStatus>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+  const key = albumIds.slice().sort().join(',');
+
+  const refetch = useCallback(async () => {
+    if (albumIds.length === 0) {
+      setByAlbum(new Map());
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    const { data } = await supabase.rpc('fn_my_daily_status', { p_album_ids: albumIds });
+    const map = new Map<string, DailyPackStatus>();
+    for (const row of (data ?? []) as any[]) {
+      const nextMs = row.next_available_at ? new Date(row.next_available_at).getTime() : null;
+      map.set(row.album_id, {
+        enabled: !!row.enabled,
+        canClaim: !!row.enabled && (nextMs === null || nextMs <= Date.now()),
+        nextAvailableAt: nextMs,
+        count: Number(row.count ?? 1),
+        cooldownHours: Number(row.cooldown_hours ?? 24),
+      });
+    }
+    setByAlbum(map);
+    setIsLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { byAlbum, isLoading, refetch };
+}

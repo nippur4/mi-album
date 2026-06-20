@@ -7,6 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { DailyAlbumRow } from '@/components/daily-album-row';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
+import { useMyDailyStatusBatch } from '@/lib/queries/daily';
 import { useMyOpenPacksByAlbum } from '@/lib/queries/packs-by-album';
 
 export default function PacksTab() {
@@ -21,10 +22,15 @@ export default function PacksTab() {
     (a) => !owned.some((o) => o.id === a.id) && a.status === 'published',
   );
 
+  // Batch fetch del status del daily (evita N+1: antes hacíamos 2 queries × N álbumes)
+  const playableIds = playable.map((a) => a.id);
+  const { byAlbum: dailyByAlbum, refetch: refetchDaily } = useMyDailyStatusBatch(playableIds);
+
   useFocusEffect(useCallback(() => {
     refetchPending();
     refetchJoined();
-  }, [refetchPending, refetchJoined]));
+    refetchDaily();
+  }, [refetchPending, refetchJoined, refetchDaily]));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -70,13 +76,21 @@ export default function PacksTab() {
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.sectionLabel}>SOBRE DIARIO GRATIS</Text>
             <View style={{ gap: Spacing.listGap }}>
-              {playable.map((a) => (
-                <DailyAlbumRow
-                  key={a.id}
-                  album={a}
-                  onClaimed={() => refetchPending()}
-                />
-              ))}
+              {playable.map((a) => {
+                const status = dailyByAlbum.get(a.id);
+                if (!status) return null;
+                return (
+                  <DailyAlbumRow
+                    key={a.id}
+                    album={a}
+                    status={status}
+                    onClaimed={() => {
+                      refetchPending();
+                      refetchDaily();
+                    }}
+                  />
+                );
+              })}
             </View>
           </View>
         )}

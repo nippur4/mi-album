@@ -3,19 +3,22 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '@/components/avatar';
 import { Countdown } from '@/components/countdown';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { claimDailyPack, useDailyPackStatus } from '@/lib/queries/daily';
+import { claimDailyPack, type DailyPackStatus } from '@/lib/queries/daily';
 import { errorMessage } from '@/lib/errors';
 import { useState } from 'react';
 import type { Album } from '@/lib/queries/albums';
 
 interface Props {
   album: Album;
+  // Status del daily para este álbum. Si no se pasa, no se renderiza nada
+  // (el caller usa el hook batch y filtra antes de renderizar).
+  status: DailyPackStatus;
   onClaimed?: () => void;
 }
 
 // Row del tab Sobres: muestra el daily de un álbum (ready / countdown / off).
-export function DailyAlbumRow({ album, onClaimed }: Props) {
-  const { status, refetch } = useDailyPackStatus(album.id);
+// El status se inyecta por prop (batch fetch desde el caller, evita N+1).
+export function DailyAlbumRow({ album, status, onClaimed }: Props) {
   const [claiming, setClaiming] = useState(false);
 
   if (!status.enabled) return null;
@@ -28,7 +31,6 @@ export function DailyAlbumRow({ album, onClaimed }: Props) {
       Alert.alert('No se pudo reclamar', errorMessage(error));
       return;
     }
-    refetch();
     onClaimed?.();
   }
 

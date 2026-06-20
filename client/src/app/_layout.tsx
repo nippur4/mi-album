@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="join" />
         <Stack.Screen name="pack" />
         <Stack.Screen name="trade" />
+        <Stack.Screen name="admin" />
       </Stack>
     </>
   );

@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   cardReceive: {
-    backgroundColor: '#EAF3DC',
+    backgroundColor: Colors.greenLight,
     borderColor: Colors.green,
   },
   label: {

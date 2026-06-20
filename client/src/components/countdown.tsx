@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 
 import { Colors, FontFamily, FontSize } from '@/constants/theme';
+import { useNow } from '@/lib/use-now';
 
 interface Props {
   // ms epoch al que apunta el contador
@@ -10,16 +11,13 @@ interface Props {
   onReachZero?: () => void;
 }
 
-// Muestra HH:MM:SS en mono. Tick cada segundo.
+// Muestra HH:MM:SS en mono. Usa el singleton useNow() para no crear un
+// setInterval por instancia (importante si hay muchos countdowns en una
+// misma pantalla, ej. tab Sobres).
 export function Countdown({ target, style, onReachZero }: Props) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
+  const now = useNow();
   const remaining = Math.max(0, target - now);
+
   useEffect(() => {
     if (remaining === 0 && onReachZero) onReachZero();
   }, [remaining, onReachZero]);
