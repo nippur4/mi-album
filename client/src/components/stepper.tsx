@@ -9,13 +9,15 @@ interface Props {
   min?: number;
   max?: number;
   step?: number;
+  // Si se provee, los botones ± saltan los valores que estén en el set.
+  // Si tipeás un valor excluido, al perder foco se ajusta al próximo disponible.
+  excluded?: Set<number>;
 }
 
-// Stepper editable: los botones ± mueven por `step`, pero el input central
-// también acepta tipear cualquier número entero. Al salir del foco, clampea
-// a [min, max] (durante la edición permite valores intermedios para que el
-// teclado no salte mientras tipeás).
-export function Stepper({ value, onChange, min = 1, max = 1000, step = 1 }: Props) {
+// Stepper editable: los botones ± mueven por `step` (saltando excluidos si
+// se pasan), el input central acepta tipear cualquier número entero y al
+// perder foco clampea + salta al próximo disponible si tipeaste uno excluido.
+export function Stepper({ value, onChange, min = 1, max = 1000, step = 1, excluded }: Props) {
   const [text, setText] = useState(String(value));
   const [focused, setFocused] = useState(false);
 
@@ -23,8 +25,20 @@ export function Stepper({ value, onChange, min = 1, max = 1000, step = 1 }: Prop
     if (!focused) setText(String(value));
   }, [value, focused]);
 
-  const canDec = value - step >= min;
-  const canInc = value + step <= max;
+  // Próximo valor permitido (no excluido) avanzando `dir`. null si no hay.
+  function nextAllowed(start: number, dir: 1 | -1): number | null {
+    let n = start;
+    while (n >= min && n <= max) {
+      if (!excluded?.has(n)) return n;
+      n += dir;
+    }
+    return null;
+  }
+
+  const candidateDec = nextAllowed(value - step, -1);
+  const candidateInc = nextAllowed(value + step, 1);
+  const canDec = candidateDec !== null;
+  const canInc = candidateInc !== null;
 
   function clamp(n: number) {
     if (n < min) return min;
@@ -34,7 +48,11 @@ export function Stepper({ value, onChange, min = 1, max = 1000, step = 1 }: Prop
 
   function commitText() {
     const parsed = parseInt(text.replace(/[^0-9]/g, ''), 10);
-    const next = Number.isFinite(parsed) ? clamp(parsed) : min;
+    const intended = Number.isFinite(parsed) ? clamp(parsed) : min;
+    let next = intended;
+    if (excluded?.has(next)) {
+      next = nextAllowed(intended, 1) ?? nextAllowed(intended, -1) ?? intended;
+    }
     onChange(next);
     setText(String(next));
   }
@@ -42,7 +60,7 @@ export function Stepper({ value, onChange, min = 1, max = 1000, step = 1 }: Prop
   return (
     <View style={styles.row}>
       <Pressable
-        onPress={() => canDec && onChange(value - step)}
+        onPress={() => canDec && onChange(candidateDec!)}
         disabled={!canDec}
         style={({ pressed }) => [styles.btn, pressed && styles.btnPressed, !canDec && styles.btnDisabled]}
       >
@@ -62,7 +80,7 @@ export function Stepper({ value, onChange, min = 1, max = 1000, step = 1 }: Prop
         textAlign="center"
       />
       <Pressable
-        onPress={() => canInc && onChange(value + step)}
+        onPress={() => canInc && onChange(candidateInc!)}
         disabled={!canInc}
         style={({ pressed }) => [styles.btn, pressed && styles.btnPressed, !canInc && styles.btnDisabled]}
       >

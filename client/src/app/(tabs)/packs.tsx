@@ -1,9 +1,11 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { Button } from '@/components/button';
 import { DailyAlbumRow } from '@/components/daily-album-row';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
@@ -39,6 +41,19 @@ export default function PacksTab() {
           <Text style={styles.kicker}>SOBRES</Text>
           <Text style={styles.title}>POR ABRIR</Text>
         </View>
+
+        {/* Acceso rápido a escanear QR de owner */}
+        <Pressable
+          onPress={() => router.push('/pack/scan')}
+          style={({ pressed }) => [styles.scanRow, pressed && styles.pressed]}
+        >
+          <Feather name="camera" size={20} color={Colors.paper} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.scanTitle}>Escanear QR del owner</Text>
+            <Text style={styles.scanSub}>Sumá sobres extra escaneando un QR.</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={Colors.paper} />
+        </Pressable>
 
         {/* Sobres pendientes (sin abrir) por álbum */}
         {items.length === 0 ? (
@@ -182,5 +197,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.paper,
     letterSpacing: 0.5,
+  },
+  scanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.ink,
+    borderRadius: Radius.cardLg,
+    padding: Spacing.md,
+  },
+  scanTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.paper,
+  },
+  scanSub: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.muted,
+    marginTop: 2,
   },
 });

@@ -1,9 +1,12 @@
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
+import { PresetBackground } from '@/components/preset-background';
 import { ProgressBar } from '@/components/progress-bar';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Album } from '@/lib/queries/albums';
+import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
 interface Props {
   album: Album;
@@ -24,7 +27,7 @@ export function AlbumCard({ album, progress, counter, roleTag, onPress }: Props)
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <Avatar source={album.name} />
+      <AlbumThumb album={album} />
       <View style={styles.center}>
         <View style={styles.titleRow}>
           <Text style={styles.name} numberOfLines={1}>{album.name}</Text>
@@ -41,6 +44,28 @@ export function AlbumCard({ album, progress, counter, roleTag, onPress }: Props)
         </View>
       )}
     </Pressable>
+  );
+}
+
+// Thumbnail circular del álbum: usa la carátula (preset o imagen R2). Si el
+// álbum aún no tiene carátula (típicamente en draft), fallback al Avatar
+// con iniciales del nombre.
+function AlbumThumb({ album }: { album: Album }) {
+  const key = album.cover_thumb_key;
+  if (!key) return <Avatar source={album.name} />;
+  if (isPreset(key)) {
+    return (
+      <View style={styles.thumb}>
+        <PresetBackground id={presetIdFromKey(key)} />
+      </View>
+    );
+  }
+  const url = r2Url(key);
+  if (!url) return <Avatar source={album.name} />;
+  return (
+    <View style={styles.thumb}>
+      <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+    </View>
   );
 }
 
@@ -97,5 +122,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.monoLabel,
     color: Colors.muted,
     lineHeight: 12,
+  },
+  thumb: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    overflow: 'hidden',
+    backgroundColor: Colors.paper2,
   },
 });

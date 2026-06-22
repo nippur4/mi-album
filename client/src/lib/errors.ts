@@ -61,6 +61,11 @@ export type AppErrorKey =
   | 'same_sticker_offered_and_requested'
   | 'duplicate_pending_offer'
   | 'stock_unavailable'
+  // Profile
+  | 'display_name_too_short'
+  | 'display_name_too_long'
+  | 'display_name_invalid_chars'
+  | 'display_name_taken'
   // Catch-all
   | 'unknown';
 
@@ -111,6 +116,10 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0120: 'duplicate_pending_offer',
   P0121: 'invalid_action',
   P0130: 'sticker_not_owned',
+  P0140: 'display_name_too_short',
+  P0141: 'display_name_too_long',
+  P0142: 'display_name_invalid_chars',
+  P0143: 'display_name_taken',
 };
 
 export interface AppError {
@@ -187,6 +196,10 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   same_sticker_offered_and_requested: 'No podés pedir la misma figurita que ofrecés.',
   duplicate_pending_offer: 'Ya tenés una oferta igual pendiente.',
   stock_unavailable: 'Una de las figuritas ya no está disponible.',
+  display_name_too_short: 'El nombre tiene que tener al menos 2 caracteres.',
+  display_name_too_long: 'El nombre no puede tener más de 40 caracteres.',
+  display_name_invalid_chars: 'El nombre solo puede tener letras, números, espacios, puntos y guiones.',
+  display_name_taken: 'Ese nombre ya está en uso. Probá otro.',
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 

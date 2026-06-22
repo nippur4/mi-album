@@ -69,6 +69,7 @@ export function ImageUploadCard({
   const isPresetKey = isPreset(thumbKey);
   const showLoader = busy || picking;
   const ratio = aspect[0] / aspect[1];
+  const hasContent = isPresetKey || !!url;
 
   return (
     <Pressable onPress={pick} disabled={showLoader} style={[styles.card, { aspectRatio: ratio }]}>
@@ -81,6 +82,13 @@ export function ImageUploadCard({
           <Text style={styles.plus}>+</Text>
           <Text style={styles.label}>{label}</Text>
           {hint && <Text style={styles.hint}>{hint}</Text>}
+        </View>
+      )}
+      {/* Badge arriba con el label, visible siempre que haya contenido. Sin
+          contenido el label central ya lo cubre, así no duplicamos. */}
+      {hasContent && (
+        <View style={styles.labelBadge}>
+          <Text style={styles.labelBadgeText}>{label.toUpperCase()}</Text>
         </View>
       )}
       {showLoader && (
@@ -134,5 +142,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42,30,22,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  labelBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: 'rgba(42,30,22,0.7)',
+    borderRadius: 4,
+  },
+  labelBadgeText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.paper,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
 });

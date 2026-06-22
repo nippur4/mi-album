@@ -17,10 +17,12 @@ import {
   usePublicAlbums,
   type Album,
 } from '@/lib/queries/albums';
+import { useMyProfile } from '@/lib/queries/profile';
 
 export default function HomeTab() {
   const router = useRouter();
   const { session } = useSession();
+  const { profile } = useMyProfile();
   const { albums: owned, refetch: refetchOwned, isLoading: loadingOwned } = useMyOwnedAlbums();
   const { albums: joined, refetch: refetchJoined, isLoading: loadingJoined } = useMyMemberAlbums();
   const { albums: publics, refetch: refetchPublics, isLoading: loadingPublics } = usePublicAlbums();
@@ -48,6 +50,7 @@ export default function HomeTab() {
   ];
 
   const displayName =
+    profile?.display_name ??
     (session?.user.user_metadata?.display_name as string | undefined) ??
     session?.user.email?.split('@')[0] ??
     '';

@@ -17,6 +17,7 @@ import { EditTotalModal } from '@/components/edit-total-modal';
 import { ImageUploadCard } from '@/components/image-upload-card';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
 import { ProgressCard } from '@/components/progress-card';
+import { QrPosterModal } from '@/components/qr-poster-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { StickerCell, StickerCellEmpty } from '@/components/sticker-cell';
@@ -27,6 +28,7 @@ import {
   type Album,
   type Sticker,
 } from '@/lib/queries/albums';
+import { enableQrForAlbum } from '@/lib/queries/qr';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
 import { makePresetKey } from '@/lib/storage';
@@ -48,6 +50,8 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [coverBusy, setCoverBusy] = useState(false);
   const [packBusy, setPackBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [enablingQr, setEnablingQr] = useState(false);
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
 
@@ -178,6 +182,26 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           </View>
         )}
 
+        {album.status === 'published' && (
+          <QrSection
+            isPro={isPro}
+            qrEnabled={(album.pack_config as any)?.qr?.enabled === true}
+            enabling={enablingQr}
+            onShow={() => setShowQr(true)}
+            onEnable={async () => {
+              setEnablingQr(true);
+              try {
+                await enableQrForAlbum(album.id);
+                await refetch();
+              } catch (err: any) {
+                Alert.alert('No se pudo activar', errorMessage(err));
+              } finally {
+                setEnablingQr(false);
+              }
+            }}
+          />
+        )}
+
         {isDraft && (
           <>
             <View style={styles.section}>
@@ -256,11 +280,13 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 {gridCells.map((n) => {
                   const s = stickerByNumber.get(n);
                   if (s) {
+                    // Siempre permitir abrir la figurita. El thin router en
+                    // [id].tsx bifurca: owner+draft → editor, sino → vista grande.
                     return (
                       <View key={n} style={styles.gridCell}>
                         <StickerCell
                           sticker={s}
-                          onPress={isDraft ? () => router.push(`/sticker/${s.id}`) : undefined}
+                          onPress={() => router.push(`/sticker/${s.id}`)}
                         />
                       </View>
                     );
@@ -269,7 +295,11 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                     <View key={n} style={styles.gridCell}>
                       <StickerCellEmpty
                         number={n}
-                        onPress={isDraft ? () => router.push(`/sticker/new?albumId=${album.id}`) : undefined}
+                        onPress={
+                          isDraft
+                            ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
+                            : undefined
+                        }
                       />
                     </View>
                   );
@@ -302,6 +332,13 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         onSave={onSaveTotal}
       />
 
+      <QrPosterModal
+        visible={showQr}
+        albumId={album.id}
+        albumName={album.name}
+        onClose={() => setShowQr(false)}
+      />
+
       <View style={styles.footer}>
         {isDraft && (
           <>
@@ -330,6 +367,94 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     </SafeAreaView>
   );
 }
+
+// Sección QR de sobres: muestra el botón apropiado según estado pro + qr_enabled.
+function QrSection({
+  isPro,
+  qrEnabled,
+  enabling,
+  onShow,
+  onEnable,
+}: {
+  isPro: boolean;
+  qrEnabled: boolean;
+  enabling: boolean;
+  onShow: () => void;
+  onEnable: () => void;
+}) {
+  return (
+    <View style={qrStyles.card}>
+      <View style={qrStyles.head}>
+        <Text style={qrStyles.label}>QR DE SOBRES</Text>
+        {!isPro && <Text style={qrStyles.proBadge}>PRO</Text>}
+      </View>
+      {!isPro ? (
+        <Text style={qrStyles.hint}>
+          Generá un QR para que jugadores escaneen y reciban sobres en eventos o
+          espacios físicos. Función Pro.
+        </Text>
+      ) : qrEnabled ? (
+        <>
+          <Text style={qrStyles.hint}>
+            Mostrá el QR a los jugadores para que reciban sobres escaneando.
+          </Text>
+          <Button label="Mostrar QR" variant="gold" onPress={onShow} />
+        </>
+      ) : (
+        <>
+          <Text style={qrStyles.hint}>
+            Activá el QR para empezar a distribuir sobres por escaneo.
+          </Text>
+          <Button
+            label={enabling ? 'Activando...' : 'Activar QR'}
+            onPress={onEnable}
+            disabled={enabling}
+            loading={enabling}
+          />
+        </>
+      )}
+    </View>
+  );
+}
+
+const qrStyles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  head: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  label: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  proBadge: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.ink,
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    letterSpacing: 1.5,
+    fontWeight: '800',
+  },
+  hint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },

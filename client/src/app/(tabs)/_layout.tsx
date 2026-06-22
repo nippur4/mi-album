@@ -1,11 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, FontFamily } from '@/constants/theme';
 
 // Tabs custom para tener control total del look (iconos lucide-style + labels
 // en Space Mono coherentes con el handoff).
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -17,7 +19,10 @@ export default function TabsLayout() {
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           paddingTop: 6,
-          height: 64,
+          // Sumamos el inset inferior para que el tab bar no se solape con la
+          // gesture bar de Android / home indicator de iOS.
+          paddingBottom: insets.bottom,
+          height: 64 + insets.bottom,
         },
         tabBarLabelStyle: {
           fontFamily: FontFamily.mono,

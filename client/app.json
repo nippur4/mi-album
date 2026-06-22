@@ -36,6 +36,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Necesitamos la cámara para escanear el QR de sobres del owner."
+        }
       ]
     ],
     "experiments": {

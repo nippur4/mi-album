@@ -489,6 +489,19 @@ export type Database = {
         }
         Returns: string
       }
+      fn_admin_list_published_albums: {
+        Args: never
+        Returns: {
+          id: string
+          is_public: boolean
+          member_count: number
+          name: string
+          owner_id: string
+          owner_name: string
+          published_at: string
+          total_stickers: number
+        }[]
+      }
       fn_album_matches: {
         Args: { p_album_id: string; p_limit?: number }
         Returns: {
@@ -505,6 +518,15 @@ export type Database = {
           they_give_sticker_number: number
           they_give_sticker_rarity: Database["public"]["Enums"]["sticker_rarity"]
           they_give_sticker_thumb_key: string
+        }[]
+      }
+      fn_album_progress: {
+        Args: { p_album_ids: string[] }
+        Returns: {
+          album_id: string
+          my_pasted_count: number
+          stickers_loaded: number
+          total_stickers: number
         }[]
       }
       fn_apply_pack_open: {
@@ -583,6 +605,16 @@ export type Database = {
       }
       fn_is_pro: { Args: { p_user: string }; Returns: boolean }
       fn_join_album: { Args: { p_share_code: string }; Returns: Json }
+      fn_my_daily_status: {
+        Args: { p_album_ids: string[] }
+        Returns: {
+          album_id: string
+          cooldown_hours: number
+          count: number
+          enabled: boolean
+          next_available_at: string
+        }[]
+      }
       fn_paste_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
       fn_publish_album: { Args: { p_album_id: string }; Returns: undefined }
       fn_resolve_trade_offer: {

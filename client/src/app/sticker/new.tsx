@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -24,21 +24,41 @@ import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
 import { errorMessage } from '@/lib/errors';
 
 export default function NewStickerScreen() {
-  const { albumId } = useLocalSearchParams<{ albumId: string }>();
+  const { albumId, number: numberParam } = useLocalSearchParams<{
+    albumId: string;
+    number?: string;
+  }>();
   const router = useRouter();
   const { album, stickers } = useAlbumDetail(albumId);
   const { isPro } = useIsPro();
 
-  // Próximo número libre como sugerencia inicial
+  // Set de números ya ocupados — el Stepper los saltará
   const usedNumbers = new Set(stickers.map((s) => s.number));
-  const suggested = nextFreeNumber(usedNumbers, album?.total_stickers ?? 1);
 
-  const [number, setNumber] = useState(suggested);
+  const [number, setNumber] = useState(() => {
+    const fromParam = numberParam ? parseInt(numberParam, 10) : NaN;
+    return Number.isFinite(fromParam) && fromParam >= 1 ? fromParam : 1;
+  });
   const [name, setName] = useState('');
   const [rarity, setRarity] = useState<Rarity>('common');
   const [keys, setKeys] = useState<UploadedKeys | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Cuando se cargan los stickers, si no llegó número por param,
+  // ajustamos al próximo libre. Solo una vez (initialSetRef).
+  const initialSetRef = useRef(false);
+  useEffect(() => {
+    if (initialSetRef.current) return;
+    if (!album) return;
+    if (numberParam) {
+      initialSetRef.current = true;
+      return;
+    }
+    setNumber(nextFreeNumber(usedNumbers, album.total_stickers));
+    initialSetRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [album, stickers.length]);
 
   // Free no puede elegir rareza: forzamos a 'common'.
   useEffect(() => {
@@ -108,7 +128,14 @@ export default function NewStickerScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>NÚMERO</Text>
-          <Stepper value={number} onChange={setNumber} min={1} max={max} step={1} />
+          <Stepper
+            value={number}
+            onChange={setNumber}
+            min={1}
+            max={max}
+            step={1}
+            excluded={usedNumbers}
+          />
           {numberTaken && (
             <Text style={styles.warn}>Ese número ya está cargado en este álbum.</Text>
           )}
