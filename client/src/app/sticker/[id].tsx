@@ -9,8 +9,8 @@ import { useSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useSticker } from '@/lib/queries/stickers';
 
-import { EditStickerView } from './_edit-mode';
-import { ViewStickerView } from './_view-mode';
+import { EditStickerView } from '@/components/sticker-edit-mode';
+import { ViewStickerView } from '@/components/sticker-view-mode';
 
 // Router del detalle de figurita: carga sticker + album mínimo y bifurca.
 // Owner del álbum (en draft) → editor. Resto → vista grande con foil.

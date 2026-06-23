@@ -9,8 +9,8 @@ import { useSession } from '@/lib/auth';
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { errorMessage } from '@/lib/errors';
 
-import { OwnerAlbumView } from './_owner-view';
-import { UserAlbumView } from './_user-view';
+import { OwnerAlbumView } from '@/components/album-owner-view';
+import { UserAlbumView } from '@/components/album-user-view';
 
 // Router del detalle del álbum: carga el álbum y bifurca según el caller sea
 // el owner o un miembro. La lógica de cada vista vive en los archivos `_*-view.tsx`.
