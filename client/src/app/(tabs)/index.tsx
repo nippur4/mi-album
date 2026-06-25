@@ -15,7 +15,6 @@ import {
   useMyMemberAlbums,
   useMyOwnedAlbums,
   usePublicAlbums,
-  type Album,
 } from '@/lib/queries/albums';
 import { useMyProfile } from '@/lib/queries/profile';
 
@@ -42,12 +41,10 @@ export default function HomeTab() {
 
   useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
 
-  // "Mis álbumes" = owned + joined (unificado, owned primero)
+  // Separamos en dos sub-secciones: "Donde jugás" (member) y "Tuyos" (owner)
   const ownedIds = new Set(owned.map((a) => a.id));
-  const mine: Array<{ album: Album; role: 'owner' | 'member' }> = [
-    ...owned.map((a) => ({ album: a, role: 'owner' as const })),
-    ...joined.filter((a) => !ownedIds.has(a.id)).map((a) => ({ album: a, role: 'member' as const })),
-  ];
+  const joinedAlbums = joined.filter((a) => !ownedIds.has(a.id));
+  const hasAny = owned.length > 0 || joinedAlbums.length > 0;
 
   const displayName =
     profile?.display_name ??
@@ -103,21 +100,14 @@ export default function HomeTab() {
           </View>
         )}
 
-        {/* Mis álbumes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Mis álbumes</Text>
-          {mine.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Todavía no tenés álbumes.</Text>
-              <Text style={styles.emptyBody}>Creá uno o unite con un código.</Text>
-            </View>
-          ) : (
+        {/* Donde jugás */}
+        {joinedAlbums.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Donde jugás</Text>
             <View style={{ gap: Spacing.listGap }}>
-              {mine.map(({ album, role }) => {
+              {joinedAlbums.map((album) => {
                 const p = progressMap[album.id];
-                const current = role === 'owner'
-                  ? (p?.stickers_loaded ?? 0)
-                  : (p?.my_pasted_count ?? 0);
+                const current = p?.my_pasted_count ?? 0;
                 const total = p?.total_stickers ?? album.total_stickers;
                 const progress = total > 0 ? current / total : 0;
                 return (
@@ -126,14 +116,44 @@ export default function HomeTab() {
                     album={album}
                     progress={progress}
                     counter={{ current, total }}
-                    roleTag={role === 'owner' ? 'TUYO' : 'JUGÁS'}
                     onPress={() => router.push(`/album/${album.id}`)}
                   />
                 );
               })}
             </View>
-          )}
-        </View>
+          </View>
+        )}
+
+        {/* Tus álbumes (owner) */}
+        {owned.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Tus álbumes</Text>
+            <View style={{ gap: Spacing.listGap }}>
+              {owned.map((album) => {
+                const p = progressMap[album.id];
+                const current = p?.stickers_loaded ?? 0;
+                const total = p?.total_stickers ?? album.total_stickers;
+                const progress = total > 0 ? current / total : 0;
+                return (
+                  <AlbumCard
+                    key={album.id}
+                    album={album}
+                    progress={progress}
+                    counter={{ current, total }}
+                    onPress={() => router.push(`/album/${album.id}`)}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {!hasAny && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Todavía no tenés álbumes.</Text>
+            <Text style={styles.emptyBody}>Creá uno o unite con un código.</Text>
+          </View>
+        )}
 
         <JoinCodeInput onJoined={(albumId) => router.push(`/album/${albumId}`)} />
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -32,7 +32,10 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.inner}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.inner}
+      >
         <View style={styles.hero}>
           <Text style={styles.kicker}>Mi álbum de</Text>
           <Text style={styles.title}>FIGURITAS</Text>
@@ -77,7 +80,7 @@ export default function Login() {
             </Text>
           </View>
         )}
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

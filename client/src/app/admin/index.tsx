@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,11 +16,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { ScreenHeader } from '@/components/screen-header';
+import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { setAlbumPublic, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
 import { errorMessage } from '@/lib/errors';
 
 export default function AdminScreen() {
+  const router = useRouter();
   const { albums, isLoading, error, refetch } = useAdminAlbums();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -33,8 +36,8 @@ export default function AdminScreen() {
       />
       <View style={styles.intro}>
         <Text style={styles.introText}>
-          Marcá un álbum como público para que aparezca en el carrusel del Landing.
-          Privado = solo accesible con código.
+          Marcá un álbum publicado como público para que aparezca en el carrusel del Landing.
+          Los borradores y pausados no pueden volverse públicos hasta que el owner los publique.
         </Text>
       </View>
 
@@ -44,6 +47,22 @@ export default function AdminScreen() {
           <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />
         }
       >
+        <Pressable
+          onPress={() => router.push('/admin/presets')}
+          style={styles.menuItem}
+        >
+          <Feather name="image" size={20} color={Colors.ink} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuTitle}>Plantillas de imágenes</Text>
+            <Text style={styles.menuSubtitle}>
+              Carátulas y sobres por defecto disponibles para todos los owners.
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={Colors.muted} />
+        </Pressable>
+
+        <Text style={styles.sectionLabel}>ÁLBUMES</Text>
+
         {error ? (
           <View style={styles.center}>
             <Text style={styles.errorText}>{errorMessage({ message: error })}</Text>
@@ -73,6 +92,9 @@ function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: 
   const [busy, setBusy] = useState(false);
   const [optimistic, setOptimistic] = useState<boolean>(row.is_public);
 
+  // Solo álbumes published pueden ser públicos (el RPC también lo enforza).
+  const canToggle = row.status === 'published';
+
   async function onToggle(next: boolean) {
     setOptimistic(next);
     setBusy(true);
@@ -91,6 +113,9 @@ function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: 
       <Avatar source={row.name} size={42} />
       <View style={styles.center2}>
         <Text style={styles.name} numberOfLines={1}>{row.name}</Text>
+        <View style={styles.badgeRow}>
+          <StatusBadge variant={row.status as any} />
+        </View>
         <Text style={styles.meta}>
           {row.total_stickers} figus · @{row.owner_name} · {row.member_count} jugando
         </Text>
@@ -98,7 +123,7 @@ function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: 
       <Switch
         value={optimistic}
         onValueChange={onToggle}
-        disabled={busy}
+        disabled={busy || !canToggle}
         trackColor={{ true: Colors.green, false: Colors.paper3 }}
         thumbColor={optimistic ? Colors.paper : Colors.paper2}
       />
@@ -122,6 +147,36 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingBottom: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+  },
+  menuTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  menuSubtitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    marginTop: 2,
+  },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    marginTop: Spacing.sm,
   },
   center: {
     paddingTop: Spacing.xxl,
@@ -162,7 +217,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
   },
-  center2: { flex: 1, gap: 2 },
+  center2: { flex: 1, gap: 4 },
+  badgeRow: { flexDirection: 'row', marginVertical: 2 },
   name: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,

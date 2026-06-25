@@ -14,9 +14,11 @@ export interface AdminAlbumRow {
   name: string;
   owner_id: string;
   owner_name: string;
+  status: 'draft' | 'published' | 'read_only' | 'archived';
   is_public: boolean;
   total_stickers: number;
   published_at: string | null;
+  created_at: string;
   member_count: number;
 }
 
@@ -53,7 +55,7 @@ export function useAdminAlbums() {
   const refetch = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const { data, error } = await supabase.rpc('fn_admin_list_published_albums');
+    const { data, error } = await supabase.rpc('fn_admin_list_albums');
     if (error) {
       setError(error.message);
       setAlbums([]);

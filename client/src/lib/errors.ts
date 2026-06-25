@@ -66,6 +66,9 @@ export type AppErrorKey =
   | 'display_name_too_long'
   | 'display_name_invalid_chars'
   | 'display_name_taken'
+  // Presets admin
+  | 'invalid_kind'
+  | 'preset_not_found'
   // Catch-all
   | 'unknown';
 
@@ -120,6 +123,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0141: 'display_name_too_long',
   P0142: 'display_name_invalid_chars',
   P0143: 'display_name_taken',
+  P0150: 'invalid_kind',
+  P0151: 'preset_not_found',
 };
 
 export interface AppError {
@@ -200,6 +205,8 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   display_name_too_long: 'El nombre no puede tener más de 40 caracteres.',
   display_name_invalid_chars: 'El nombre solo puede tener letras, números, espacios, puntos y guiones.',
   display_name_taken: 'Ese nombre ya está en uso. Probá otro.',
+  invalid_kind: 'Tipo de plantilla inválido.',
+  preset_not_found: 'No encontramos esa plantilla.',
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 

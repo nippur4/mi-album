@@ -120,3 +120,51 @@ export async function uploadImage(
   }
   return body as UploadedKeys;
 }
+
+export interface UploadedPreset {
+  preset_id: string;
+  thumb_key: string;
+  large_key: string;
+}
+
+export async function uploadPresetImage(
+  kind: 'cover' | 'pack',
+  asset: UploadAsset,
+): Promise<UploadedPreset> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw { error: 'auth_required' };
+
+  const sizes = SIZES[kind];
+  const [thumb_base64, large_base64] = await Promise.all([
+    resizeToBase64(asset.uri, sizes.thumb),
+    resizeToBase64(asset.uri, sizes.large),
+  ]);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+  let res: Response;
+  try {
+    res = await fetch(`${env.supabaseUrl}/functions/v1/upload_preset_image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: env.supabaseAnonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ kind, thumb_base64, large_base64 }),
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    clearTimeout(timeout);
+    if (err?.name === 'AbortError') throw { error: 'upload_timeout_60s' };
+    throw { error: `fetch_failed: ${err?.message ?? String(err)}` };
+  }
+  clearTimeout(timeout);
+
+  const text = await res.text();
+  let body: any = {};
+  try { body = JSON.parse(text); } catch {}
+  if (!res.ok) throw { error: body.error ?? `upload_failed_${res.status}` };
+  return body as UploadedPreset;
+}

@@ -31,7 +31,6 @@ import {
 import { enableQrForAlbum } from '@/lib/queries/qr';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
-import { makePresetKey } from '@/lib/storage';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {
@@ -114,13 +113,12 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     }
   }
 
-  async function onPresetSelected(presetId: string) {
+  async function onPresetSelected(keys: { thumb_key: string; large_key: string }) {
     if (!presetFor) return;
-    const key = makePresetKey(presetId);
     const patch =
       presetFor === 'cover'
-        ? { cover_thumb_key: key, cover_large_key: key }
-        : { pack_thumb_key: key, pack_large_key: key };
+        ? { cover_thumb_key: keys.thumb_key, cover_large_key: keys.large_key }
+        : { pack_thumb_key: keys.thumb_key, pack_large_key: keys.large_key };
     if (presetFor === 'cover') setCoverBusy(true);
     else setPackBusy(true);
     try {
@@ -319,6 +317,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
       <PresetPickerModal
         visible={presetFor !== null}
+        kind={presetFor}
         onClose={() => setPresetFor(null)}
         onSelect={onPresetSelected}
       />
