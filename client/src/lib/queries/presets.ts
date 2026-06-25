@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
 
-export type PresetKind = 'cover' | 'pack';
+export type PresetKind = 'cover' | 'pack' | 'avatar';
 
 export interface PresetImage {
   id: string;

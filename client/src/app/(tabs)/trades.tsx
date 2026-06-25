@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderAvatar } from '@/components/header-avatar';
 import { SegmentedControl } from '@/components/segmented-control';
 import { TradeOfferCard } from '@/components/trade-offer-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
@@ -27,8 +28,11 @@ export default function TradesTab() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />}
       >
         <View style={styles.header}>
-          <Text style={styles.kicker}>INTERCAMBIO</Text>
-          <Text style={styles.title}>OFERTAS</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.kicker}>INTERCAMBIO</Text>
+            <Text style={styles.title}>OFERTAS</Text>
+          </View>
+          <HeaderAvatar size={44} />
         </View>
 
         <SegmentedControl
@@ -73,7 +77,12 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
     gap: Spacing.lg,
   },
-  header: { gap: Spacing.xs },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerText: { gap: Spacing.xs, flex: 1 },
   kicker: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,

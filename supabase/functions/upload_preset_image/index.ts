@@ -22,7 +22,7 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { AwsClient } from 'https://esm.sh/aws4fetch@1.0.20';
 
-type Kind = 'cover' | 'pack';
+type Kind = 'cover' | 'pack' | 'avatar';
 
 const MAX_BYTES_PER_FILE = 10 * 1024 * 1024;
 
@@ -75,7 +75,9 @@ serve(async (req) => {
   const thumbB64 = payload.thumb_base64;
   const largeB64 = payload.large_base64;
 
-  if (kindRaw !== 'cover' && kindRaw !== 'pack') return jsonError('invalid_kind', 400);
+  if (kindRaw !== 'cover' && kindRaw !== 'pack' && kindRaw !== 'avatar') {
+    return jsonError('invalid_kind', 400);
+  }
   if (typeof thumbB64 !== 'string' || thumbB64.length === 0) return jsonError('thumb_required', 400);
   if (typeof largeB64 !== 'string' || largeB64.length === 0) return jsonError('large_required', 400);
   const kind = kindRaw as Kind;

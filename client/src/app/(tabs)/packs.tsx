@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { DailyAlbumRow } from '@/components/daily-album-row';
+import { HeaderAvatar } from '@/components/header-avatar';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
 import { useMyDailyStatusBatch } from '@/lib/queries/daily';
@@ -38,8 +39,11 @@ export default function PacksTab() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>SOBRES</Text>
-          <Text style={styles.title}>POR ABRIR</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.kicker}>SOBRES</Text>
+            <Text style={styles.title}>POR ABRIR</Text>
+          </View>
+          <HeaderAvatar size={44} />
         </View>
 
         {/* Acceso rápido a escanear QR de owner */}
@@ -122,7 +126,12 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
     gap: Spacing.xl,
   },
-  header: { gap: Spacing.xs },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerText: { gap: Spacing.xs, flex: 1 },
   kicker: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,

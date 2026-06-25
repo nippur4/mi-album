@@ -45,7 +45,8 @@ export default function AdminPresetsScreen() {
       Alert.alert('Permiso requerido', 'Necesitamos acceso a tus fotos.');
       return;
     }
-    const aspect: [number, number] = kind === 'cover' ? [4, 5] : [3, 4];
+    const aspect: [number, number] =
+      kind === 'cover' ? [4, 5] : kind === 'pack' ? [3, 4] : [1, 1];
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -57,7 +58,12 @@ export default function AdminPresetsScreen() {
     setUploadingFor(kind);
     try {
       const up = await uploadPresetImage(kind, result.assets[0]);
-      const defaultName = kind === 'cover' ? 'Carátula sin nombre' : 'Sobre sin nombre';
+      const defaultName =
+        kind === 'cover'
+          ? 'Carátula sin nombre'
+          : kind === 'pack'
+            ? 'Sobre sin nombre'
+            : 'Avatar sin nombre';
       const { error: rpcErr } = await createAdminPreset({
         preset_id: up.preset_id,
         kind,
@@ -76,6 +82,7 @@ export default function AdminPresetsScreen() {
 
   const covers = items.filter((p) => p.kind === 'cover');
   const packs = items.filter((p) => p.kind === 'pack');
+  const avatars = items.filter((p) => p.kind === 'avatar');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -86,8 +93,9 @@ export default function AdminPresetsScreen() {
       />
       <View style={styles.intro}>
         <Text style={styles.introText}>
-          Imágenes que los owners pueden elegir como carátula (4:5) o sobre (3:4)
-          en vez de subir una propia. Se suman a los colores predefinidos.
+          Carátulas (4:5) y sobres (3:4) que los owners pueden elegir, y avatares (1:1)
+          que cualquier user puede elegir como foto de perfil. Se suman a los colores
+          predefinidos en el caso de carátulas y sobres.
         </Text>
       </View>
 
@@ -117,6 +125,15 @@ export default function AdminPresetsScreen() {
           items={packs}
           uploading={uploadingFor === 'pack'}
           onUpload={() => pickAndUpload('pack')}
+          onRename={setRenaming}
+          onChanged={refetch}
+        />
+
+        <PresetKindSection
+          title="Avatares (1:1)"
+          items={avatars}
+          uploading={uploadingFor === 'avatar'}
+          onUpload={() => pickAndUpload('avatar')}
           onRename={setRenaming}
           onChanged={refetch}
         />

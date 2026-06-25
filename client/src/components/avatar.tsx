@@ -1,7 +1,9 @@
+import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, FontFamily } from '@/constants/theme';
+import { r2Url } from '@/lib/storage';
 
 interface Props {
   // Texto base para derivar iniciales (display_name, nombre de álbum, etc.)
@@ -9,6 +11,8 @@ interface Props {
   size?: number;
   // Override de color de fondo. Sin este, se hashea el source para consistencia.
   bgColor?: string;
+  // Si está seteado, renderiza la imagen R2 en vez del fallback de iniciales.
+  imageKey?: string | null;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -38,28 +42,37 @@ function initials(s: string, max = 3): string {
   return words[0].slice(0, max).toUpperCase();
 }
 
-export function Avatar({ source, size = 46, bgColor, style }: Props) {
+export function Avatar({ source, size = 46, bgColor, imageKey, style }: Props) {
   const bg = useMemo(
     () => bgColor ?? BG_PALETTE[hash(source) % BG_PALETTE.length],
     [bgColor, source],
   );
   const initialsText = useMemo(() => initials(source), [source]);
+  const url = r2Url(imageKey);
   return (
     <View
       style={[
         styles.base,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: bg },
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: url ? Colors.paper3 : bg },
         style,
       ]}
     >
-      <Text
-        style={[
-          styles.initials,
-          { fontSize: Math.max(11, size * 0.32) },
-        ]}
-      >
-        {initialsText}
-      </Text>
+      {url ? (
+        <Image
+          source={{ uri: url }}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          contentFit="cover"
+        />
+      ) : (
+        <Text
+          style={[
+            styles.initials,
+            { fontSize: Math.max(11, size * 0.32) },
+          ]}
+        >
+          {initialsText}
+        </Text>
+      )}
     </View>
   );
 }

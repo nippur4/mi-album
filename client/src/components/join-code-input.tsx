@@ -8,10 +8,14 @@ import { errorMessage } from '@/lib/errors';
 
 interface Props {
   onJoined: (albumId: string) => void;
+  // Callback al ganar focus el input. El parent lo usa para hacer scroll
+  // hacia el input cuando aparece el teclado (KeyboardAvoidingView solo
+  // no alcanza en muchos casos).
+  onInputFocus?: () => void;
 }
 
 // Bloque oscuro con input dashed para pegar código o link mialbum://...
-export function JoinCodeInput({ onJoined }: Props) {
+export function JoinCodeInput({ onJoined, onInputFocus }: Props) {
   const [value, setValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,6 +47,7 @@ export function JoinCodeInput({ onJoined }: Props) {
           autoCapitalize="characters"
           autoCorrect={false}
           editable={!submitting}
+          onFocus={onInputFocus}
         />
         <Button
           label="Unirme"

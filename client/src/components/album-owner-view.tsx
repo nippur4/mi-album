@@ -1,5 +1,6 @@
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -53,6 +54,20 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [enablingQr, setEnablingQr] = useState(false);
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  // El feedback "Copiado" se autodestruye tras 2s.
+  useEffect(() => {
+    if (!codeCopied) return;
+    const t = setTimeout(() => setCodeCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [codeCopied]);
+
+  async function copyShareCode() {
+    if (!album.share_code) return;
+    await Clipboard.setStringAsync(album.share_code);
+    setCodeCopied(true);
+  }
 
   const items: ChecklistItem[] = [
     { label: 'Nombre y cantidad', done: true },
@@ -173,11 +188,18 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         />
 
         {album.status === 'published' && (
-          <View style={styles.codeCard}>
-            <Text style={styles.codeLabel}>CÓDIGO PARA COMPARTIR</Text>
+          <Pressable
+            onPress={copyShareCode}
+            style={({ pressed }) => [styles.codeCard, pressed && styles.codeCardPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Copiar código al portapapeles"
+          >
+            <Text style={styles.codeLabel}>
+              {codeCopied ? '¡COPIADO!' : 'CÓDIGO PARA COMPARTIR · TOCÁ PARA COPIAR'}
+            </Text>
             <Text style={styles.code}>{album.share_code}</Text>
             <Text style={styles.codeHint}>Quien lo ingrese se va a unir a tu álbum.</Text>
-          </View>
+          </Pressable>
         )}
 
         {album.status === 'published' && (
@@ -471,6 +493,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     gap: Spacing.xs,
+  },
+  codeCardPressed: {
+    backgroundColor: Colors.paper3,
   },
   codeLabel: {
     fontFamily: FontFamily.mono,

@@ -1,11 +1,11 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
-import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { HeaderAvatar } from '@/components/header-avatar';
 import { JoinCodeInput } from '@/components/join-code-input';
 import { PublicAlbumCard } from '@/components/public-album-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
@@ -20,6 +20,19 @@ import { useMyProfile } from '@/lib/queries/profile';
 
 export default function HomeTab() {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
+  const [kbHeight, setKbHeight] = useState(0);
+
+  // Padding dinámico al final del scroll para que el JoinCodeInput pueda
+  // quedar arriba del teclado al focusearse. KeyboardAvoidingView solo no
+  // alcanza dentro de Tabs en Android.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
   const { session } = useSession();
   const { profile } = useMyProfile();
   const { albums: owned, refetch: refetchOwned, isLoading: loadingOwned } = useMyOwnedAlbums();
@@ -41,10 +54,10 @@ export default function HomeTab() {
 
   useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
 
-  // Separamos en dos sub-secciones: "Donde jugás" (member) y "Tuyos" (owner)
+  // Los owned se gestionan en la tab Gestionar. En home solo mostramos los
+  // álbumes donde el caller juega como member (no owner).
   const ownedIds = new Set(owned.map((a) => a.id));
   const joinedAlbums = joined.filter((a) => !ownedIds.has(a.id));
-  const hasAny = owned.length > 0 || joinedAlbums.length > 0;
 
   const displayName =
     profile?.display_name ??
@@ -56,8 +69,14 @@ export default function HomeTab() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        ref={scrollRef}
+        contentContainerStyle={[styles.scroll, { paddingBottom: Spacing.xxl + kbHeight }]}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refreshAll} tintColor={Colors.red} />
         }
@@ -68,7 +87,7 @@ export default function HomeTab() {
             <Text style={styles.kicker}>HOLA DE NUEVO</Text>
             <Text style={styles.greeting}>{displayName.toUpperCase()}</Text>
           </View>
-          <Avatar source={displayName || 'Vos'} size={48} />
+          <HeaderAvatar size={48} />
         </View>
 
         {/* Álbumes públicos */}
@@ -124,41 +143,28 @@ export default function HomeTab() {
           </View>
         )}
 
-        {/* Tus álbumes (owner) */}
-        {owned.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Tus álbumes</Text>
-            <View style={{ gap: Spacing.listGap }}>
-              {owned.map((album) => {
-                const p = progressMap[album.id];
-                const current = p?.stickers_loaded ?? 0;
-                const total = p?.total_stickers ?? album.total_stickers;
-                const progress = total > 0 ? current / total : 0;
-                return (
-                  <AlbumCard
-                    key={album.id}
-                    album={album}
-                    progress={progress}
-                    counter={{ current, total }}
-                    onPress={() => router.push(`/album/${album.id}`)}
-                  />
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {!hasAny && (
+        {joinedAlbums.length === 0 && (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Todavía no tenés álbumes.</Text>
-            <Text style={styles.emptyBody}>Creá uno o unite con un código.</Text>
+            <Text style={styles.emptyTitle}>Todavía no estás jugando ningún álbum.</Text>
+            <Text style={styles.emptyBody}>
+              Unite con un código abajo o explorá los álbumes públicos.
+            </Text>
           </View>
         )}
 
-        <JoinCodeInput onJoined={(albumId) => router.push(`/album/${albumId}`)} />
+        <JoinCodeInput
+          onJoined={(albumId) => router.push(`/album/${albumId}`)}
+          onInputFocus={() => {
+            // Esperamos a que el teclado termine de aparecer (~300ms en iOS y
+            // ~250ms en Android) antes de scrollear, así el layout ya se
+            // recortó y scrollToEnd nos deja el input arriba del teclado.
+            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
+          }}
+        />
 
         <Button label="Crear álbum nuevo" variant="outline" onPress={() => router.push('/album/new')} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -167,7 +173,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
   scroll: {
     paddingHorizontal: Spacing.screenX,
-    paddingBottom: Spacing.xxl,
     gap: Spacing.xl,
   },
   header: {

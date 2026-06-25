@@ -69,6 +69,7 @@ export type AppErrorKey =
   // Presets admin
   | 'invalid_kind'
   | 'preset_not_found'
+  | 'invalid_avatar'
   // Catch-all
   | 'unknown';
 
@@ -125,6 +126,7 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0143: 'display_name_taken',
   P0150: 'invalid_kind',
   P0151: 'preset_not_found',
+  P0152: 'invalid_avatar',
 };
 
 export interface AppError {
@@ -207,11 +209,18 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   display_name_taken: 'Ese nombre ya está en uso. Probá otro.',
   invalid_kind: 'Tipo de plantilla inválido.',
   preset_not_found: 'No encontramos esa plantilla.',
+  invalid_avatar: 'Ese avatar no está disponible.',
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 
 export const errorMessage = (err: unknown): string => {
   const appErr = toAppError(err);
+  // qr_on_cooldown trae el timestamp del próximo escaneo permitido en el raw
+  // (formato "qr_on_cooldown_until_<ISO>"). Lo parseamos para darle al user
+  // un mensaje específico con el horario en vez del genérico.
+  if (appErr.key === 'qr_on_cooldown') {
+    return formatQrCooldown(appErr.raw);
+  }
   // Si no tenemos copy específico, mostramos el raw (más diagnóstico-friendly
   // que un genérico "algo salió mal").
   if (appErr.key === 'unknown' && appErr.raw) {
@@ -219,3 +228,27 @@ export const errorMessage = (err: unknown): string => {
   }
   return ERROR_COPY[appErr.key];
 };
+
+function formatQrCooldown(raw: string): string {
+  const match = raw.match(/qr_on_cooldown_until_(.+)$/);
+  const ts = match ? new Date(match[1]) : null;
+  if (!ts || Number.isNaN(ts.getTime())) {
+    return 'Ya reclamaste sobres de este QR. Volvé más tarde.';
+  }
+  const now = new Date();
+  const hh = String(ts.getHours()).padStart(2, '0');
+  const mm = String(ts.getMinutes()).padStart(2, '0');
+  const sameDay = ts.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = ts.toDateString() === tomorrow.toDateString();
+  if (sameDay) {
+    return `Ya reclamaste sobres de este QR hoy. Volvé a las ${hh}:${mm}.`;
+  }
+  if (isTomorrow) {
+    return `Ya reclamaste sobres de este QR hoy. Volvé mañana a las ${hh}:${mm}.`;
+  }
+  const dd = String(ts.getDate()).padStart(2, '0');
+  const mo = String(ts.getMonth() + 1).padStart(2, '0');
+  return `Ya reclamaste sobres de este QR. Volvé el ${dd}/${mo} a las ${hh}:${mm}.`;
+}

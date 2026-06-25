@@ -149,8 +149,56 @@ export type Database = {
           },
         ]
       }
+      preset_images: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          large_key: string
+          name: string
+          sort_order: number
+          thumb_key: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          large_key: string
+          name: string
+          sort_order?: number
+          thumb_key: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          large_key?: string
+          name?: string
+          sort_order?: number
+          thumb_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preset_images_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          avatar_thumb_key: string | null
           avatar_url: string | null
           created_at: string
           display_name: string
@@ -159,6 +207,7 @@ export type Database = {
           push_token: string | null
         }
         Insert: {
+          avatar_thumb_key?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name: string
@@ -167,6 +216,7 @@ export type Database = {
           push_token?: string | null
         }
         Update: {
+          avatar_thumb_key?: string | null
           avatar_url?: string | null
           created_at?: string
           display_name?: string
@@ -489,9 +539,39 @@ export type Database = {
         }
         Returns: string
       }
-      fn_admin_list_published_albums: {
+      fn_admin_create_preset: {
+        Args: {
+          p_id: string
+          p_kind: string
+          p_large_key: string
+          p_name: string
+          p_sort_order?: number
+          p_thumb_key: string
+        }
+        Returns: {
+          active: boolean
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          large_key: string
+          name: string
+          sort_order: number
+          thumb_key: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "preset_images"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_admin_delete_preset: { Args: { p_id: string }; Returns: undefined }
+      fn_admin_list_albums: {
         Args: never
         Returns: {
+          created_at: string
           id: string
           is_public: boolean
           member_count: number
@@ -499,8 +579,56 @@ export type Database = {
           owner_id: string
           owner_name: string
           published_at: string
+          status: Database["public"]["Enums"]["album_status"]
           total_stickers: number
         }[]
+      }
+      fn_admin_list_presets: {
+        Args: never
+        Returns: {
+          active: boolean
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          large_key: string
+          name: string
+          sort_order: number
+          thumb_key: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "preset_images"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      fn_admin_update_preset: {
+        Args: {
+          p_active: boolean
+          p_id: string
+          p_name: string
+          p_sort_order: number
+        }
+        Returns: {
+          active: boolean
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          large_key: string
+          name: string
+          sort_order: number
+          thumb_key: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "preset_images"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       fn_album_matches: {
         Args: { p_album_id: string; p_limit?: number }
@@ -660,6 +788,11 @@ export type Database = {
           p_pack_config?: Json
           p_trade_config?: Json
         }
+        Returns: undefined
+      }
+      fn_update_avatar: { Args: { p_thumb_key: string }; Returns: undefined }
+      fn_update_display_name: {
+        Args: { p_new_name: string }
         Returns: undefined
       }
       fn_update_sticker: {

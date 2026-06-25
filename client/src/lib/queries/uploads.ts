@@ -25,10 +25,11 @@ export interface UploadAsset {
 }
 
 // Tamaños target por tipo de imagen. El cliente resizea + comprime.
-const SIZES: Record<ImageKind, { thumb: number; large: number }> = {
+const SIZES: Record<ImageKind | 'avatar', { thumb: number; large: number }> = {
   cover:   { thumb: 400, large: 1200 },
   pack:    { thumb: 400, large: 1200 },
   sticker: { thumb: 300, large: 1000 },
+  avatar:  { thumb: 160, large: 480 },
 };
 const JPEG_QUALITY = 0.85;
 
@@ -128,7 +129,7 @@ export interface UploadedPreset {
 }
 
 export async function uploadPresetImage(
-  kind: 'cover' | 'pack',
+  kind: 'cover' | 'pack' | 'avatar',
   asset: UploadAsset,
 ): Promise<UploadedPreset> {
   const { data } = await supabase.auth.getSession();

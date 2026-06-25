@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { useAppFonts } from '@/lib/fonts';
 import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
+import { ProfileProvider } from '@/lib/queries/profile';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,7 +37,7 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <>
+    <ProfileProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
         <Stack.Screen name="(tabs)" />
@@ -48,6 +49,6 @@ export default function RootLayout() {
         <Stack.Screen name="trade" />
         <Stack.Screen name="admin" />
       </Stack>
-    </>
+    </ProfileProvider>
   );
 }

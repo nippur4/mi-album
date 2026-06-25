@@ -2,11 +2,11 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-06-20 (segunda sesión del día).
+Última actualización: 2026-06-25.
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 13 migraciones aplicadas (schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list) + 4 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`) + `pg_cron` activo.
+**Backend (`supabase/`):** 17 migraciones aplicadas (schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -26,9 +26,22 @@
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
 
-#### Nuevo en esta sesión (PENDIENTE DE VALIDACIÓN POR NICO)
+#### Sesión 2026-06-25 (VALIDADO)
 
-Lo siguiente fue construido pero **no se probó en mobile**. Nico debe correr `supabase db push`, regenerar tipos, bootstrappear admin (SQL abajo) y luego probar:
+1. **QR de sobres completo**: tipo `qr` en `pack_config`, Edge Function `generate_qr` (HMAC con `qr_secret` de la columna restringida), Edge Function `redeem_qr` existente + UI owner (`QrPosterModal`) + UI user (`pack/scan.tsx` con `expo-camera`). Pro-only enforced server-side.
+2. **Fix bug `get_random_bytes`** (migración 0016): pgcrypto vive en schema `extensions` en Supabase managed, no en `public`. Agregado `set search_path = public, extensions` a `fn_update_album_economy` y `fn_rotate_qr_secret`.
+3. **Admin ve TODOS los álbumes** (migración 0016): renombrada RPC a `fn_admin_list_albums` que devuelve también drafts/pausados con status. Toggle público sigue deshabilitado para non-published (lo enforza también el RPC `fn_set_album_public`).
+4. **KeyboardAvoidingView** en login + edit-name-modal + edit-total-modal. Patrón estándar para cualquier modal/screen con TextInput.
+5. **Landing dividido**: "Mis álbumes" pasó a dos sub-secciones, "Donde jugás" (member) y "Tus álbumes" (owner). Owner ve `stickers_loaded`, member ve `my_pasted_count`.
+6. **Admin custom presets de imágenes** (migración 0017 + Edge Function `upload_preset_image`):
+   - Tabla `preset_images` (kind cover/pack, name, sort_order, active, R2 keys) con RLS select-when-active.
+   - 4 RPCs SECURITY DEFINER con check `is_admin`: list, create, update, delete.
+   - Pantalla `app/admin/presets.tsx` con secciones cover (4:5) / pack (3:4), upload + toggle activo + borrar + rename via modal.
+   - `PresetPickerModal` ahora muestra gradientes + imágenes admin del kind. Cuando el owner elige una imagen admin, **las keys R2 reales se copian al álbum** (no se referencia el preset por id) — así si admin desactiva/borra el preset, los álbumes que lo usaron siguen renderizando sin lookups en runtime.
+7. **Display name unique + edit** (migración 0015): unique constraint + RPC `fn_update_display_name` + modal en perfil.
+8. **Refactor a `components/` de los thin-router bifurcadores**: `_owner-view.tsx`, `_user-view.tsx`, `_edit-mode.tsx`, `_view-mode.tsx` movidos fuera de `app/` porque expo-router los descubría como rutas. Imports en thin routers ajustados.
+
+#### Pendiente histórico (NO esta sesión, queda como estaba)
 
 1. **Refactor del detalle de álbum** — `app/album/[id].tsx` pasó de 813 líneas a 64 (thin router). La lógica vive en `_owner-view.tsx` (460) y `_user-view.tsx` (334). `_user-view` ahora tiene `useFocusEffect` que refetcha collection + packs + daily al recuperar foco — **fix de bug**: antes los datos quedaban viejos al volver de `/pack/open`.
 2. **RPC batch `fn_my_daily_status(uuid[])`** (migración 0012) + hook `useMyDailyStatusBatch` en `lib/queries/daily.ts`. `DailyAlbumRow` ahora recibe `status` por prop. Tab Sobres pasó de N+1 (2 queries × N álbumes) a 1 query batch.
@@ -36,26 +49,8 @@ Lo siguiente fue construido pero **no se probó en mobile**. Nico debe correr `s
 4. **Panel admin (pantalla 11):** migración 0013 con `fn_admin_list_published_albums()` (SECURITY DEFINER + chequea is_admin) + `lib/queries/admin.ts` (`useIsAdmin`, `useAdminAlbums`, `setAlbumPublic`) + `app/admin/index.tsx` con lista + Switch nativo + optimistic update. Acceso desde Perfil con link "Panel admin" + icono shield (solo visible si is_admin).
 5. **Pantalla 03 figurita grande con foil:** `app/sticker/[id].tsx` pasó a thin router. La lógica de edición vive en `_edit-mode.tsx` (renombrado), la vista grande en `_view-mode.tsx` nuevo. Carta foil 240×CARD_H con bob vertical sutil (todas las rarezas) + sheen lineal animado (solo legendarias). Badges de estado (pegada/sin pegar/falta + counter de repes). Botón "Proponer cambio" → `/trade/matches`. Tap en celda pegada del `_user-view` ahora abre esta vista.
 
-### Pasos pendientes de Nico para activar lo nuevo
-
-```powershell
-# 1. Aplicar migraciones 0012 + 0013
-supabase db push
-
-# 2. Regenerar tipos (Out-File con UTF8 explícito, sin él PS usa UTF-16)
-supabase gen types typescript --linked | Out-File -Encoding utf8 client/src/lib/database.types.ts
-
-# 3. Volverse admin (Dashboard → SQL Editor):
-#    update profiles
-#    set is_admin = true
-#    where id = (select id from auth.users where email = 'nico4cueto@gmail.com');
-
-# 4. Metro reload (no requiere rebuild EAS, todo es JS)
-```
-
 ### Lo que quedó pendiente o a medias
 
-- **QR de sobres (pantallas 05/06)**: Edge Function + RPC ya existen, falta UI del owner para generar/mostrar QR y del user para escanear (requiere `expo-camera`, otro rebuild EAS).
 - **Paywall + Confirmación Pro (pantallas 12/13)**: ni RevenueCat real conectado ni screens. El secret de webhook es placeholder.
 - **Tab "Álbum"**: existe placeholder sin contenido — sin concepto de "álbum activo" en el modelo. Decisión UX pendiente.
 - **Push notifications**: cero. `profiles.push_token` existe pero no se setea ni se usa.
