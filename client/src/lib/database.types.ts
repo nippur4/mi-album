@@ -51,6 +51,8 @@ export type Database = {
           pack_config: Json
           pack_large_key: string | null
           pack_thumb_key: string | null
+          page_bg_color: string
+          page_overrides: Json
           published_at: string | null
           qr_secret: string | null
           share_code: string
@@ -69,6 +71,8 @@ export type Database = {
           pack_config?: Json
           pack_large_key?: string | null
           pack_thumb_key?: string | null
+          page_bg_color?: string
+          page_overrides?: Json
           published_at?: string | null
           qr_secret?: string | null
           share_code: string
@@ -87,6 +91,8 @@ export type Database = {
           pack_config?: Json
           pack_large_key?: string | null
           pack_thumb_key?: string | null
+          page_bg_color?: string
+          page_overrides?: Json
           published_at?: string | null
           qr_secret?: string | null
           share_code?: string
@@ -679,6 +685,8 @@ export type Database = {
           pack_config: Json
           pack_large_key: string | null
           pack_thumb_key: string | null
+          page_bg_color: string
+          page_overrides: Json
           published_at: string | null
           qr_secret: string | null
           share_code: string
@@ -788,6 +796,10 @@ export type Database = {
           p_pack_config?: Json
           p_trade_config?: Json
         }
+        Returns: undefined
+      }
+      fn_update_album_pages: {
+        Args: { p_album_id: string; p_bg_color: string; p_overrides: Json }
         Returns: undefined
       }
       fn_update_avatar: { Args: { p_thumb_key: string }; Returns: undefined }

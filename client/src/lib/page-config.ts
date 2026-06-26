@@ -1,0 +1,119 @@
+// Configuración de hojas del álbum: paleta de colores + layouts disponibles,
+// helpers de build y persistencia.
+
+import { supabase } from '@/lib/supabase';
+
+export interface PageColor {
+  key: string;
+  name: string;
+  bg: string;
+}
+
+// Paleta predefinida. Las keys se guardan en DB; el bg se resuelve en cliente.
+// Si en el futuro cambiamos el hex, los álbumes existentes se actualizan automáticamente.
+// El default es blanco para que la hoja destaque sobre el fondo cream del body.
+export const PAGE_COLORS: PageColor[] = [
+  { key: 'white',    name: 'Blanco',   bg: '#FFFFFF' },
+  { key: 'paper',    name: 'Paper',    bg: '#FBF3E2' },
+  { key: 'cream',    name: 'Crema',    bg: '#F7EDD9' },
+  { key: 'ocre',     name: 'Ocre',     bg: '#F0E4C8' },
+  { key: 'mint',     name: 'Menta',    bg: '#D5EBDC' },
+  { key: 'sky',      name: 'Cielo',    bg: '#D9E8F4' },
+  { key: 'lavender', name: 'Lavanda',  bg: '#E2D9F1' },
+  { key: 'rose',     name: 'Rosa',     bg: '#F4DDDD' },
+  { key: 'slate',    name: 'Pizarra',  bg: '#DDE2E6' },
+];
+
+export const DEFAULT_PAGE_COLOR = 'white';
+
+export function resolveColor(key: string | null | undefined): string {
+  if (!key) return PAGE_COLORS[0].bg;
+  const found = PAGE_COLORS.find((c) => c.key === key);
+  return found?.bg ?? PAGE_COLORS[0].bg;
+}
+
+export interface PageLayout {
+  key: string;
+  name: string;
+  cols: number;
+  rows: number;
+  capacity: number;
+}
+
+// Layouts disponibles. capacity = cols * rows. El cliente calcula el tamaño
+// efectivo de cada celda según el espacio que cada layout deja disponible
+// dentro de la hoja (que tiene tamaño constante).
+export const PAGE_LAYOUTS: PageLayout[] = [
+  { key: '3x4', name: '3 × 4', cols: 3, rows: 4, capacity: 12 },
+  { key: '2x3', name: '2 × 3', cols: 2, rows: 3, capacity: 6 },
+  { key: '3x3', name: '3 × 3', cols: 3, rows: 3, capacity: 9 },
+  { key: '2x4', name: '2 × 4', cols: 2, rows: 4, capacity: 8 },
+  { key: '4x4', name: '4 × 4', cols: 4, rows: 4, capacity: 16 },
+];
+
+export const DEFAULT_PAGE_LAYOUT = '3x4';
+
+export function resolveLayout(key: string | null | undefined): PageLayout {
+  return (
+    PAGE_LAYOUTS.find((l) => l.key === (key ?? DEFAULT_PAGE_LAYOUT)) ?? PAGE_LAYOUTS[0]
+  );
+}
+
+export interface PageOverride {
+  page: number;            // 0-indexed
+  color?: string;
+  layout?: string;
+}
+
+export interface BuiltPage {
+  index: number;
+  layout: PageLayout;
+  colorKey: string;        // resuelto (default si no hay override)
+  numbers: number[];
+}
+
+// Asigna sticker numbers a páginas según los layouts (con overrides).
+// Cada página llena su capacidad y la siguiente sigue desde el último número.
+export function buildPages(
+  totalStickers: number,
+  defaultColor: string,
+  overrides: PageOverride[],
+): BuiltPage[] {
+  const overrideByPage = new Map<number, PageOverride>();
+  for (const o of overrides) overrideByPage.set(o.page, o);
+
+  const pages: BuiltPage[] = [];
+  let n = 1;
+  let pageIdx = 0;
+
+  while (n <= totalStickers) {
+    const ov = overrideByPage.get(pageIdx);
+    const layout = resolveLayout(ov?.layout);
+    const cap = layout.capacity;
+    const nums: number[] = [];
+    for (let i = 0; i < cap && n <= totalStickers; i++) {
+      nums.push(n++);
+    }
+    pages.push({
+      index: pageIdx,
+      layout,
+      colorKey: ov?.color ?? defaultColor,
+      numbers: nums,
+    });
+    pageIdx++;
+  }
+
+  return pages;
+}
+
+export async function updateAlbumPages(
+  albumId: string,
+  bgColor: string,
+  overrides: PageOverride[],
+) {
+  return supabase.rpc('fn_update_album_pages', {
+    p_album_id: albumId,
+    p_bg_color: bgColor,
+    p_overrides: overrides as any,
+  });
+}

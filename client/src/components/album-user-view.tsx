@@ -114,6 +114,8 @@ export function UserAlbumView({ album, stickers }: Props) {
           </Text>
           <AlbumPager
             totalStickers={album.total_stickers}
+            pageBgColor={(album as any).page_bg_color}
+            pageOverrides={(album as any).page_overrides ?? []}
             renderCell={(n) => {
               const s = stickerByNumber.get(n);
               if (!s) return <StickerCellMissing number={n} />;

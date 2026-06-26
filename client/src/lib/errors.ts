@@ -70,6 +70,9 @@ export type AppErrorKey =
   | 'invalid_kind'
   | 'preset_not_found'
   | 'invalid_avatar'
+  // Hojas
+  | 'invalid_color'
+  | 'invalid_overrides'
   // Catch-all
   | 'unknown';
 
@@ -127,6 +130,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0150: 'invalid_kind',
   P0151: 'preset_not_found',
   P0152: 'invalid_avatar',
+  P0160: 'invalid_color',
+  P0161: 'invalid_overrides',
 };
 
 export interface AppError {
@@ -210,6 +215,8 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   invalid_kind: 'Tipo de plantilla inválido.',
   preset_not_found: 'No encontramos esa plantilla.',
   invalid_avatar: 'Ese avatar no está disponible.',
+  invalid_color: 'Color de hoja inválido.',
+  invalid_overrides: 'Configuración de hojas inválida.',
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 

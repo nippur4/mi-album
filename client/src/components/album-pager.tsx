@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -10,50 +10,55 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Colors, FontFamily, FontSize, Layout, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
+import {
+  buildPages,
+  DEFAULT_PAGE_COLOR,
+  resolveColor,
+  type BuiltPage,
+  type PageOverride,
+} from '@/lib/page-config';
 
 interface Props {
   totalStickers: number;
-  perPage?: number;
   renderCell: (number: number) => ReactNode;
   headerLabel?: string;
+  // Color de hoja por defecto (key del paleta). Default 'paper'.
+  pageBgColor?: string;
+  // Overrides por página (color y/o layout).
+  pageOverrides?: PageOverride[];
 }
 
-const FLIP_THRESHOLD = 0.25;     // % de pageWidth para que el flip se complete
-const FLIP_DURATION = 380;       // ms
+const FLIP_THRESHOLD = 0.25;
+const FLIP_DURATION = 380;
 const PERSPECTIVE = 1100;
 
-// Pager con efecto de hoja: la página activa rota rotateY 0→±180 sobre su eje
-// vertical (con backfaceVisibility hidden, así "desaparece" al pasar 90°) y
-// detrás queda la página entrante. El swipe se maneja con PanGestureHandler,
-// las flechas disparan la misma animación programáticamente. Custom con
-// Reanimated/Gesture Handler — sin libs externas, sin rebuild.
-export function AlbumPager({ totalStickers, perPage = 12, renderCell, headerLabel }: Props) {
+export function AlbumPager({
+  totalStickers,
+  renderCell,
+  headerLabel,
+  pageBgColor = DEFAULT_PAGE_COLOR,
+  pageOverrides = [],
+}: Props) {
   const { width: screenWidth } = useWindowDimensions();
-  const pageCount = Math.max(1, Math.ceil(totalStickers / perPage));
   const [currentPage, setCurrentPage] = useState(0);
 
   const pageWidth = screenWidth;
   const innerWidth = pageWidth - 2 * Spacing.screenX;
-  const cellWidth = (innerWidth - 2 * Spacing.gridGap) / 3;
-  const cellHeight = cellWidth / Layout.gridCellAspect;
-  const pageHeight = cellHeight * 4 + Spacing.gridGap * 3 + Spacing.md * 2;
 
-  const pages = useMemo(() => {
-    const out: number[][] = [];
-    for (let p = 0; p < pageCount; p++) {
-      const start = p * perPage + 1;
-      const end = Math.min(start + perPage - 1, totalStickers);
-      const nums: number[] = [];
-      for (let n = start; n <= end; n++) nums.push(n);
-      out.push(nums);
-    }
-    return out;
-  }, [pageCount, perPage, totalStickers]);
+  // Altura de la hoja: fija para todos los layouts, calculada del default 3×4
+  // con aspectRatio gridCellAspect — los otros layouts ajustan su celda
+  // adentro para llenar el espacio sin desbordar.
+  const defaultCellWidth = (innerWidth - 2 * Spacing.gridGap) / 3;
+  const defaultCellHeight = defaultCellWidth / Layout.gridCellAspect;
+  const pageHeight = defaultCellHeight * 4 + Spacing.gridGap * 3 + Spacing.md * 2;
 
-  // progress: -1 → flip completo hacia la siguiente página (swipe izquierdo)
-  //           +1 → flip completo hacia la anterior (swipe derecho)
-  //            0 → página actual centrada
+  const pages: BuiltPage[] = useMemo(
+    () => buildPages(totalStickers, pageBgColor, pageOverrides),
+    [totalStickers, pageBgColor, pageOverrides],
+  );
+  const pageCount = Math.max(1, pages.length);
+
   const progress = useSharedValue(0);
 
   const commitPage = useCallback((delta: number) => {
@@ -78,10 +83,8 @@ export function AlbumPager({ totalStickers, perPage = 12, renderCell, headerLabe
           'worklet';
           const delta = e.changeX / pageWidth;
           let next = progress.value + delta;
-          // Limitar a [-1, 1]
           if (next > 1) next = 1;
           if (next < -1) next = -1;
-          // Desactivar en los extremos
           if (currentPage === 0 && next > 0) next = 0;
           if (currentPage === pageCount - 1 && next < 0) next = 0;
           progress.value = next;
@@ -105,24 +108,12 @@ export function AlbumPager({ totalStickers, perPage = 12, renderCell, headerLabe
     [progress, currentPage, pageCount, pageWidth, commitPage],
   );
 
-  // Estilo de la página activa: rota rotateY hasta ±45° (sutil tilt de hoja)
-  // y se desplaza lateralmente para "salir" de pantalla, mientras la opacidad
-  // se desvanece al final del flip para ocultarla justo cuando la entrante
-  // ya está visible debajo.
   const activeStyle = useAnimatedStyle(() => {
     const p = progress.value;
     const rotateY = interpolate(p, [-1, 0, 1], [-45, 0, 45]);
     const translateX = interpolate(p, [-1, 0, 1], [-pageWidth * 0.7, 0, pageWidth * 0.7]);
-    const opacity = interpolate(
-      Math.abs(p),
-      [0, 0.6, 1],
-      [1, 0.85, 0],
-    );
-    const shadowOpacity = interpolate(
-      Math.abs(p),
-      [0, 0.5, 1],
-      [0.08, 0.25, 0.05],
-    );
+    const opacity = interpolate(Math.abs(p), [0, 0.6, 1], [1, 0.85, 0]);
+    const shadowOpacity = interpolate(Math.abs(p), [0, 0.5, 1], [0.08, 0.25, 0.05]);
     return {
       transform: [
         { perspective: PERSPECTIVE },
@@ -134,37 +125,74 @@ export function AlbumPager({ totalStickers, perPage = 12, renderCell, headerLabe
     };
   });
 
-  // Estilo del fondo: la página siguiente o la previa, según el sentido del swipe.
-  const nextPageOpacity = useAnimatedStyle(() => {
-    // visible cuando flip hacia adelante (progress < 0)
-    return { opacity: progress.value < 0 ? 1 : 0 };
-  });
-  const prevPageOpacity = useAnimatedStyle(() => {
-    return { opacity: progress.value > 0 ? 1 : 0 };
-  });
+  const nextPageOpacity = useAnimatedStyle(() => ({
+    opacity: progress.value < 0 ? 1 : 0,
+  }));
+  const prevPageOpacity = useAnimatedStyle(() => ({
+    opacity: progress.value > 0 ? 1 : 0,
+  }));
 
   function goTo(dir: -1 | 1) {
-    // -1 = anterior (progress → +1 visualmente); +1 = siguiente (progress → -1)
     if (dir === -1 && currentPage > 0) snapTo(1);
     if (dir === 1 && currentPage < pageCount - 1) snapTo(-1);
   }
 
   function renderPageContent(pageIdx: number) {
     if (pageIdx < 0 || pageIdx >= pages.length) return null;
-    const nums = pages[pageIdx];
-    const slots = [...nums, ...Array(perPage - nums.length).fill(null)];
+    const page = pages[pageIdx];
+    const { layout, numbers, colorKey } = page;
+    const bg = resolveColor(colorKey);
+
+    // La celda interior tiene aspectRatio:0.82 propio. Para que NUNCA pelee
+    // con el slot, le doy al slot el mismo aspectRatio (en vez de width+height
+    // explícitos). Yoga calcula height = width/aspectRatio nativamente y el
+    // cell adentro respeta el slot al pie.
+    const aspect = Layout.gridCellAspect; // width / height
+    const availW = innerWidth - Spacing.gridGap * (layout.cols - 1);
+    const availH = pageHeight - Spacing.md * 2 - Spacing.gridGap * (layout.rows - 1);
+
+    // cellW máximo según el eje horizontal:
+    let cellW = availW / layout.cols;
+    // Si la altura calculada (cellW/aspect)*rows excede la altura disponible,
+    // recortamos cellW para que entren.
+    const cellHfromW = cellW / aspect;
+    if (cellHfromW * layout.rows > availH) {
+      const cellH = availH / layout.rows;
+      cellW = cellH * aspect;
+    }
+
+    const gridW = cellW * layout.cols + Spacing.gridGap * (layout.cols - 1);
+
     return (
-      <View style={[styles.page, { width: pageWidth, height: pageHeight }]}>
-        <View style={styles.grid}>
-          {slots.map((n, i) =>
-            n === null ? (
-              <View key={`empty-${i}`} style={styles.gridCellPlaceholder} />
-            ) : (
-              <View key={n} style={styles.gridCell}>
-                {renderCell(n)}
+      <View
+        style={[
+          styles.page,
+          {
+            width: pageWidth,
+            height: pageHeight,
+            backgroundColor: bg,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.grid,
+            { width: gridW, alignSelf: 'center' },
+          ]}
+        >
+          {Array.from({ length: layout.capacity }).map((_, i) => {
+            const n = numbers[i];
+            return (
+              <View
+                key={n ?? `empty-${i}`}
+                // Slot con width fija + aspectRatio: Yoga calcula la altura
+                // matching el aspectRatio del cell adentro → no overflow.
+                style={{ width: cellW, aspectRatio: aspect, overflow: 'hidden' }}
+              >
+                {n !== undefined && renderCell(n)}
               </View>
-            ),
-          )}
+            );
+          })}
         </View>
       </View>
     );
@@ -216,23 +244,14 @@ export function AlbumPager({ totalStickers, perPage = 12, renderCell, headerLabe
           marginHorizontal: -Spacing.screenX,
         }}
       >
-        {/* Página entrante (siguiente), visible solo durante flip izquierdo */}
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.layer, nextPageOpacity]}
-        >
+        <Animated.View pointerEvents="none" style={[styles.layer, nextPageOpacity]}>
           {renderPageContent(currentPage + 1)}
         </Animated.View>
 
-        {/* Página entrante (anterior), visible solo durante flip derecho */}
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.layer, prevPageOpacity]}
-        >
+        <Animated.View pointerEvents="none" style={[styles.layer, prevPageOpacity]}>
           {renderPageContent(currentPage - 1)}
         </Animated.View>
 
-        {/* Página activa con animación + gesture */}
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.layer, styles.activeLayer, activeStyle]}>
             {renderPageContent(currentPage)}
@@ -290,32 +309,33 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // La página activa lleva sombra animada para acentuar el flip.
   activeLayer: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 6,
   },
+  // La hoja se renderiza como card con border + shadow, así se distingue del
+  // body de la app sin depender solo del color. El tamaño es FIJO (calculado
+  // en pageHeight según el layout default 3×4), independiente del layout que
+  // la hoja use por dentro — las celdas se ajustan al espacio disponible y
+  // el grid se centra cuando el aspectRatio deja margen.
   page: {
-    backgroundColor: Colors.paper,
     paddingHorizontal: Spacing.screenX,
     paddingVertical: Spacing.md,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.gridGap,
-  },
-  gridCell: {
-    flexBasis: '31.5%',
-    flexGrow: 0,
-    flexShrink: 0,
-  },
-  gridCellPlaceholder: {
-    flexBasis: '31.5%',
-    flexGrow: 0,
-    flexShrink: 0,
-    aspectRatio: Layout.gridCellAspect,
   },
 });

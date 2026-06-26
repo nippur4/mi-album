@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumPager } from '@/components/album-pager';
 import { BulkStickerUploadModal } from '@/components/bulk-sticker-upload-modal';
+import { EditPagesModal } from '@/components/edit-pages-modal';
 import { Button } from '@/components/button';
 import { Checklist, type ChecklistItem } from '@/components/checklist';
 import { EditEconomyModal } from '@/components/edit-economy-modal';
@@ -34,6 +35,7 @@ import {
   type Sticker,
 } from '@/lib/queries/albums';
 import { DEFAULT_PACK_CONFIG, modeFromConfig, type PackConfig } from '@/lib/queries/economy';
+import { DEFAULT_PAGE_COLOR, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
 import { errorMessage } from '@/lib/errors';
@@ -59,6 +61,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
   const [editingEconomy, setEditingEconomy] = useState(false);
+  const [editingPages, setEditingPages] = useState(false);
   const [bulkUpload, setBulkUpload] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -358,6 +361,8 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             <>
               <AlbumPager
                 totalStickers={album.total_stickers}
+                pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
+                pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
                 renderCell={(n) => {
                   const s = stickerByNumber.get(n);
                   if (s) {
@@ -397,6 +402,11 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                   />
                 </View>
               )}
+              <Button
+                label="Editar hojas"
+                variant="outline"
+                onPress={() => setEditingPages(true)}
+              />
             </>
           )}
         </View>
@@ -441,6 +451,16 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         occupiedNumbers={new Set(stickers.map((s) => s.number))}
         onClose={() => setBulkUpload(false)}
         onFinished={refetch}
+      />
+
+      <EditPagesModal
+        visible={editingPages}
+        albumId={album.id}
+        totalStickers={album.total_stickers}
+        currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
+        currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
+        onClose={() => setEditingPages(false)}
+        onSaved={refetch}
       />
 
       <View style={styles.footer}>
