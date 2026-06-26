@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AlbumPager } from '@/components/album-pager';
 import { Button } from '@/components/button';
 import { Countdown } from '@/components/countdown';
 import { ProgressCard } from '@/components/progress-card';
@@ -74,7 +75,6 @@ export function UserAlbumView({ album, stickers }: Props) {
   const missingCount = album.total_stickers - myPastedCount - toPasteCount;
   const isWelcome = myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
 
-  const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
 
   return (
@@ -112,39 +112,32 @@ export function UserAlbumView({ album, stickers }: Props) {
           <Text style={styles.sectionLabel}>
             FIGURITAS · {myPastedCount} / {album.total_stickers}
           </Text>
-          <View style={styles.grid}>
-            {gridCells.map((n) => {
+          <AlbumPager
+            totalStickers={album.total_stickers}
+            renderCell={(n) => {
               const s = stickerByNumber.get(n);
-              if (!s) {
-                return <View key={n} style={styles.gridCell}><StickerCellMissing number={n} /></View>;
-              }
+              if (!s) return <StickerCellMissing number={n} />;
               const entry = collection.get(s.id);
-              if (!entry) {
-                return <View key={n} style={styles.gridCell}><StickerCellMissing number={n} /></View>;
-              }
+              if (!entry) return <StickerCellMissing number={n} />;
               if (entry.pasted) {
                 return (
-                  <View key={n} style={styles.gridCell}>
-                    <StickerCell
-                      sticker={s}
-                      extraCount={Math.max(0, entry.quantity - 1)}
-                      onPress={() => router.push(`/sticker/${s.id}`)}
-                    />
-                  </View>
+                  <StickerCell
+                    sticker={s}
+                    extraCount={Math.max(0, entry.quantity - 1)}
+                    onPress={() => router.push(`/sticker/${s.id}`)}
+                  />
                 );
               }
               return (
-                <View key={n} style={styles.gridCell}>
-                  <StickerCell
-                    sticker={s}
-                    state="to_paste"
-                    extraCount={Math.max(0, entry.quantity - 1)}
-                    onPress={() => onPaste(s.id)}
-                  />
-                </View>
+                <StickerCell
+                  sticker={s}
+                  state="to_paste"
+                  extraCount={Math.max(0, entry.quantity - 1)}
+                  onPress={() => onPaste(s.id)}
+                />
               );
-            })}
-          </View>
+            }}
+          />
         </View>
 
         {(repesCount > 0 || missingCount > 0) && (

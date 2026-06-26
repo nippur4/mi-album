@@ -230,9 +230,9 @@ export const errorMessage = (err: unknown): string => {
 };
 
 function formatQrCooldown(raw: string): string {
-  const match = raw.match(/qr_on_cooldown_until_(.+)$/);
-  const ts = match ? new Date(match[1]) : null;
-  if (!ts || Number.isNaN(ts.getTime())) {
+  const match = raw.match(/qr_on_cooldown_until_(.+?)\s*$/);
+  const ts = match ? parsePgTimestamp(match[1]) : null;
+  if (!ts) {
     return 'Ya reclamaste sobres de este QR. Volvé más tarde.';
   }
   const now = new Date();
@@ -251,4 +251,26 @@ function formatQrCooldown(raw: string): string {
   const dd = String(ts.getDate()).padStart(2, '0');
   const mo = String(ts.getMonth() + 1).padStart(2, '0');
   return `Ya reclamaste sobres de este QR. Volvé el ${dd}/${mo} a las ${hh}:${mm}.`;
+}
+
+// Postgres formatea timestamptz como "2026-06-26 14:30:00+00" o
+// "2026-06-26 14:30:00.123456+00" (sin la 'T' ISO y con offset corto).
+// Hermes no garantiza parsear ese formato. Lo normalizamos antes de pasarlo
+// a Date.
+function parsePgTimestamp(s: string): Date | null {
+  let n = s.trim();
+  // "YYYY-MM-DD HH:MM:SS..." → "YYYY-MM-DDTHH:MM:SS..."
+  n = n.replace(' ', 'T');
+  // Truncar fracciones de segundo a 3 dígitos (ms) si vienen más largas.
+  n = n.replace(/\.(\d{3})\d+/, '.$1');
+  // Normalizar el offset:
+  //   "+00"      → "+00:00"
+  //   "+0000"    → "+00:00"
+  //   "-03"      → "-03:00"
+  //   "+00:00", "Z" → se dejan como están
+  if (!/[zZ]$/.test(n)) {
+    n = n.replace(/([+-]\d{2})(\d{2})?$/, (_, hh, mm) => `${hh}:${mm ?? '00'}`);
+  }
+  const d = new Date(n);
+  return Number.isNaN(d.getTime()) ? null : d;
 }

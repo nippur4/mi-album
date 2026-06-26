@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAppFonts } from '@/lib/fonts';
 import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
@@ -37,18 +38,20 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ProfileProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="album" />
-        <Stack.Screen name="sticker" />
-        <Stack.Screen name="join" />
-        <Stack.Screen name="pack" />
-        <Stack.Screen name="trade" />
-        <Stack.Screen name="admin" />
-      </Stack>
-    </ProfileProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ProfileProvider>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="album" />
+          <Stack.Screen name="sticker" />
+          <Stack.Screen name="join" />
+          <Stack.Screen name="pack" />
+          <Stack.Screen name="trade" />
+          <Stack.Screen name="admin" />
+        </Stack>
+      </ProfileProvider>
+    </GestureHandlerRootView>
   );
 }

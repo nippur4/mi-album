@@ -22,7 +22,7 @@ const RARITY_WEIGHTS: Record<Rarity, number> = {
 };
 
 const DEFAULT_PACK_SIZE = 5;
-const PACK_SIZE_MIN = 3;
+const PACK_SIZE_MIN = 1;
 const PACK_SIZE_MAX = 10;
 
 interface Sticker {

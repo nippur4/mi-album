@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,8 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AlbumPager } from '@/components/album-pager';
+import { BulkStickerUploadModal } from '@/components/bulk-sticker-upload-modal';
 import { Button } from '@/components/button';
 import { Checklist, type ChecklistItem } from '@/components/checklist';
+import { EditEconomyModal } from '@/components/edit-economy-modal';
 import { EditTotalModal } from '@/components/edit-total-modal';
 import { ImageUploadCard } from '@/components/image-upload-card';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
@@ -29,7 +33,7 @@ import {
   type Album,
   type Sticker,
 } from '@/lib/queries/albums';
-import { enableQrForAlbum } from '@/lib/queries/qr';
+import { DEFAULT_PACK_CONFIG, modeFromConfig, type PackConfig } from '@/lib/queries/economy';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
 import { errorMessage } from '@/lib/errors';
@@ -54,6 +58,8 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [enablingQr, setEnablingQr] = useState(false);
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
+  const [editingEconomy, setEditingEconomy] = useState(false);
+  const [bulkUpload, setBulkUpload] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
   // El feedback "Copiado" se autodestruye tras 2s.
@@ -69,6 +75,12 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     setCodeCopied(true);
   }
 
+  const packConfig: PackConfig = {
+    ...DEFAULT_PACK_CONFIG,
+    ...((album.pack_config as Partial<PackConfig>) ?? {}),
+  };
+  const economyMode = modeFromConfig(packConfig);
+
   const items: ChecklistItem[] = [
     { label: 'Nombre y cantidad', done: true },
     { label: 'Carátula del álbum', done: !!album.cover_thumb_key },
@@ -77,6 +89,11 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
       label: 'Cargar figuritas',
       done: stickers.length >= album.total_stickers,
       hint: `${stickers.length} / ${album.total_stickers}`,
+    },
+    {
+      label: 'Cómo se consiguen las figuritas',
+      done: economyMode !== 'none',
+      hint: economyDescription(packConfig),
     },
   ];
   const allReady = items.every((i) => i.done);
@@ -222,6 +239,44 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           />
         )}
 
+        {/* Economía: visible siempre, editable en draft y published */}
+        <Pressable
+          onPress={() => setEditingEconomy(true)}
+          style={({ pressed }) => [
+            styles.economyCard,
+            economyMode === 'none' && styles.economyCardWarn,
+            pressed && styles.economyCardPressed,
+          ]}
+        >
+          <View
+            style={[
+              styles.economyIcon,
+              economyMode === 'none' && styles.economyIconWarn,
+            ]}
+          >
+            <Feather
+              name={economyMode === 'none' ? 'alert-circle' : 'package'}
+              size={26}
+              color={economyMode === 'none' ? Colors.paper : Colors.paper}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.economyLabel}>CÓMO SE CONSIGUEN LAS FIGURITAS</Text>
+            <Text
+              style={[
+                styles.economyValue,
+                economyMode === 'none' && styles.economyValueWarn,
+              ]}
+              numberOfLines={2}
+            >
+              {economyDescription(packConfig)}
+            </Text>
+            <Text style={styles.economyAction}>
+              {economyMode === 'none' ? 'Tocá para configurar →' : 'Tocá para editar →'}
+            </Text>
+          </View>
+        </Pressable>
+
         {isDraft && (
           <>
             <View style={styles.section}>
@@ -293,44 +348,54 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 label="Cargar figuritas"
                 onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
               />
+              <Button
+                label="Carga masiva"
+                variant="outline"
+                onPress={() => setBulkUpload(true)}
+              />
             </View>
           ) : (
             <>
-              <View style={styles.grid}>
-                {gridCells.map((n) => {
+              <AlbumPager
+                totalStickers={album.total_stickers}
+                renderCell={(n) => {
                   const s = stickerByNumber.get(n);
                   if (s) {
-                    // Siempre permitir abrir la figurita. El thin router en
-                    // [id].tsx bifurca: owner+draft → editor, sino → vista grande.
+                    // El thin router en [id].tsx bifurca: owner+draft → editor,
+                    // sino → vista grande.
                     return (
-                      <View key={n} style={styles.gridCell}>
-                        <StickerCell
-                          sticker={s}
-                          onPress={() => router.push(`/sticker/${s.id}`)}
-                        />
-                      </View>
+                      <StickerCell
+                        sticker={s}
+                        onPress={() => router.push(`/sticker/${s.id}`)}
+                      />
                     );
                   }
                   return (
-                    <View key={n} style={styles.gridCell}>
-                      <StickerCellEmpty
-                        number={n}
-                        onPress={
-                          isDraft
-                            ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
-                            : undefined
-                        }
-                      />
-                    </View>
+                    <StickerCellEmpty
+                      number={n}
+                      showPlus={isDraft}
+                      onPress={
+                        isDraft
+                          ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
+                          : undefined
+                      }
+                    />
                   );
-                })}
-              </View>
+                }}
+              />
               {isDraft && stickers.length < album.total_stickers && (
-                <Button
-                  label={`Cargar otra (${stickers.length}/${album.total_stickers})`}
-                  variant="outline"
-                  onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
-                />
+                <View style={{ gap: Spacing.sm }}>
+                  <Button
+                    label={`Cargar otra (${stickers.length}/${album.total_stickers})`}
+                    variant="outline"
+                    onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
+                  />
+                  <Button
+                    label="Carga masiva"
+                    variant="outline"
+                    onPress={() => setBulkUpload(true)}
+                  />
+                </View>
               )}
             </>
           )}
@@ -360,6 +425,24 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         onClose={() => setShowQr(false)}
       />
 
+      <EditEconomyModal
+        visible={editingEconomy}
+        albumId={album.id}
+        currentConfig={packConfig}
+        isPro={isPro}
+        onClose={() => setEditingEconomy(false)}
+        onSaved={refetch}
+      />
+
+      <BulkStickerUploadModal
+        visible={bulkUpload}
+        albumId={album.id}
+        totalStickers={album.total_stickers}
+        occupiedNumbers={new Set(stickers.map((s) => s.number))}
+        onClose={() => setBulkUpload(false)}
+        onFinished={refetch}
+      />
+
       <View style={styles.footer}>
         {isDraft && (
           <>
@@ -387,6 +470,22 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
       </View>
     </SafeAreaView>
   );
+}
+
+// Descripción corta del config de economía actual, para el checklist y la
+// sección de owner. Ej: "Sobre diario · 1 sobre · 5 figus" / "Solo QR · 3 sobres · 5 figus".
+function economyDescription(cfg: PackConfig): string {
+  const mode = modeFromConfig(cfg);
+  if (mode === 'none') return 'No configurado';
+  const size = cfg.pack_size ?? 5;
+  const weekly = cfg.daily.cooldown_hours >= 168;
+  const dailyTxt = `${cfg.daily.count} sobre${cfg.daily.count > 1 ? 's' : ''} ${weekly ? 'sem.' : 'diario'}`;
+  const qrTxt = `QR ${cfg.qr.count} sobre${cfg.qr.count > 1 ? 's' : ''}`;
+  const head =
+    mode === 'daily' ? dailyTxt :
+    mode === 'qr' ? qrTxt :
+    `${dailyTxt} + ${qrTxt}`;
+  return `${head} · ${size} figus/sobre`;
 }
 
 // Sección QR de sobres: muestra el botón apropiado según estado pro + qr_enabled.
@@ -496,6 +595,65 @@ const styles = StyleSheet.create({
   },
   codeCardPressed: {
     backgroundColor: Colors.paper3,
+  },
+  economyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.cardLg,
+    borderWidth: 2,
+    borderColor: Colors.gold,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  economyCardWarn: {
+    borderColor: Colors.red,
+    backgroundColor: '#FFF6F4',
+  },
+  economyCardPressed: {
+    opacity: 0.85,
+  },
+  economyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  economyIconWarn: {
+    backgroundColor: Colors.red,
+  },
+  economyLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  economyValue: {
+    fontFamily: FontFamily.display,
+    fontSize: 20,
+    color: Colors.ink,
+    letterSpacing: 0.3,
+    lineHeight: 24,
+  },
+  economyValueWarn: {
+    color: Colors.red,
+  },
+  economyAction: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginTop: 6,
   },
   codeLabel: {
     fontFamily: FontFamily.mono,

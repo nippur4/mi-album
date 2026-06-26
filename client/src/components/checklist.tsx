@@ -22,10 +22,12 @@ export function Checklist({ items }: Props) {
           <View style={[styles.bullet, item.done && styles.bulletDone]}>
             {item.done && <Text style={styles.bulletCheck}>✓</Text>}
           </View>
-          <Text style={[styles.label, item.done && styles.labelDone]}>{item.label}</Text>
-          {item.hint && (
-            <Text style={[styles.hint, item.done && styles.hintDone]}>{item.hint}</Text>
-          )}
+          <View style={styles.textCol}>
+            <Text style={[styles.label, item.done && styles.labelDone]}>{item.label}</Text>
+            {item.hint && (
+              <Text style={[styles.hint, item.done && styles.hintDone]}>{item.hint}</Text>
+            )}
+          </View>
         </View>
       ))}
     </View>
@@ -40,9 +42,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: Spacing.sm,
     gap: Spacing.md,
+  },
+  textCol: {
+    flex: 1,
+    gap: 2,
   },
   rowDivider: {
     borderTopWidth: 1,
@@ -69,7 +75,6 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   label: {
-    flex: 1,
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,
     fontWeight: '600',

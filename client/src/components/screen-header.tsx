@@ -29,7 +29,7 @@ export function ScreenHeader({ title, back, multiline, right, style }: Props) {
       >
         {title.toUpperCase()}
       </Text>
-      <View style={[styles.side, { alignItems: 'flex-end' }]}>{right}</View>
+      <View style={[styles.sideRight, { alignItems: 'flex-end' }]}>{right}</View>
     </View>
   );
 }
@@ -49,6 +49,12 @@ const styles = StyleSheet.create({
   },
   side: {
     width: 40,
+    justifyContent: 'center',
+  },
+  // El slot derecho se expande al contenido (badge, icono) para que el texto
+  // no se corte. minWidth: 40 mantiene la simetría cuando está vacío.
+  sideRight: {
+    minWidth: 40,
     justifyContent: 'center',
   },
   backHit: {
