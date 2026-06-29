@@ -9,6 +9,7 @@ import { Countdown } from '@/components/countdown';
 import { ProgressCard } from '@/components/progress-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { StickerCell, StickerCellMissing } from '@/components/sticker-cell';
+import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Album, Sticker } from '@/lib/queries/albums';
 import { useAvailablePacksCount, useUserCollection } from '@/lib/queries/collection';
@@ -54,8 +55,13 @@ export function UserAlbumView({ album, stickers }: Props) {
     refetchDaily();
   }
 
+  const [pastingId, setPastingId] = useState<string | null>(null);
+
   async function onPaste(stickerId: string) {
+    if (pastingId) return;
+    setPastingId(stickerId);
     const { error } = await pasteSticker(stickerId);
+    setPastingId(null);
     if (error) {
       Alert.alert('No se pudo pegar', errorMessage(error));
       return;
@@ -77,6 +83,20 @@ export function UserAlbumView({ album, stickers }: Props) {
 
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
 
+  // Listado de figuritas en el "bolsillo": cualquiera con stock disponible.
+  // Incluye:
+  //   - las que tiene sin pegar (pasted=false): la primera podría ir al álbum
+  //   - las repes de las pegadas (pasted=true, quantity>1): solo para cambiar
+  // El stock disponible es quantity - (pasted ? 1 : 0).
+  const toPasteList = stickers
+    .filter((s) => {
+      const e = collection.get(s.id);
+      if (!e) return false;
+      const stock = e.quantity - (e.pasted ? 1 : 0);
+      return stock > 0;
+    })
+    .sort((a, b) => a.number - b.number);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScreenHeader title={album.name} back multiline />
@@ -95,33 +115,22 @@ export function UserAlbumView({ album, stickers }: Props) {
           rightStat={`${repesCount} repetidas · ${missingCount} faltan`}
         />
 
-        {toPasteCount > 0 && (
-          <View style={styles.toPasteBanner}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.toPasteBannerTitle}>
-                Tenés {toPasteCount} figurita{toPasteCount > 1 ? 's' : ''} sin pegar
-              </Text>
-              <Text style={styles.toPasteBannerSub}>
-                Tocá cada una en la grilla para pegarla.
-              </Text>
-            </View>
-          </View>
-        )}
-
+        {/* El álbum: solo pegadas + huecos. Las "por pegar" viven en la sección
+            de abajo, no encima de la grilla. */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>
-            FIGURITAS · {myPastedCount} / {album.total_stickers}
+            EL ÁLBUM · {myPastedCount} / {album.total_stickers}
           </Text>
           <AlbumPager
             totalStickers={album.total_stickers}
             pageBgColor={(album as any).page_bg_color}
+            pageTexture={(album as any).page_texture}
             pageOverrides={(album as any).page_overrides ?? []}
             renderCell={(n) => {
               const s = stickerByNumber.get(n);
               if (!s) return <StickerCellMissing number={n} />;
               const entry = collection.get(s.id);
-              if (!entry) return <StickerCellMissing number={n} />;
-              if (entry.pasted) {
+              if (entry?.pasted) {
                 return (
                   <StickerCell
                     sticker={s}
@@ -130,17 +139,44 @@ export function UserAlbumView({ album, stickers }: Props) {
                   />
                 );
               }
-              return (
-                <StickerCell
-                  sticker={s}
-                  state="to_paste"
-                  extraCount={Math.max(0, entry.quantity - 1)}
-                  onPress={() => onPaste(s.id)}
-                />
-              );
+              // No pegada todavía (sea que la tenga sin pegar o no la tenga):
+              // se ve como silueta gris. La acción de pegar/cambiar vive en
+              // la lista de abajo.
+              return <StickerCellMissing number={n} />;
             }}
           />
         </View>
+
+        {toPasteList.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>
+              EN TU BOLSILLO · {toPasteList.length}
+            </Text>
+            <Text style={styles.sectionHint}>
+              Pegá las que te faltan en el álbum o cambialas con otros jugadores.
+            </Text>
+            <View style={{ gap: Spacing.sm }}>
+              {toPasteList.map((s) => {
+                const entry = collection.get(s.id)!;
+                const stock = entry.quantity - (entry.pasted ? 1 : 0);
+                return (
+                  <ToPasteCard
+                    key={s.id}
+                    sticker={s}
+                    stock={stock}
+                    canPaste={!entry.pasted}
+                    busy={pastingId === s.id}
+                    onPaste={() => onPaste(s.id)}
+                    onTrade={() =>
+                      router.push(`/trade/matches?albumId=${album.id}&stickerId=${s.id}`)
+                    }
+                    onPress={() => router.push(`/sticker/${s.id}`)}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {(repesCount > 0 || missingCount > 0) && (
           <Button
@@ -202,6 +238,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.monoLabelSmall,
     color: Colors.muted,
     letterSpacing: 1.5,
+  },
+  sectionHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    marginBottom: Spacing.xs,
   },
   grid: {
     flexDirection: 'row',

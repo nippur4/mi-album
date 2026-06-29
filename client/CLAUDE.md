@@ -2,11 +2,11 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-06-25.
+Última actualización: 2026-06-26.
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 17 migraciones aplicadas (schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) + `pg_cron` activo.
+**Backend (`supabase/`):** 21 migraciones aplicadas (schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, page_color_default_white) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -25,6 +25,69 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-06-26 (VALIDADO)
+
+1. **Navegación reorganizada**:
+   - Tab bar: INICIO → GESTIONAR → QR → SOBRES → CAMBIOS. Perfil sacado de la barra (`href: null`), accesible via `/profile`.
+   - `HeaderAvatar` (`components/header-avatar.tsx`) nuevo: Pressable<Avatar> que va a `/profile`, montado en cada tab arriba a la derecha.
+   - Tab QR no navega: usa `listeners.tabPress` con `e.preventDefault()` y abre `QrTabModal` con opciones Escanear / Mostrar QR (chooser de álbum si tenés varios con QR habilitado).
+   - Tab ÁLBUM → "Gestionar" (`app/(tabs)/album.tsx` reescrito): lista vertical de owned + botón "Crear álbum nuevo". Home sacó la sección "Tus álbumes" (vive solo en Gestionar) pero mantiene el botón crear.
+
+2. **Avatares custom desde admin presets**:
+   - Migración 0018: `'avatar'` sumado al CHECK de `preset_images.kind`, columna `profiles.avatar_thumb_key`, RPC `fn_update_avatar(p_thumb_key)` que valida que la key pertenezca a un preset activo de kind `avatar` (evita inyección de keys arbitrarias).
+   - Edge Function `upload_preset_image` acepta `kind='avatar'` (1:1).
+   - `app/admin/presets.tsx` tiene tercera sección "Avatares (1:1)".
+   - `components/avatar-picker-modal.tsx` (modal exclusivo, no muestra gradientes, primera opción "Por defecto" = iniciales+color hash).
+   - `components/avatar.tsx` extendido con `imageKey` opcional (renderiza Image circular si está, sino fallback a iniciales). `HeaderAvatar` lo consume.
+   - Decisión: los users NO suben sus fotos — moderación / contenido inadecuado. Eligen de la galería curada por admin.
+
+3. **ProfileProvider global** (`lib/queries/profile.ts` refactor): `useMyProfile` ahora consume un Context montado en `_layout.tsx` root. Antes cada tab tenía su propio state local del profile y los updates (avatar/nombre) no se propagaban entre tabs hasta refetch manual. Un único fetch alimenta a todos los `HeaderAvatar` + Profile screen.
+
+4. **QR cooldown con timestamp legible**:
+   - Migración 0019: el `raise exception 'qr_on_cooldown_until_%'` ahora formatea con `to_char(... at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')` para emitir ISO. Antes era formato Postgres default que Hermes no parseaba.
+   - `errors.ts` detecta `qr_on_cooldown` y parsea el timestamp ISO, devolviendo copy específico: "Volvé hoy a las HH:MM" / "Volvé mañana a las HH:MM" / "Volvé el DD/MM a las HH:MM".
+   - `parsePgTimestamp` helper que normaliza formatos legacy (offset `+00` → `+00:00`, espacio → `T`, etc.).
+
+5. **Tap-to-copy del share_code**: el card del código ahora es `Pressable`. Tap → `Clipboard.setStringAsync(album.share_code)` + feedback temporal "¡COPIADO!" (2s). Requirió `npx expo install expo-clipboard` + **rebuild EAS** (módulo nativo).
+
+6. **Carga masiva de figuritas** (`components/bulk-sticker-upload-modal.tsx`): `allowsMultipleSelection: true` en ImagePicker, asignación secuencial a próximos números libres, name auto `#NN`, rarity default `common`, upload secuencial con progress bar + "Detener" entre items + resumen final. Botón "Carga masiva" en empty state y debajo de "Cargar otra".
+
+7. **Slot vacío de figurita con `+`** en draft: `StickerCellEmpty` ya soportaba `showPlus`, faltaba pasar `showPlus={isDraft}` en la grilla activa del owner. Tap → `/sticker/new?albumId=...&number={n}` con número preseleccionado.
+
+8. **Editor de economía** (`components/edit-economy-modal.tsx`):
+   - Modal con tres modos: A (solo sobre diario), B (solo QR), C (ambos). B y C con badge PRO disabled si free.
+   - Frecuencia daily diaria/semanal (semanal PRO-only) con chips. Stepper cantidad de sobres (free: 1 fijo, pro: 1–10).
+   - Pack size chips 1/3/5/7/10 — libre para todos. (`open_pack/index.ts` con `PACK_SIZE_MIN = 1`, antes era 3).
+   - Card "Cómo se consiguen las figuritas" prominente (border gold + shadow + icono Feather; rojo+icono alert si no configurado) que abre el modal. También item del checklist con hint en línea aparte.
+   - Sumó sección a `pack_config` que ya existía; sin migración.
+   - Fix del scroll del modal: SafeAreaView ya no envuelve todo, ScrollView con `flexShrink: 1` + actions sticky abajo. Antes el botón Guardar quedaba fuera del viewport.
+
+9. **Checklist con label arriba + hint abajo** (`components/checklist.tsx`): cada item ahora apila label + hint en columna `flex:1` al lado del bullet. Hint queda verde si done. Antes el hint colateral se cortaba.
+
+10. **`ScreenHeader` slot derecho variable**: era `width: 40` fijo y cortaba badges. Nuevo style `sideRight: { minWidth: 40 }` permite expandir al contenido.
+
+11. **Avatar pixelado fix**: `SIZES.avatar` subió de 160/480 a 512/1024 en `lib/queries/uploads.ts`. Los avatars existentes hay que re-subirlos desde admin para tomar el nuevo tamaño.
+
+12. **Teclado tapa input ("Te pasaron un código")**:
+    - `Keyboard.addListener` en `(tabs)/index.tsx` para padding dinámico del ScrollView según altura del teclado.
+    - `JoinCodeInput` expone `onInputFocus` → home dispara `scrollToEnd` con timeout 350ms post-focus.
+    - KeyboardAvoidingView + `keyboardShouldPersistTaps="handled"`.
+
+13. **Page pager 3×4 con efecto de hoja** (`components/album-pager.tsx`):
+    - **Intento 1** (FlatList horizontal con tilt sutil): no convenció, "no parece hoja real".
+    - **Intento 2** (lib `react-native-page-flipper`): falla en runtime — la lib es de 2 años atrás, usa peer dep antiguo de `expo-linear-gradient` (~11.x) + `react-native-linear-gradient` (módulo nativo) + APIs viejas de Reanimated 2/3 incompatibles con Reanimated 4. Quedó `react-native-linear-gradient` instalado como dead code (rebuild ya hecho).
+    - **Intento 3** (custom con PanGestureHandler + Reanimated, layered approach): página activa rotaba ±180° con backface hidden, prev/next debajo con opacity. Tirón visible al hacer commit (setCurrentPage en JS thread vs progress=0 en UI thread no atómicos).
+    - **Solución final — carousel approach**: una sola `position: SharedValue<number>` fraccionaria que crece sin reset. Cada página `position: absolute, left: idx * pageWidth`, transform `translateX = -position * pageWidth + idx * pageWidth`. RotateY ±25° + opacity según `idx - position`. Solo se renderean páginas a distancia ≤1 del current (perf OK). Velocidad alta completa el flip aunque el dedo no haya cruzado la mitad.
+    - Necesitó `GestureHandlerRootView` en el root `_layout.tsx`.
+
+14. **Color de hoja editable + layouts por hoja**:
+    - Migraciones 0020 + 0021: `albums.page_bg_color text default 'white'` + `albums.page_overrides jsonb default '[]'` + RPC `fn_update_album_pages(album_id, bg_color, overrides)` editable en draft y published. 0021 cambió el default de `'paper'` (igual al body cream) a `'white'` para que se distinga visualmente + migró las filas existentes.
+    - `lib/page-config.ts`: paleta de 9 colores (blanco, paper, crema, ocre, menta, cielo, lavanda, rosa, pizarra) + 5 layouts (3×4 default, 2×3, 3×3, 2×4, 4×4). Helpers `buildPages()`, `resolveColor`, `resolveLayout`, `updateAlbumPages`.
+    - `components/edit-pages-modal.tsx`: modo principal con paleta + lista de hojas con preview chica, tap → editor de página individual (color con opción "Default" para volver + layout chips con preview).
+    - `AlbumPager` recibe `pageBgColor` + `pageOverrides`. Cada hoja resuelve su color y layout.
+    - **Hoja con tamaño FIJO**: `pageHeight` calculado del layout default 3×4 y respetado por TODOS los layouts. Las celdas se ajustan al espacio (4×4 más chicas, 2×3 más grandes) pero la hoja en sí mantiene tamaño en pantalla.
+    - **Slot del cell con `aspectRatio` nativo** (en vez de `width × height` explícito): evita que el `aspectRatio: 0.82` interno del `StickerCell` pelee con dimensiones forzadas y desborde. + `SAFETY_MARGIN: 4` en el cálculo para evitar que floating-point + gap pierdan la última columna del wrap (era el bug por el que solo 2×3 funcionaba sin perder cells).
 
 #### Sesión 2026-06-25 (VALIDADO)
 
@@ -88,20 +151,36 @@
 21. **Pantalla 03 (figurita grande) sin `conic-gradient` ni `mix-blend-mode`**: RN no soporta nativo. Limitado a sheen lineal (LinearGradient transparente→blanco-alpha→transparente rotado 18° atravesando con `withTiming` lineal en loop) + bob vertical (sine). Aceptable en MVP.
 22. **Admin RPC con SECURITY DEFINER y check explícito de `is_admin`**: la lista de álbumes del panel admin bypasa RLS para mostrar TODOS los published (incluidos privados). El check de admin va en la RPC.
 
+#### Sesión 2026-06-26
+
+23. **State global vía Context para profile**: cada tab tenía su propio `useState(profile)` y los updates (avatar, nombre) no se propagaban entre tabs. Solución: `ProfileProvider` en `_layout.tsx` root + `useMyProfile()` que consume el contexto. Un solo fetch, un solo state, todos los consumers se re-renderean automáticamente al `refetch()`. Patrón a repetir para data global compartida (pro status, admin flag, etc.) si surgen casos similares.
+24. **Tap intercept en tab no-navegable** (tab QR): `Tabs.Screen` con `listeners.tabPress: (e) => { e.preventDefault(); setVisible(true); }` para abrir modal sin navegar. Hace falta una ruta dummy (`(tabs)/qr.tsx` vacía) para que expo-router la registre.
+25. **Profile fuera de tab bar**: `<Tabs.Screen name="profile" options={{ href: null }} />` oculta la tab del bar pero mantiene la ruta accesible. Patrón para tabs que no van abajo (acceso por avatar arriba).
+26. **Page-flipping en RN sin libs nativas**: el approach **carousel con una sola posición fraccionaria** que crece sin reset es el más robusto. El layered approach (active layer separada con reset progress + setCurrentPage en commit) tiene un tirón inevitable porque JS thread y UI thread no son atómicos. En el carousel, `position` está siempre en UI thread, `setCurrentPage` solo actualiza el counter visual y no afecta el render. Para evitar pop-in al cruzar, renderear ±1 del current (no solo el activo).
+27. **Slot del pager con `aspectRatio` nativo en vez de `width × height` explícito**: cuando un cell interno (StickerCell) tiene su propio `aspectRatio`, pelea con dimensiones forzadas del padre y desborda. Pasarle `{ width: cellW, aspectRatio: aspect }` al slot deja que Yoga calcule la altura sin conflicto. + `SAFETY_MARGIN: 4` para que floating-point + flex-wrap no pierdan la última columna en layouts ajustados al pixel.
+28. **Color/layout keys (no hex/dims) en DB**: `page_bg_color: 'mint'` y `layout: '3x4'` se guardan como strings cortas. El cliente resuelve a hex y dimensions. Si en el futuro cambiamos el hex, los álbumes existentes se actualizan automáticamente sin migración. Hacemos lo mismo con presets de imágenes (key 'cover'/'pack'/'avatar').
+29. **Default value matters**: `page_bg_color default 'paper'` (que resolvía al mismo #FBF3E2 del body) era invisible. Cambiamos a `'white'` para que la hoja se distinga del fondo + sumamos border + shadow al rendering. Cuando creás una columna con default, asegurate de que el default produzca un resultado VISIBLE/útil para el user.
+30. **Carga masiva**: `allowsMultipleSelection: true` + `selectionLimit: N` del ImagePicker permite picker múltiple nativo en una pasada. Upload secuencial (no paralelo) para no saturar la Edge Function. Cancel entre items con `useRef` (un state quedaría capturado en el closure del loop).
+
 ### Próximo paso concreto
 
-**Validar todo lo de esta sesión primero** (Nico aún no probó nada): aplicar 0012 + 0013, regenerar tipos, hacer SQL bootstrap admin, probar en mobile que (a) no se rompió nada del flujo previo, (b) el panel admin lista y togglea correctamente, (c) tap en celda pegada del user abre la figurita grande con foil, (d) refetch del user view funciona al volver de pack/open.
+Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat real**. Pasos:
+- Conectar RevenueCat SDK real (`react-native-purchases`), config de productos en App Store / Play Store sandbox.
+- Reemplazar el secret placeholder del webhook por uno real, validar firma.
+- Pantallas 12 (paywall) + 13 (confirmación pro) del handoff.
+- Test end-to-end con sandbox: comprar → webhook → `subscriptions` row → `useIsPro()` true.
 
-**Una vez validado: QR de sobres** (pantallas 05 owner + 06 user). Es la única pieza del MVP user-facing que queda. Pasos:
-- Owner: en el detalle del álbum (sección economía o nueva), botón "Generar QR" que muestra el QR con el token firmado (HMAC con `qr_secret`). Pro-only (validado server-side ya).
-- User: en el tab Sobres o una pantalla nueva accesible desde allí, botón "Escanear QR" que abre la cámara con `expo-camera`. Al escanear, llama Edge Function `redeem_qr` (ya implementada) que valida HMAC y otorga sobres.
-- Requiere `npx expo install expo-camera` + permisos de cámara en `app.json` + **rebuild EAS (~15 min)** por el módulo nativo.
+**Alternativas / polish que quedan:**
+- **Sobre flotante animado** en el welcome del user (handoff 15).
+- **Paginador de puntos** en figurita grande para navegar entre stickers del álbum.
+- **Tab "Álbum activo"** (placeholder hoy) o quitarlo / repurpose.
+- **Push notifications** end-to-end (registrar push_token, enviar al claim diario disponible, etc.).
+- **Animación "snap"** al pegar figurita (Reanimated scale spring + tinte verde fugaz).
+- **Polish del empty state del owner** pre-cargar imágenes (grid fantasma más dramático).
 
-**Alternativas si Nico prefiere otra cosa:**
-- Polish del flujo de pegar: animación "snap" cuando una figurita se pega (Reanimated con scale spring + tinte verde fugaz).
-- Pantalla 03 mejorada: paginador de puntos para navegar entre las figuritas del álbum.
-- Tab "Álbum": decidir UX (último joineado / lista de álbumes activos / quitar).
-- Cron de welcome cuando una pantalla de Inicio detecta álbum joineado sin welcome_granted (recovery).
+**Limpieza técnica pendiente:**
+- `react-native-linear-gradient` quedó instalado (intento fallido de page-flipper). Es dead code pero ya compilado en el dev client. Se saca en el próximo rebuild de rutina con `npm uninstall` + rebuild EAS.
+- `runOnJS` de Reanimated 4 emite warnings de deprecation. Funciona, no hay drop-in replacement obvio. Esperar Reanimated 5 o revisar al refactor.
 
 ### Operativas
 

@@ -16,12 +16,19 @@ export const PAGE_COLORS: PageColor[] = [
   { key: 'white',    name: 'Blanco',   bg: '#FFFFFF' },
   { key: 'paper',    name: 'Paper',    bg: '#FBF3E2' },
   { key: 'cream',    name: 'Crema',    bg: '#F7EDD9' },
+  { key: 'butter',   name: 'Manteca',  bg: '#F4E8B0' },
   { key: 'ocre',     name: 'Ocre',     bg: '#F0E4C8' },
-  { key: 'mint',     name: 'Menta',    bg: '#D5EBDC' },
-  { key: 'sky',      name: 'Cielo',    bg: '#D9E8F4' },
-  { key: 'lavender', name: 'Lavanda',  bg: '#E2D9F1' },
+  { key: 'peach',    name: 'Durazno',  bg: '#FCDDC5' },
+  { key: 'coral',    name: 'Coral',    bg: '#F5C8A8' },
   { key: 'rose',     name: 'Rosa',     bg: '#F4DDDD' },
+  { key: 'plum',     name: 'Ciruela',  bg: '#D2BCE0' },
+  { key: 'lavender', name: 'Lavanda',  bg: '#E2D9F1' },
+  { key: 'sky',      name: 'Cielo',    bg: '#D9E8F4' },
+  { key: 'teal',     name: 'Turquesa', bg: '#B8E0DA' },
+  { key: 'mint',     name: 'Menta',    bg: '#D5EBDC' },
+  { key: 'sage',     name: 'Salvia',   bg: '#C8D8B5' },
   { key: 'slate',    name: 'Pizarra',  bg: '#DDE2E6' },
+  { key: 'stone',    name: 'Piedra',   bg: '#C9C2BC' },
 ];
 
 export const DEFAULT_PAGE_COLOR = 'white';
@@ -59,16 +66,42 @@ export function resolveLayout(key: string | null | undefined): PageLayout {
   );
 }
 
+export interface PageTexture {
+  key: string;
+  name: string;
+}
+
+// Texturas que se aplican sobre el color de la hoja, debajo de las celdas.
+// El render real lo hace components/page-texture.tsx con react-native-svg.
+export const PAGE_TEXTURES: PageTexture[] = [
+  { key: 'none',       name: 'Sin textura' },
+  { key: 'dots',       name: 'Puntos' },
+  { key: 'lines',      name: 'Líneas' },
+  { key: 'grid',       name: 'Cuadrícula' },
+  { key: 'crosshatch', name: 'Tramado' },
+  { key: 'diagonals',  name: 'Diagonales' },
+  { key: 'rings',      name: 'Anillos' },
+  { key: 'triangles',  name: 'Triángulos' },
+  { key: 'stars',      name: 'Estrellas' },
+  { key: 'plus',       name: 'Cruces' },
+  { key: 'waves',      name: 'Olas' },
+  { key: 'zigzag',     name: 'Zigzag' },
+];
+
+export const DEFAULT_PAGE_TEXTURE = 'none';
+
 export interface PageOverride {
   page: number;            // 0-indexed
   color?: string;
   layout?: string;
+  texture?: string;
 }
 
 export interface BuiltPage {
   index: number;
   layout: PageLayout;
   colorKey: string;        // resuelto (default si no hay override)
+  textureKey: string;
   numbers: number[];
 }
 
@@ -77,6 +110,7 @@ export interface BuiltPage {
 export function buildPages(
   totalStickers: number,
   defaultColor: string,
+  defaultTexture: string,
   overrides: PageOverride[],
 ): BuiltPage[] {
   const overrideByPage = new Map<number, PageOverride>();
@@ -98,6 +132,7 @@ export function buildPages(
       index: pageIdx,
       layout,
       colorKey: ov?.color ?? defaultColor,
+      textureKey: ov?.texture ?? defaultTexture,
       numbers: nums,
     });
     pageIdx++;
@@ -109,11 +144,13 @@ export function buildPages(
 export async function updateAlbumPages(
   albumId: string,
   bgColor: string,
+  texture: string,
   overrides: PageOverride[],
 ) {
   return supabase.rpc('fn_update_album_pages', {
     p_album_id: albumId,
     p_bg_color: bgColor,
+    p_texture: texture,
     p_overrides: overrides as any,
   });
 }

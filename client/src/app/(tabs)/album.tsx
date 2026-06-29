@@ -12,9 +12,12 @@ import { useAlbumsProgress, useMyOwnedAlbums } from '@/lib/queries/albums';
 export default function ManageTab() {
   const router = useRouter();
   const { albums: owned, refetch, isLoading } = useMyOwnedAlbums();
-  const progress = useAlbumsProgress(owned.map((a) => a.id));
+  const { progress, refetch: refetchProgress } = useAlbumsProgress(owned.map((a) => a.id));
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusEffect(useCallback(() => {
+    refetch();
+    refetchProgress();
+  }, [refetch, refetchProgress]));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

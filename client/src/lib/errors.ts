@@ -73,6 +73,7 @@ export type AppErrorKey =
   // Hojas
   | 'invalid_color'
   | 'invalid_overrides'
+  | 'invalid_texture'
   // Catch-all
   | 'unknown';
 
@@ -132,6 +133,7 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0152: 'invalid_avatar',
   P0160: 'invalid_color',
   P0161: 'invalid_overrides',
+  P0162: 'invalid_texture',
 };
 
 export interface AppError {
@@ -217,6 +219,7 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   invalid_avatar: 'Ese avatar no está disponible.',
   invalid_color: 'Color de hoja inválido.',
   invalid_overrides: 'Configuración de hojas inválida.',
+  invalid_texture: 'Textura inválida.',
   unknown: 'Algo salió mal. Probá de nuevo.',
 };
 

@@ -44,13 +44,14 @@ export default function HomeTab() {
     () => Array.from(new Set([...owned.map((a) => a.id), ...joined.map((a) => a.id), ...publics.map((a) => a.id)])),
     [owned, joined, publics],
   );
-  const progressMap = useAlbumsProgress(allIds);
+  const { progress: progressMap, refetch: refetchProgress } = useAlbumsProgress(allIds);
 
   const refreshAll = useCallback(() => {
     refetchOwned();
     refetchJoined();
     refetchPublics();
-  }, [refetchOwned, refetchJoined, refetchPublics]);
+    refetchProgress();
+  }, [refetchOwned, refetchJoined, refetchPublics, refetchProgress]);
 
   useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
 
@@ -126,15 +127,17 @@ export default function HomeTab() {
             <View style={{ gap: Spacing.listGap }}>
               {joinedAlbums.map((album) => {
                 const p = progressMap[album.id];
-                const current = p?.my_pasted_count ?? 0;
                 const total = p?.total_stickers ?? album.total_stickers;
-                const progress = total > 0 ? current / total : 0;
+                // Counter siempre visible con el total del álbum; current=?
+                // mientras no llegue el progress (better than mostrar 0).
+                const counter = { current: p?.my_pasted_count ?? 0, total };
+                const progress = p && total > 0 ? p.my_pasted_count / total : 0;
                 return (
                   <AlbumCard
                     key={album.id}
                     album={album}
                     progress={progress}
-                    counter={{ current, total }}
+                    counter={counter}
                     onPress={() => router.push(`/album/${album.id}`)}
                   />
                 );

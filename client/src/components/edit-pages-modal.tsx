@@ -11,14 +11,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { PageTexture } from '@/components/page-texture';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
 import {
   buildPages,
   DEFAULT_PAGE_COLOR,
   DEFAULT_PAGE_LAYOUT,
+  DEFAULT_PAGE_TEXTURE,
   PAGE_COLORS,
   PAGE_LAYOUTS,
+  PAGE_TEXTURES,
   resolveColor,
   resolveLayout,
   updateAlbumPages,
@@ -30,24 +33,27 @@ interface Props {
   albumId: string;
   totalStickers: number;
   currentBgColor: string;
+  currentTexture: string;
   currentOverrides: PageOverride[];
   onClose: () => void;
   onSaved: () => void;
 }
 
 // Modal de configuración de hojas. Dos partes:
-//   1) Color de hoja por defecto (paleta predefinida).
-//   2) Lista de páginas, cada una con preview + tap para overridear su color/layout.
+//   1) Color + textura por defecto (paletas predefinidas).
+//   2) Lista de páginas, cada una con preview + tap para overridear color/layout/texture.
 export function EditPagesModal({
   visible,
   albumId,
   totalStickers,
   currentBgColor,
+  currentTexture,
   currentOverrides,
   onClose,
   onSaved,
 }: Props) {
   const [bgColor, setBgColor] = useState(currentBgColor);
+  const [texture, setTexture] = useState(currentTexture);
   const [overrides, setOverrides] = useState<PageOverride[]>(currentOverrides);
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -56,16 +62,17 @@ export function EditPagesModal({
   useEffect(() => {
     if (visible) {
       setBgColor(currentBgColor);
+      setTexture(currentTexture);
       setOverrides(currentOverrides);
       setError(null);
       setEditingPage(null);
     }
-  }, [visible, currentBgColor, currentOverrides]);
+  }, [visible, currentBgColor, currentTexture, currentOverrides]);
 
   // Recalculamos las páginas en vivo para que el preview refleje los cambios.
   const pages = useMemo(
-    () => buildPages(totalStickers, bgColor, overrides),
-    [totalStickers, bgColor, overrides],
+    () => buildPages(totalStickers, bgColor, texture, overrides),
+    [totalStickers, bgColor, texture, overrides],
   );
 
   function getOverride(page: number): PageOverride | undefined {
@@ -81,8 +88,9 @@ export function EditPagesModal({
       const cleaned: PageOverride = { page };
       if (merged.color) cleaned.color = merged.color;
       if (merged.layout) cleaned.layout = merged.layout;
-      // Si el override solo tiene 'page' (sin color/layout), lo eliminamos.
-      const hasContent = cleaned.color || cleaned.layout;
+      if (merged.texture) cleaned.texture = merged.texture;
+      // Si el override solo tiene 'page' (sin color/layout/texture), lo eliminamos.
+      const hasContent = cleaned.color || cleaned.layout || cleaned.texture;
       if (!hasContent) {
         return prev.filter((o) => o.page !== page);
       }
@@ -97,13 +105,14 @@ export function EditPagesModal({
 
   function resetAll() {
     setBgColor(DEFAULT_PAGE_COLOR);
+    setTexture(DEFAULT_PAGE_TEXTURE);
     setOverrides([]);
   }
 
   async function onSave() {
     setError(null);
     setSaving(true);
-    const { error: rpcErr } = await updateAlbumPages(albumId, bgColor, overrides);
+    const { error: rpcErr } = await updateAlbumPages(albumId, bgColor, texture, overrides);
     setSaving(false);
     if (rpcErr) {
       setError(errorMessage(rpcErr));
@@ -140,6 +149,22 @@ export function EditPagesModal({
                 </View>
 
                 <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
+                  TEXTURA POR DEFECTO
+                </Text>
+                <View style={styles.textureRow}>
+                  {PAGE_TEXTURES.map((t) => (
+                    <TextureSwatch
+                      key={t.key}
+                      textureKey={t.key}
+                      name={t.name}
+                      baseColor={bgColor}
+                      selected={texture === t.key}
+                      onPress={() => setTexture(t.key)}
+                    />
+                  ))}
+                </View>
+
+                <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
                   HOJAS · {pages.length}
                 </Text>
                 <Text style={styles.hint}>
@@ -148,7 +173,7 @@ export function EditPagesModal({
                 <View style={styles.pageList}>
                   {pages.map((p) => {
                     const ov = getOverride(p.index);
-                    const hasOverride = !!(ov && (ov.color || ov.layout));
+                    const hasOverride = !!(ov && (ov.color || ov.layout || ov.texture));
                     return (
                       <Pressable
                         key={p.index}
@@ -164,20 +189,12 @@ export function EditPagesModal({
                             { backgroundColor: resolveColor(p.colorKey) },
                           ]}
                         >
-                          <View style={styles.previewGrid}>
-                            {Array.from({ length: Math.min(p.layout.capacity, 16) }).map((_, i) => (
-                              <View
-                                key={i}
-                                style={[
-                                  styles.previewCell,
-                                  {
-                                    width: `${100 / p.layout.cols - 2}%`,
-                                    height: `${100 / p.layout.rows - 2}%`,
-                                  },
-                                ]}
-                              />
-                            ))}
-                          </View>
+                          <PageTexture texture={p.textureKey} opacity={0.22} />
+                          <LayoutPreviewGrid
+                            cols={p.layout.cols}
+                            rows={p.layout.rows}
+                            cellColor="rgba(42,30,22,0.18)"
+                          />
                         </View>
                         <View style={styles.pageText}>
                           <Text style={styles.pageTitle}>
@@ -208,8 +225,10 @@ export function EditPagesModal({
               <PageEditor
                 page={editingPage}
                 override={getOverride(editingPage)}
+                defaultColor={bgColor}
                 onSetColor={(color) => setOverride(editingPage, { color })}
                 onSetLayout={(layout) => setOverride(editingPage, { layout })}
+                onSetTexture={(t) => setOverride(editingPage, { texture: t })}
                 onClear={() => {
                   setOverrides((prev) => prev.filter((o) => o.page !== editingPage));
                   setEditingPage(null);
@@ -234,20 +253,28 @@ export function EditPagesModal({
 function PageEditor({
   page,
   override,
+  defaultColor,
   onSetColor,
   onSetLayout,
+  onSetTexture,
   onClear,
   onBack,
 }: {
   page: number;
   override?: PageOverride;
+  defaultColor: string;
   onSetColor: (color: string | undefined) => void;
   onSetLayout: (layout: string | undefined) => void;
+  onSetTexture: (t: string | undefined) => void;
   onClear: () => void;
   onBack: () => void;
 }) {
   const selectedColor = override?.color;
   const selectedLayout = override?.layout ?? DEFAULT_PAGE_LAYOUT;
+  const selectedTexture = override?.texture;
+  // El color base que vemos en los swatches de textura: el override si lo hay,
+  // sino el default del álbum.
+  const previewColorKey = selectedColor ?? defaultColor;
 
   return (
     <View>
@@ -274,6 +301,27 @@ function PageEditor({
       </View>
 
       <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
+        TEXTURA DE ESTA HOJA
+      </Text>
+      <Text style={styles.hint}>Sin marcar = usa la textura por defecto.</Text>
+      <View style={styles.textureRow}>
+        <TextureSwatchDefault
+          selected={!selectedTexture}
+          onPress={() => onSetTexture(undefined)}
+        />
+        {PAGE_TEXTURES.map((t) => (
+          <TextureSwatch
+            key={t.key}
+            textureKey={t.key}
+            name={t.name}
+            baseColor={previewColorKey}
+            selected={selectedTexture === t.key}
+            onPress={() => onSetTexture(t.key)}
+          />
+        ))}
+      </View>
+
+      <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
         COMPOSICIÓN
       </Text>
       <View style={styles.layoutList}>
@@ -290,18 +338,7 @@ function PageEditor({
             ]}
           >
             <View style={styles.layoutPreview}>
-              {Array.from({ length: l.capacity }).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.layoutPreviewCell,
-                    {
-                      width: `${100 / l.cols - 4}%`,
-                      height: `${100 / l.rows - 4}%`,
-                    },
-                  ]}
-                />
-              ))}
+              <LayoutPreviewGrid cols={l.cols} rows={l.rows} />
             </View>
             <Text style={styles.layoutName}>{l.name}</Text>
             <Text style={styles.layoutCap}>{l.capacity} figus</Text>
@@ -315,6 +352,92 @@ function PageEditor({
         </Pressable>
       )}
     </View>
+  );
+}
+
+// Grid de preview de un layout (M rows × N cols). Usa flex puro para
+// distribuir las celdas — Yoga calcula tamaños y gaps sin que tengamos que
+// hacer cuentas con porcentajes (que se rompían cuando el layout no era
+// cuadrado, mismo bug que tenía el AlbumPager).
+function LayoutPreviewGrid({
+  cols,
+  rows,
+  cellColor = 'rgba(42,30,22,0.25)',
+}: {
+  cols: number;
+  rows: number;
+  cellColor?: string;
+}) {
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      {Array.from({ length: rows }).map((_, r) => (
+        <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+          {Array.from({ length: cols }).map((_, c) => (
+            <View
+              key={c}
+              style={{ flex: 1, backgroundColor: cellColor, borderRadius: 1 }}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TextureSwatch({
+  textureKey,
+  name,
+  baseColor,
+  selected,
+  onPress,
+}: {
+  textureKey: string;
+  name: string;
+  baseColor: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.swatchWrap}>
+      <View
+        style={[
+          styles.textureSwatch,
+          { backgroundColor: resolveColor(baseColor) },
+          selected && styles.swatchSelected,
+        ]}
+      >
+        <PageTexture texture={textureKey} opacity={0.25} />
+        {selected && (
+          <View style={styles.textureCheck}>
+            <Feather name="check" size={14} color={Colors.paper} />
+          </View>
+        )}
+      </View>
+      <Text style={styles.swatchLabel}>{name}</Text>
+    </Pressable>
+  );
+}
+
+function TextureSwatchDefault({
+  selected,
+  onPress,
+}: {
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.swatchWrap}>
+      <View
+        style={[
+          styles.textureSwatch,
+          styles.swatchDefault,
+          selected && styles.swatchSelected,
+        ]}
+      >
+        <Feather name="x" size={18} color={Colors.muted} />
+      </View>
+      <Text style={styles.swatchLabel}>Default</Text>
+    </Pressable>
   );
 }
 
@@ -406,6 +529,32 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
+  textureRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  textureSwatch: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textureCheck: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   swatchWrap: {
     alignItems: 'center',
     gap: 4,
@@ -457,17 +606,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderStrong,
     padding: 4,
-  },
-  previewGrid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    alignContent: 'flex-start',
-  },
-  previewCell: {
-    backgroundColor: 'rgba(42,30,22,0.18)',
-    borderRadius: 1,
   },
   pageText: { flex: 1, gap: 2 },
   pageTitle: {
@@ -529,15 +667,7 @@ const styles = StyleSheet.create({
     aspectRatio: 0.75,
     backgroundColor: Colors.paper3,
     borderRadius: 4,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     padding: 4,
-    gap: 2,
-    alignContent: 'flex-start',
-  },
-  layoutPreviewCell: {
-    backgroundColor: 'rgba(42,30,22,0.25)',
-    borderRadius: 1,
   },
   layoutName: {
     fontFamily: FontFamily.body,

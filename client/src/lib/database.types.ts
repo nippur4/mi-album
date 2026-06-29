@@ -53,6 +53,7 @@ export type Database = {
           pack_thumb_key: string | null
           page_bg_color: string
           page_overrides: Json
+          page_texture: string
           published_at: string | null
           qr_secret: string | null
           share_code: string
@@ -73,6 +74,7 @@ export type Database = {
           pack_thumb_key?: string | null
           page_bg_color?: string
           page_overrides?: Json
+          page_texture?: string
           published_at?: string | null
           qr_secret?: string | null
           share_code: string
@@ -93,6 +95,7 @@ export type Database = {
           pack_thumb_key?: string | null
           page_bg_color?: string
           page_overrides?: Json
+          page_texture?: string
           published_at?: string | null
           qr_secret?: string | null
           share_code?: string
@@ -687,6 +690,7 @@ export type Database = {
           pack_thumb_key: string | null
           page_bg_color: string
           page_overrides: Json
+          page_texture: string
           published_at: string | null
           qr_secret: string | null
           share_code: string
@@ -799,7 +803,12 @@ export type Database = {
         Returns: undefined
       }
       fn_update_album_pages: {
-        Args: { p_album_id: string; p_bg_color: string; p_overrides: Json }
+        Args: {
+          p_album_id: string
+          p_bg_color: string
+          p_overrides: Json
+          p_texture: string
+        }
         Returns: undefined
       }
       fn_update_avatar: { Args: { p_thumb_key: string }; Returns: undefined }

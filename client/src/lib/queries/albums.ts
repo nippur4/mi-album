@@ -22,30 +22,30 @@ export interface AlbumProgress {
 }
 
 // Hook que devuelve un map albumId → progress para los IDs pasados.
-// Re-fetcha cuando cambia la lista de IDs.
+// Re-fetcha cuando cambia la lista de IDs Y expone un refetch() para que
+// el caller lo llame en useFocusEffect (sin esto, volver al home después
+// de pegar figuritas dejaba el progreso desactualizado).
 export function useAlbumsProgress(ids: string[]) {
   const [progress, setProgress] = useState<Record<string, AlbumProgress>>({});
   const key = ids.slice().sort().join(',');
 
-  useEffect(() => {
-    let mounted = true;
+  const refetch = useCallback(async () => {
     if (ids.length === 0) {
       setProgress({});
       return;
     }
-    supabase.rpc('fn_album_progress', { p_album_ids: ids }).then(({ data }) => {
-      if (!mounted) return;
-      const map: Record<string, AlbumProgress> = {};
-      for (const row of (data ?? []) as AlbumProgress[]) {
-        map[row.album_id] = row;
-      }
-      setProgress(map);
-    });
-    return () => { mounted = false; };
+    const { data } = await supabase.rpc('fn_album_progress', { p_album_ids: ids });
+    const map: Record<string, AlbumProgress> = {};
+    for (const row of (data ?? []) as AlbumProgress[]) {
+      map[row.album_id] = row;
+    }
+    setProgress(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  return progress;
+  useEffect(() => { refetch(); }, [refetch]);
+
+  return { progress, refetch };
 }
 
 // Álbumes públicos publicados (RLS los expone a todos).

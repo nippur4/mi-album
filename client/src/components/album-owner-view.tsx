@@ -35,7 +35,7 @@ import {
   type Sticker,
 } from '@/lib/queries/albums';
 import { DEFAULT_PACK_CONFIG, modeFromConfig, type PackConfig } from '@/lib/queries/economy';
-import { DEFAULT_PAGE_COLOR, type PageOverride } from '@/lib/page-config';
+import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
 import { errorMessage } from '@/lib/errors';
@@ -326,11 +326,26 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             <Text style={styles.sectionLabel}>
               FIGURITAS · {stickers.length} / {album.total_stickers}
             </Text>
-            {isDraft && (
-              <Pressable onPress={() => setEditingTotal(true)} hitSlop={8}>
-                <Text style={styles.linkText}>Editar cantidad</Text>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+              <Pressable
+                onPress={() => setEditingPages(true)}
+                style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                hitSlop={6}
+              >
+                <Feather name="layers" size={12} color={Colors.ink} />
+                <Text style={styles.editPillText}>Hojas</Text>
               </Pressable>
-            )}
+              {isDraft && (
+                <Pressable
+                  onPress={() => setEditingTotal(true)}
+                  style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                  hitSlop={6}
+                >
+                  <Feather name="hash" size={12} color={Colors.ink} />
+                  <Text style={styles.editPillText}>Cantidad</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
 
           {stickers.length === 0 && isDraft ? (
@@ -362,6 +377,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               <AlbumPager
                 totalStickers={album.total_stickers}
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
+                pageTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
                 renderCell={(n) => {
                   const s = stickerByNumber.get(n);
@@ -402,11 +418,6 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                   />
                 </View>
               )}
-              <Button
-                label="Editar hojas"
-                variant="outline"
-                onPress={() => setEditingPages(true)}
-              />
             </>
           )}
         </View>
@@ -458,6 +469,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         albumId={album.id}
         totalStickers={album.total_stickers}
         currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
+        currentTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
         currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
         onClose={() => setEditingPages(false)}
         onSaved={refetch}
@@ -714,6 +726,27 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     textDecorationLine: 'underline',
+  },
+  // Pill compacto pero notorio: chip blanco con borde + icono + label.
+  editPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+  },
+  editPillPressed: {
+    opacity: 0.7,
+  },
+  editPillText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.ink,
   },
   imageGrid: {
     flexDirection: 'row',

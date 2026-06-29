@@ -206,41 +206,120 @@ function RevealedCard({ sticker, index }: { sticker: OpenedSticker; index: numbe
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(34);
   const scale = useSharedValue(0.6);
+  // Pulso del halo dorado, solo activo si la figurita es nueva.
+  const glow = useSharedValue(0);
 
   useEffect(() => {
     const delay = index * 110;
     opacity.value = withDelay(delay, withTiming(1, { duration: 350 }));
     translateY.value = withDelay(delay, withTiming(0, { duration: 550, easing: Easing.bezier(0.2, 1.3, 0.4, 1) }));
     scale.value = withDelay(delay, withTiming(1, { duration: 550, easing: Easing.bezier(0.2, 1.3, 0.4, 1) }));
-  }, [index, opacity, translateY, scale]);
+    if (sticker.was_new) {
+      glow.value = withDelay(
+        delay + 200,
+        withRepeat(
+          withSequence(
+            withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+            withTiming(0.4, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+          ),
+          -1,
+          true,
+        ),
+      );
+    }
+  }, [index, opacity, translateY, scale, glow, sticker.was_new]);
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
 
+  // Sombra dorada animada que respira alrededor de la card cuando es nueva.
+  const haloStyle = useAnimatedStyle(() => {
+    if (!sticker.was_new) return {};
+    return {
+      shadowOpacity: 0.4 + glow.value * 0.5,
+      shadowRadius: 12 + glow.value * 18,
+    };
+  });
+
   const url = r2Url(sticker.large_key);
-  const borderColor = RarityFrame[sticker.rarity];
+  const borderColor = sticker.was_new ? Colors.gold : RarityFrame[sticker.rarity];
 
   return (
-    <Animated.View style={[styles.revealedCard, { borderColor }, animStyle]}>
-      <View style={[styles.rarityStrip, { backgroundColor: borderColor }]}>
-        <Text style={styles.rarityStripText}>
-          {sticker.rarity.toUpperCase()}
-        </Text>
-      </View>
-      {url && (
-        <Image source={{ uri: url }} style={styles.revealedImage} contentFit="cover" />
-      )}
-      <View style={styles.revealedFooter}>
-        <Text style={styles.revealedNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
-        <Text style={styles.revealedName} numberOfLines={2}>{sticker.name}</Text>
-      </View>
-      <View style={[styles.ribbon, !sticker.was_new && styles.ribbonRepe]}>
-        <Text style={[styles.ribbonText, !sticker.was_new && styles.ribbonTextRepe]}>
-          {sticker.was_new ? 'NUEVA' : 'REPE'}
-        </Text>
-      </View>
+    <Animated.View style={[styles.revealedCardWrap, animStyle]}>
+      {sticker.was_new && <NewCardSparkles />}
+      <Animated.View
+        style={[
+          styles.revealedCard,
+          { borderColor },
+          sticker.was_new && styles.revealedCardNew,
+          haloStyle,
+        ]}
+      >
+        <View style={[styles.rarityStrip, { backgroundColor: borderColor }]}>
+          <Text style={styles.rarityStripText}>
+            {sticker.rarity.toUpperCase()}
+          </Text>
+        </View>
+        {url && (
+          <Image source={{ uri: url }} style={styles.revealedImage} contentFit="cover" />
+        )}
+        <View style={styles.revealedFooter}>
+          <Text style={styles.revealedNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
+          <Text style={styles.revealedName} numberOfLines={2}>{sticker.name}</Text>
+        </View>
+        <View style={[styles.ribbon, !sticker.was_new && styles.ribbonRepe]}>
+          <Text style={[styles.ribbonText, !sticker.was_new && styles.ribbonTextRepe]}>
+            {sticker.was_new ? 'NUEVA' : 'REPE'}
+          </Text>
+        </View>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+// Sparkles flotando alrededor del card de figurita nueva. Cuatro estrellas
+// con scale/opacity animados, delays distintos para que no parezcan sincronizadas.
+const SPARKLE_POSITIONS = [
+  { top: 6, left: -6 },
+  { top: 30, right: -8 },
+  { bottom: 50, left: -4 },
+  { bottom: 18, right: -2 },
+];
+
+function NewCardSparkles() {
+  return (
+    <>
+      {SPARKLE_POSITIONS.map((pos, i) => (
+        <Sparkle key={i} delay={i * 280} position={pos} />
+      ))}
+    </>
+  );
+}
+
+function Sparkle({ delay, position }: { delay: number; position: any }) {
+  const s = useSharedValue(0);
+  useEffect(() => {
+    s.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 600, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 600, easing: Easing.in(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [delay, s]);
+  const style = useAnimatedStyle(() => ({
+    opacity: s.value,
+    transform: [{ scale: 0.5 + s.value * 0.6 }],
+  }));
+  return (
+    <Animated.View style={[styles.sparkle, position, style]} pointerEvents="none">
+      <Text style={styles.sparkleText}>✦</Text>
     </Animated.View>
   );
 }
@@ -358,6 +437,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: Spacing.md,
   },
+  // Wrapper alrededor del card para alojar los sparkles fuera del borde
+  // sin que queden clipeados por el overflow:hidden del card.
+  revealedCardWrap: {
+    width: 140,
+    position: 'relative',
+  },
   revealedCard: {
     width: 140,
     aspectRatio: 0.7,
@@ -366,6 +451,23 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     overflow: 'hidden',
     paddingBottom: Spacing.sm,
+  },
+  revealedCardNew: {
+    // Halo dorado pulsando (shadowOpacity/Radius animados desde JS).
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 16,
+  },
+  sparkle: {
+    position: 'absolute',
+    zIndex: 10,
+  },
+  sparkleText: {
+    fontSize: 20,
+    color: Colors.gold,
+    textShadowColor: 'rgba(232,178,74,0.9)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   rarityStrip: {
     paddingVertical: 3,
