@@ -24,13 +24,14 @@ export default function StickerDetailScreen() {
     status: string;
     name: string;
     total_stickers: number;
+    pack_config: any;
   } | null>(null);
 
   useEffect(() => {
     if (!sticker) return;
     supabase
       .from('albums')
-      .select('owner_id, status, name, total_stickers')
+      .select('owner_id, status, name, total_stickers, pack_config')
       .eq('id', sticker.album_id)
       .maybeSingle()
       .then(({ data }) => setAlbum(data as any));
@@ -60,7 +61,7 @@ export default function StickerDetailScreen() {
     session?.user.id === album.owner_id && album.status === 'draft';
 
   return isOwnerDraft ? (
-    <EditStickerView sticker={sticker} />
+    <EditStickerView sticker={sticker} packConfig={album.pack_config} />
   ) : (
     <ViewStickerView
       sticker={sticker}

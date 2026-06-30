@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ImageUploadCard } from '@/components/image-upload-card';
+import { RarityInfoLine } from '@/components/rarity-info-line';
 import { RarityPills } from '@/components/rarity-pills';
 import { ScreenHeader } from '@/components/screen-header';
 import { Stepper } from '@/components/stepper';
@@ -156,6 +157,7 @@ export default function NewStickerScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>RAREZA</Text>
             <RarityPills value={rarity} onChange={setRarity} />
+            <RarityInfoLine rarity={rarity} packConfig={album?.pack_config as any} />
           </View>
         ) : (
           <View style={styles.field}>
@@ -165,6 +167,7 @@ export default function NewStickerScreen() {
               para definir rarezas (rara, épica, legendaria) y configurar las
               probabilidades del sobre.
             </Text>
+            <RarityInfoLine rarity="common" packConfig={album?.pack_config as any} />
           </View>
         )}
       </ScrollView>

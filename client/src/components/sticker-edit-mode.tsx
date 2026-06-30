@@ -12,11 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ImageUploadCard } from '@/components/image-upload-card';
+import { RarityInfoLine } from '@/components/rarity-info-line';
 import { RarityPills } from '@/components/rarity-pills';
 import { ScreenHeader } from '@/components/screen-header';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
+import type { PackConfig } from '@/lib/queries/economy';
 import {
   deleteSticker,
   updateSticker,
@@ -28,10 +30,11 @@ import { errorMessage } from '@/lib/errors';
 
 interface Props {
   sticker: Sticker;
+  packConfig?: PackConfig | null;
 }
 
 // Vista de edición de figurita para el owner del álbum (solo en draft).
-export function EditStickerView({ sticker }: Props) {
+export function EditStickerView({ sticker, packConfig }: Props) {
   const router = useRouter();
   const { isPro } = useIsPro();
 
@@ -136,6 +139,7 @@ export function EditStickerView({ sticker }: Props) {
           <View style={styles.field}>
             <Text style={styles.label}>RAREZA</Text>
             <RarityPills value={rarity} onChange={setRarity} />
+            <RarityInfoLine rarity={rarity} packConfig={packConfig} />
           </View>
         ) : (
           <View style={styles.field}>
@@ -143,6 +147,7 @@ export function EditStickerView({ sticker }: Props) {
             <Text style={styles.proHint}>
               En el plan Free todas las figuritas son comunes.
             </Text>
+            <RarityInfoLine rarity="common" packConfig={packConfig} />
           </View>
         )}
       </ScrollView>

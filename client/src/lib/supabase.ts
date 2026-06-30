@@ -9,10 +9,15 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 import { env } from './env';
 import type { Database } from './database.types';
 
+// En web habilitamos detectSessionInUrl: cuando la página carga con
+// `#access_token=...` en el hash, supabase-js auto-lee el token, llama a
+// setSession y limpia la URL. Eso elimina la necesidad de una pantalla
+// /auth/callback manual. En mobile lo hacemos a mano via useDeepLinkAuth.
 export const supabase = createClient<Database>(
   env.supabaseUrl,
   env.supabaseAnonKey,
@@ -21,7 +26,7 @@ export const supabase = createClient<Database>(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: Platform.OS === 'web',
     },
   },
 );

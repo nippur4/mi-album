@@ -10,6 +10,7 @@
 //   3. el hook actualiza session → el redirect del _layout lleva al user a /(tabs)
 
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
@@ -43,13 +44,21 @@ export function useSession() {
   return { session, isLoading };
 }
 
-// emailRedirectTo es el deep link al que vuelve la app después del click.
-// Debe matchear el scheme de app.json y estar autorizado en Supabase Dashboard
-// → Authentication → URL Configuration → Redirect URLs.
+// emailRedirectTo cambia según plataforma:
+//   - mobile: deep link `mialbum://` (lo captura useDeepLinkAuth)
+//   - web: window.location.origin (supabase-js auto-detecta el hash con
+//     access_token al cargar gracias a detectSessionInUrl)
+// Ambas URLs deben estar autorizadas en Supabase Dashboard → Authentication
+// → URL Configuration → Redirect URLs (mialbum://, http://localhost:5000,
+// y el dominio de prod cuando se deploye).
 export async function signInWithMagicLink(email: string) {
+  const emailRedirectTo =
+    Platform.OS === 'web' && typeof window !== 'undefined'
+      ? window.location.origin
+      : 'mialbum://';
   return supabase.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { emailRedirectTo: 'mialbum://' },
+    options: { emailRedirectTo },
   });
 }
 
@@ -59,8 +68,13 @@ export async function signOut() {
 
 // Captura deep links del magic link (mialbum://#access_token=...&refresh_token=...)
 // y registra la sesión en supabase-js. Llamar una vez en _layout.tsx root.
+//
+// En web es no-op porque detectSessionInUrl: true en supabase.ts hace que
+// supabase-js auto-detecte el hash de la URL al cargar.
 export function useDeepLinkAuth() {
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     const handle = async (url: string | null) => {
       if (!url) return;
       const fragment = url.split('#')[1];
