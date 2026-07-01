@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlbumPager } from '@/components/album-pager';
 import { BulkStickerUploadModal } from '@/components/bulk-sticker-upload-modal';
@@ -29,12 +29,18 @@ import { StatusBadge } from '@/components/status-badge';
 import { StickerCell, StickerCellEmpty } from '@/components/sticker-cell';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import {
+  archiveAlbumByOwner,
+  joinAlbumByCode,
   publishAlbum,
+  unarchiveAlbumByOwner,
   updateAlbumContent,
   type Album,
   type Sticker,
 } from '@/lib/queries/albums';
-import { DEFAULT_PACK_CONFIG, modeFromConfig, type PackConfig } from '@/lib/queries/economy';
+import { supabase } from '@/lib/supabase';
+import { useSession } from '@/lib/auth';
+import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackConfig, type TradeConfig } from '@/lib/queries/economy';
+import { proFeatureHint } from '@/lib/upsell-copy';
 import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
@@ -52,7 +58,9 @@ interface Props {
 // Published: code card + botón Compartir. read_only: aviso de pausa.
 export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isPro } = useIsPro();
+  const { session } = useSession();
   const [coverBusy, setCoverBusy] = useState(false);
   const [packBusy, setPackBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -64,6 +72,35 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [editingPages, setEditingPages] = useState(false);
   const [bulkUpload, setBulkUpload] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  // Estado "yo me joineé como jugador a mi propio álbum" (Fase 10).
+  const [isJoinedAsPlayer, setIsJoinedAsPlayer] = useState<boolean | null>(null);
+  const [joiningToPlay, setJoiningToPlay] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  // Chequeamos membership: null = cargando; true/false = respuesta del backend.
+  useEffect(() => {
+    if (!session?.user.id) return;
+    supabase
+      .from('user_album_membership')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
+      .eq('album_id', album.id)
+      .then(({ count }) => setIsJoinedAsPlayer((count ?? 0) > 0));
+  }, [session?.user.id, album.id]);
+
+  async function onPlayAlbum() {
+    setJoiningToPlay(true);
+    // Si nunca se joineó, primero llamamos fn_join_album para obtener welcome pack.
+    // Si ya estaba joineado, fn_join_album es idempotente (devuelve joined=false).
+    const { error } = await joinAlbumByCode(album.share_code);
+    setJoiningToPlay(false);
+    if (error) {
+      Alert.alert('No se pudo empezar a jugar', errorMessage(error));
+      return;
+    }
+    setIsJoinedAsPlayer(true);
+    router.push(`/album/${album.id}?as=player`);
+  }
 
   // El feedback "Copiado" se autodestruye tras 2s.
   useEffect(() => {
@@ -82,6 +119,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     ...DEFAULT_PACK_CONFIG,
     ...((album.pack_config as Partial<PackConfig>) ?? {}),
   };
+  const tradeConfig: TradeConfig = {
+    ...DEFAULT_TRADE_CONFIG,
+    ...((album.trade_config as Partial<TradeConfig>) ?? {}),
+  };
   const economyMode = modeFromConfig(packConfig);
 
   const items: ChecklistItem[] = [
@@ -96,7 +137,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     {
       label: 'Cómo se consiguen las figuritas',
       done: economyMode !== 'none',
-      hint: economyDescription(packConfig),
+      hint: economyDescription(packConfig, tradeConfig),
     },
   ];
   const allReady = items.every((i) => i.done);
@@ -188,6 +229,44 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     await refetch();
   }
 
+  const isArchived = (album as any).owner_hidden === true;
+
+  function onArchivePress() {
+    if (isArchived) {
+      // Des-archivar es directo, sin confirm.
+      doArchive(false);
+      return;
+    }
+    Alert.alert(
+      'Archivar álbum',
+      album.status === 'published'
+        ? 'Se va a ocultar de tus listas. Los jugadores que ya se unieron lo siguen viendo y pueden seguir abriendo sobres. Podés desarchivarlo cuando quieras.'
+        : 'Se va a ocultar de tus listas. Podés desarchivarlo cuando quieras.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Archivar', style: 'destructive', onPress: () => doArchive(true) },
+      ],
+    );
+  }
+
+  async function doArchive(hide: boolean) {
+    setArchiving(true);
+    const { error: archErr } = hide
+      ? await archiveAlbumByOwner(album.id)
+      : await unarchiveAlbumByOwner(album.id);
+    setArchiving(false);
+    if (archErr) {
+      Alert.alert('No se pudo', errorMessage(archErr));
+      return;
+    }
+    if (hide) {
+      // Al archivar, volvemos a Gestionar (ya no aparece en esta vista).
+      router.back();
+    } else {
+      await refetch();
+    }
+  }
+
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
   const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
 
@@ -242,6 +321,37 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           />
         )}
 
+        {album.status === 'published' && (
+          <Pressable
+            onPress={onPlayAlbum}
+            disabled={joiningToPlay}
+            style={({ pressed }) => [
+              styles.playCard,
+              pressed && styles.playCardPressed,
+              joiningToPlay && styles.playCardDisabled,
+            ]}
+          >
+            <View style={styles.playIcon}>
+              <Feather name="play" size={22} color={Colors.paper} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.playTitle}>
+                {joiningToPlay
+                  ? 'Preparando...'
+                  : isJoinedAsPlayer
+                    ? 'Seguir jugando este álbum'
+                    : 'Jugar este álbum'}
+              </Text>
+              <Text style={styles.playSub}>
+                {isJoinedAsPlayer
+                  ? 'Volvé a la vista de jugador para abrir sobres y pegar figuritas.'
+                  : 'Uníte como jugador para abrir sobres, pegar figuritas y completar tu propio álbum.'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={Colors.muted} />
+          </Pressable>
+        )}
+
         {/* Economía: visible siempre, editable en draft y published */}
         <Pressable
           onPress={() => setEditingEconomy(true)}
@@ -272,7 +382,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               ]}
               numberOfLines={2}
             >
-              {economyDescription(packConfig)}
+              {economyDescription(packConfig, tradeConfig)}
             </Text>
             <Text style={styles.economyAction}>
               {economyMode === 'none' ? 'Tocá para configurar →' : 'Tocá para editar →'}
@@ -333,7 +443,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 hitSlop={6}
               >
                 <Feather name="layers" size={12} color={Colors.ink} />
-                <Text style={styles.editPillText}>Hojas</Text>
+                <Text style={styles.editPillText}>Editar hojas</Text>
               </Pressable>
               {isDraft && (
                 <Pressable
@@ -379,7 +489,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
                 pageTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
-                renderCell={(n) => {
+                renderCell={(n, cellStyle) => {
                   const s = stickerByNumber.get(n);
                   if (s) {
                     // El thin router en [id].tsx bifurca: owner+draft → editor,
@@ -387,6 +497,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                     return (
                       <StickerCell
                         sticker={s}
+                        style={cellStyle}
                         onPress={() => router.push(`/sticker/${s.id}`)}
                       />
                     );
@@ -395,6 +506,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                     <StickerCellEmpty
                       number={n}
                       showPlus={isDraft}
+                      style={cellStyle}
                       onPress={
                         isDraft
                           ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
@@ -450,6 +562,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         visible={editingEconomy}
         albumId={album.id}
         currentConfig={packConfig}
+        currentTradeConfig={tradeConfig}
         isPro={isPro}
         onClose={() => setEditingEconomy(false)}
         onSaved={refetch}
@@ -475,7 +588,28 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         onSaved={refetch}
       />
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+        {/* Archivar/Desarchivar va ARRIBA del CTA principal, como link discreto.
+            Si el device chrome corta algo, sacrificamos este antes que el CTA. */}
+        <Pressable
+          onPress={onArchivePress}
+          disabled={archiving}
+          hitSlop={8}
+          style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Feather
+            name={isArchived ? 'rotate-ccw' : 'archive'}
+            size={13}
+            color={Colors.muted}
+          />
+          <Text style={styles.archiveBtnText}>
+            {archiving
+              ? '...'
+              : isArchived
+                ? 'Desarchivar álbum'
+                : 'Archivar álbum'}
+          </Text>
+        </Pressable>
         {isDraft && (
           <>
             {!allReady && (
@@ -506,7 +640,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
 // Descripción corta del config de economía actual, para el checklist y la
 // sección de owner. Ej: "Sobre diario · 1 sobre · 5 figus" / "Solo QR · 3 sobres · 5 figus".
-function economyDescription(cfg: PackConfig): string {
+function economyDescription(cfg: PackConfig, trade?: TradeConfig): string {
   const mode = modeFromConfig(cfg);
   if (mode === 'none') return 'No configurado';
   const size = cfg.pack_size ?? 5;
@@ -517,7 +651,20 @@ function economyDescription(cfg: PackConfig): string {
     mode === 'daily' ? dailyTxt :
     mode === 'qr' ? qrTxt :
     `${dailyTxt} + ${qrTxt}`;
-  return `${head} · ${size} figus/sobre`;
+  const welcomeCount = cfg.welcome?.enabled ? (cfg.welcome.count ?? 1) : 0;
+  const welcomeTxt = welcomeCount > 0
+    ? `Welcome ${welcomeCount}`
+    : 'Sin welcome';
+  const tradeTxt = trade
+    ? !trade.enabled
+      ? 'Cambios OFF'
+      : trade.limit
+        ? `${trade.limit.count}/${trade.limit.period === 'week' ? 'sem' : 'día'}`
+        : 'Cambios libres'
+    : '';
+  const parts = [head, `${size} figus/sobre`, welcomeTxt];
+  if (tradeTxt) parts.push(tradeTxt);
+  return parts.join(' · ');
 }
 
 // Sección QR de sobres: muestra el botón apropiado según estado pro + qr_enabled.
@@ -542,8 +689,9 @@ function QrSection({
       </View>
       {!isPro ? (
         <Text style={qrStyles.hint}>
-          Generá un QR para que jugadores escaneen y reciban sobres en eventos o
-          espacios físicos. Función Pro.
+          {proFeatureHint(
+            'Generá un QR para que jugadores escaneen y reciban sobres en eventos o espacios físicos.',
+          )}
         </Text>
       ) : qrEnabled ? (
         <>
@@ -627,6 +775,45 @@ const styles = StyleSheet.create({
   },
   codeCardPressed: {
     backgroundColor: Colors.paper3,
+  },
+  // Card "Jugar este álbum" — CTA para que el owner se joinee como jugador.
+  playCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.cardLg,
+    borderWidth: 2,
+    borderColor: Colors.gold,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  playCardPressed: { opacity: 0.85 },
+  playCardDisabled: { opacity: 0.6 },
+  playIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  playSub: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+    marginTop: 2,
   },
   economyCard: {
     flexDirection: 'row',
@@ -814,7 +1001,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.screenX,
     right: Spacing.screenX,
-    bottom: Spacing.xl,
+    bottom: 0,
+    paddingTop: Spacing.sm,
     gap: Spacing.sm,
+    backgroundColor: Colors.paper,
+  },
+  archiveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.xs,
+  },
+  archiveBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
 });

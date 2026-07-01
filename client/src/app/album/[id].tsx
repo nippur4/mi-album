@@ -15,7 +15,7 @@ import { UserAlbumView } from '@/components/album-user-view';
 // Router del detalle del álbum: carga el álbum y bifurca según el caller sea
 // el owner o un miembro. La lógica de cada vista vive en los archivos `_*-view.tsx`.
 export default function AlbumDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, as: viewAs } = useLocalSearchParams<{ id: string; as?: string }>();
   const { session } = useSession();
   const { album, stickers, isLoading, error, refetch } = useAlbumDetail(id);
 
@@ -43,8 +43,14 @@ export default function AlbumDetailScreen() {
     );
   }
 
+  // Bifurcación:
+  //   - Owner: vista owner por default. Con `?as=player` fuerza vista user
+  //     (para que el owner pueda jugar su propio álbum, Fase 10).
+  //   - Non-owner: siempre vista user.
   const isOwner = session?.user.id === album.owner_id;
-  return isOwner ? (
+  const asPlayer = viewAs === 'player';
+  const showOwnerView = isOwner && !asPlayer;
+  return showOwnerView ? (
     <OwnerAlbumView album={album} stickers={stickers} refetch={refetch} />
   ) : (
     <UserAlbumView album={album} stickers={stickers} />

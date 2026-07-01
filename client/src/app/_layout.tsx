@@ -7,9 +7,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAppFonts } from '@/lib/fonts';
 import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
 import { ProfileProvider } from '@/lib/queries/profile';
+import { ensurePwaHead } from '@/lib/pwa-head';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Inyecta los meta/link tags PWA al cargar la página en web. Es idempotente,
+// no hace nada en mobile.
+ensurePwaHead();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useAppFonts();

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -72,7 +72,9 @@ export default function NewAlbumScreen() {
           <Text style={styles.hint}>
             {isPro
               ? `Hasta ${PRO_MAX} figuritas (Pro).`
-              : `Free: máximo ${FREE_MAX}. Pro permite hasta ${PRO_MAX}.`}
+              : Platform.OS === 'web'
+                ? `Free: máximo ${FREE_MAX}. Para tener hasta ${PRO_MAX}, bajate la app Android.`
+                : `Free: máximo ${FREE_MAX}. Pro permite hasta ${PRO_MAX}.`}
           </Text>
         </View>
 

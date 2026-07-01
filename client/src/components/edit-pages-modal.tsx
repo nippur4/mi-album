@@ -18,6 +18,7 @@ import {
   buildPages,
   DEFAULT_PAGE_COLOR,
   DEFAULT_PAGE_LAYOUT,
+  DEFAULT_PAGE_ORIENTATION,
   DEFAULT_PAGE_TEXTURE,
   PAGE_COLORS,
   PAGE_LAYOUTS,
@@ -25,8 +26,10 @@ import {
   resolveColor,
   resolveLayout,
   updateAlbumPages,
+  type PageOrientation,
   type PageOverride,
 } from '@/lib/page-config';
+import { Layout as ThemeLayout } from '@/constants/theme';
 
 interface Props {
   visible: boolean;
@@ -136,81 +139,87 @@ export function EditPagesModal({
           >
             {editingPage === null ? (
               <>
-                <Text style={styles.sectionLabel}>COLOR DE HOJA POR DEFECTO</Text>
-                <View style={styles.colorRow}>
-                  {PAGE_COLORS.map((c) => (
-                    <ColorSwatch
-                      key={c.key}
-                      color={c}
-                      selected={bgColor === c.key}
-                      onPress={() => setBgColor(c.key)}
-                    />
-                  ))}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>COLOR DE HOJA POR DEFECTO</Text>
+                  <View style={styles.colorRow}>
+                    {PAGE_COLORS.map((c) => (
+                      <ColorSwatch
+                        key={c.key}
+                        color={c}
+                        selected={bgColor === c.key}
+                        onPress={() => setBgColor(c.key)}
+                      />
+                    ))}
+                  </View>
                 </View>
 
-                <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-                  TEXTURA POR DEFECTO
-                </Text>
-                <View style={styles.textureRow}>
-                  {PAGE_TEXTURES.map((t) => (
-                    <TextureSwatch
-                      key={t.key}
-                      textureKey={t.key}
-                      name={t.name}
-                      baseColor={bgColor}
-                      selected={texture === t.key}
-                      onPress={() => setTexture(t.key)}
-                    />
-                  ))}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>TEXTURA POR DEFECTO</Text>
+                  <View style={styles.textureRow}>
+                    {PAGE_TEXTURES.map((t) => (
+                      <TextureSwatch
+                        key={t.key}
+                        textureKey={t.key}
+                        name={t.name}
+                        baseColor={bgColor}
+                        selected={texture === t.key}
+                        onPress={() => setTexture(t.key)}
+                      />
+                    ))}
+                  </View>
                 </View>
 
-                <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-                  HOJAS · {pages.length}
-                </Text>
-                <Text style={styles.hint}>
-                  Tocá una hoja para cambiar su color o composición.
-                </Text>
-                <View style={styles.pageList}>
-                  {pages.map((p) => {
-                    const ov = getOverride(p.index);
-                    const hasOverride = !!(ov && (ov.color || ov.layout || ov.texture));
-                    return (
-                      <Pressable
-                        key={p.index}
-                        onPress={() => setEditingPage(p.index)}
-                        style={({ pressed }) => [
-                          styles.pageRow,
-                          pressed && styles.pageRowPressed,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.pagePreview,
-                            { backgroundColor: resolveColor(p.colorKey) },
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>HOJAS · {pages.length}</Text>
+                  <Text style={styles.hint}>
+                    Tocá una hoja para cambiar su color o composición.
+                  </Text>
+                  <View style={styles.pageList}>
+                    {pages.map((p) => {
+                      const ov = getOverride(p.index);
+                      const hasOverride = !!(ov && (ov.color || ov.layout || ov.texture || ov.orientation));
+                      return (
+                        <Pressable
+                          key={p.index}
+                          onPress={() => setEditingPage(p.index)}
+                          style={({ pressed }) => [
+                            styles.pageRow,
+                            pressed && styles.pageRowPressed,
                           ]}
                         >
-                          <PageTexture texture={p.textureKey} opacity={0.22} />
-                          <LayoutPreviewGrid
-                            cols={p.layout.cols}
-                            rows={p.layout.rows}
-                            cellColor="rgba(42,30,22,0.18)"
-                          />
-                        </View>
-                        <View style={styles.pageText}>
-                          <Text style={styles.pageTitle}>
-                            Hoja {p.index + 1}
-                          </Text>
-                          <Text style={styles.pageMeta}>
-                            {p.layout.name} · {p.numbers.length} figus
-                          </Text>
-                          {hasOverride && (
-                            <Text style={styles.overrideBadge}>PERSONALIZADA</Text>
-                          )}
-                        </View>
-                        <Feather name="chevron-right" size={20} color={Colors.muted} />
-                      </Pressable>
-                    );
-                  })}
+                          <View
+                            style={[
+                              styles.pagePreview,
+                              { backgroundColor: resolveColor(p.colorKey) },
+                            ]}
+                          >
+                            <PageTexture texture={p.textureKey} opacity={0.22} />
+                            <LayoutPreviewGrid
+                              cols={p.layout.cols}
+                              rows={p.layout.rows}
+                              orientation={p.orientation}
+                              cellColor="rgba(42,30,22,0.18)"
+                            />
+                          </View>
+                          <View style={styles.pageText}>
+                            <Text style={styles.pageTitle}>
+                              Hoja {p.index + 1}
+                            </Text>
+                            <Text style={styles.pageMeta}>
+                              {p.layout.name}
+                              {p.orientation === 'landscape' ? ' · horizontal' : ''}
+                              {' · '}
+                              {p.numbers.length} figus
+                            </Text>
+                            {hasOverride && (
+                              <Text style={styles.overrideBadge}>PERSONALIZADA</Text>
+                            )}
+                          </View>
+                          <Feather name="chevron-right" size={20} color={Colors.muted} />
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
 
                 {(bgColor !== DEFAULT_PAGE_COLOR || overrides.length > 0) && (
@@ -229,6 +238,7 @@ export function EditPagesModal({
                 onSetColor={(color) => setOverride(editingPage, { color })}
                 onSetLayout={(layout) => setOverride(editingPage, { layout })}
                 onSetTexture={(t) => setOverride(editingPage, { texture: t })}
+                onSetOrientation={(o) => setOverride(editingPage, { orientation: o })}
                 onClear={() => {
                   setOverrides((prev) => prev.filter((o) => o.page !== editingPage));
                   setEditingPage(null);
@@ -257,6 +267,7 @@ function PageEditor({
   onSetColor,
   onSetLayout,
   onSetTexture,
+  onSetOrientation,
   onClear,
   onBack,
 }: {
@@ -266,15 +277,21 @@ function PageEditor({
   onSetColor: (color: string | undefined) => void;
   onSetLayout: (layout: string | undefined) => void;
   onSetTexture: (t: string | undefined) => void;
+  onSetOrientation: (o: PageOrientation | undefined) => void;
   onClear: () => void;
   onBack: () => void;
 }) {
   const selectedColor = override?.color;
   const selectedLayout = override?.layout ?? DEFAULT_PAGE_LAYOUT;
   const selectedTexture = override?.texture;
+  const selectedOrientation: PageOrientation = override?.orientation ?? DEFAULT_PAGE_ORIENTATION;
+  const layoutObj = resolveLayout(selectedLayout);
+  const canPickOrientation = !!layoutObj.supportsLandscape;
   // El color base que vemos en los swatches de textura: el override si lo hay,
   // sino el default del álbum.
   const previewColorKey = selectedColor ?? defaultColor;
+  // Si el layout no soporta landscape, el preview siempre muestra portrait.
+  const previewOrientation: PageOrientation = canPickOrientation ? selectedOrientation : 'portrait';
 
   return (
     <View>
@@ -283,70 +300,105 @@ function PageEditor({
         <Text style={styles.backText}>Hoja {page + 1}</Text>
       </Pressable>
 
-      <Text style={styles.sectionLabel}>COLOR DE ESTA HOJA</Text>
-      <Text style={styles.hint}>Sin marcar = usa el color por defecto.</Text>
-      <View style={styles.colorRow}>
-        <ColorSwatchDefault
-          selected={!selectedColor}
-          onPress={() => onSetColor(undefined)}
-        />
-        {PAGE_COLORS.map((c) => (
-          <ColorSwatch
-            key={c.key}
-            color={c}
-            selected={selectedColor === c.key}
-            onPress={() => onSetColor(c.key)}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>COLOR DE ESTA HOJA</Text>
+        <Text style={styles.hint}>Sin marcar = usa el color por defecto.</Text>
+        <View style={styles.colorRow}>
+          <ColorSwatchDefault
+            selected={!selectedColor}
+            onPress={() => onSetColor(undefined)}
           />
-        ))}
+          {PAGE_COLORS.map((c) => (
+            <ColorSwatch
+              key={c.key}
+              color={c}
+              selected={selectedColor === c.key}
+              onPress={() => onSetColor(c.key)}
+            />
+          ))}
+        </View>
       </View>
 
-      <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-        TEXTURA DE ESTA HOJA
-      </Text>
-      <Text style={styles.hint}>Sin marcar = usa la textura por defecto.</Text>
-      <View style={styles.textureRow}>
-        <TextureSwatchDefault
-          selected={!selectedTexture}
-          onPress={() => onSetTexture(undefined)}
-        />
-        {PAGE_TEXTURES.map((t) => (
-          <TextureSwatch
-            key={t.key}
-            textureKey={t.key}
-            name={t.name}
-            baseColor={previewColorKey}
-            selected={selectedTexture === t.key}
-            onPress={() => onSetTexture(t.key)}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>TEXTURA DE ESTA HOJA</Text>
+        <Text style={styles.hint}>Sin marcar = usa la textura por defecto.</Text>
+        <View style={styles.textureRow}>
+          <TextureSwatchDefault
+            selected={!selectedTexture}
+            onPress={() => onSetTexture(undefined)}
           />
-        ))}
+          {PAGE_TEXTURES.map((t) => (
+            <TextureSwatch
+              key={t.key}
+              textureKey={t.key}
+              name={t.name}
+              baseColor={previewColorKey}
+              selected={selectedTexture === t.key}
+              onPress={() => onSetTexture(t.key)}
+            />
+          ))}
+        </View>
       </View>
 
-      <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-        COMPOSICIÓN
-      </Text>
-      <View style={styles.layoutList}>
-        {PAGE_LAYOUTS.map((l) => (
-          <Pressable
-            key={l.key}
-            onPress={() =>
-              onSetLayout(l.key === DEFAULT_PAGE_LAYOUT ? undefined : l.key)
-            }
-            style={({ pressed }) => [
-              styles.layoutCard,
-              selectedLayout === l.key && styles.layoutCardSelected,
-              pressed && styles.layoutCardPressed,
-            ]}
-          >
-            <View style={styles.layoutPreview}>
-              <LayoutPreviewGrid cols={l.cols} rows={l.rows} />
-            </View>
-            <Text style={styles.layoutName}>{l.name}</Text>
-            <Text style={styles.layoutCap}>{l.capacity} figus</Text>
-          </Pressable>
-        ))}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>COMPOSICIÓN</Text>
+        <View style={styles.layoutList}>
+          {PAGE_LAYOUTS.map((l) => (
+            <Pressable
+              key={l.key}
+              onPress={() => {
+                const nextKey = l.key === DEFAULT_PAGE_LAYOUT ? undefined : l.key;
+                onSetLayout(nextKey);
+                // Si el layout nuevo no soporta landscape, limpiamos la
+                // orientación (evita persistir un valor inaplicable).
+                if (!l.supportsLandscape && selectedOrientation === 'landscape') {
+                  onSetOrientation(undefined);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.layoutCard,
+                selectedLayout === l.key && styles.layoutCardSelected,
+                pressed && styles.layoutCardPressed,
+              ]}
+            >
+              <View style={styles.layoutPreview}>
+                <LayoutPreviewGrid
+                  cols={l.cols}
+                  rows={l.rows}
+                  orientation={selectedLayout === l.key ? previewOrientation : 'portrait'}
+                />
+              </View>
+              <Text style={styles.layoutName}>{l.name}</Text>
+              <Text style={styles.layoutCap}>{l.capacity} figus</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
-      {(override?.color || override?.layout) && (
+      {canPickOrientation && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ORIENTACIÓN DE LAS FIGURITAS</Text>
+          <Text style={styles.hint}>
+            En esta composición podés elegir cómo quedan orientadas las figus.
+          </Text>
+          <View style={styles.orientationRow}>
+            <OrientationChip
+              label="Vertical"
+              orientation="portrait"
+              selected={selectedOrientation === 'portrait'}
+              onPress={() => onSetOrientation(undefined)}
+            />
+            <OrientationChip
+              label="Horizontal"
+              orientation="landscape"
+              selected={selectedOrientation === 'landscape'}
+              onPress={() => onSetOrientation('landscape')}
+            />
+          </View>
+        </View>
+      )}
+
+      {(override?.color || override?.layout || override?.texture || override?.orientation) && (
         <Pressable onPress={onClear} style={styles.resetBtn}>
           <Text style={styles.resetText}>Quitar personalización de esta hoja</Text>
         </Pressable>
@@ -355,27 +407,87 @@ function PageEditor({
   );
 }
 
+// Chip visual portrait/landscape para el toggle de orientación.
+function OrientationChip({
+  label,
+  orientation,
+  selected,
+  onPress,
+}: {
+  label: string;
+  orientation: PageOrientation;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  // Miniatura de una figurita en la orientación indicada (0.82 o su inverso).
+  const aspect =
+    orientation === 'landscape'
+      ? 1 / ThemeLayout.gridCellAspect
+      : ThemeLayout.gridCellAspect;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.orientationChip,
+        selected && styles.orientationChipSelected,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <View style={styles.orientationPreviewFrame}>
+        <View
+          style={{
+            width: orientation === 'landscape' ? 32 : 24,
+            aspectRatio: aspect,
+            backgroundColor: selected ? Colors.ink : Colors.borderStrong,
+            borderRadius: 2,
+          }}
+        />
+      </View>
+      <Text style={[styles.orientationLabel, selected && styles.orientationLabelSelected]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 // Grid de preview de un layout (M rows × N cols). Usa flex puro para
 // distribuir las celdas — Yoga calcula tamaños y gaps sin que tengamos que
 // hacer cuentas con porcentajes (que se rompían cuando el layout no era
 // cuadrado, mismo bug que tenía el AlbumPager).
+//
+// Si orientation='landscape', las celdas dibujadas quedan apaisadas (fixed
+// aspectRatio invertido). Sirve para que el owner vea el resultado real de
+// aplicar la orientación antes de aplicar.
 function LayoutPreviewGrid({
   cols,
   rows,
+  orientation = 'portrait',
   cellColor = 'rgba(42,30,22,0.25)',
 }: {
   cols: number;
   rows: number;
+  orientation?: PageOrientation;
   cellColor?: string;
 }) {
+  const baseAspect = ThemeLayout.gridCellAspect;
+  const cellAspect = orientation === 'landscape' ? 1 / baseAspect : baseAspect;
+  const cellWidthPct = `${Math.floor((100 - (cols - 1) * 3) / cols)}%` as any;
   return (
-    <View style={{ flex: 1, gap: 2 }}>
+    <View style={{ flex: 1, gap: 2, alignItems: 'center', justifyContent: 'center' }}>
       {Array.from({ length: rows }).map((_, r) => (
-        <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 2 }}>
+        <View
+          key={r}
+          style={{ width: '100%', flexDirection: 'row', gap: 2, justifyContent: 'center' }}
+        >
           {Array.from({ length: cols }).map((_, c) => (
             <View
               key={c}
-              style={{ flex: 1, backgroundColor: cellColor, borderRadius: 1 }}
+              style={{
+                width: cellWidthPct,
+                aspectRatio: cellAspect,
+                backgroundColor: cellColor,
+                borderRadius: 1,
+              }}
             />
           ))}
         </View>
@@ -496,7 +608,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   scroll: { flexShrink: 1 },
-  scrollContent: { paddingBottom: Spacing.md },
+  scrollContent: { paddingBottom: Spacing.md, gap: Spacing.md },
+  // Bloque visual con borde + fondo suave para separar cada sección del modal.
+  // Antes las tres secciones (color/textura/hojas) vivían al hilo en el scroll
+  // y la separación era sólo por spacing, se perdía la jerarquía visual.
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
   handle: {
     alignSelf: 'center',
     width: 40,
@@ -680,6 +805,43 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: Colors.muted,
     letterSpacing: 0.5,
+  },
+  orientationRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  orientationChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  orientationChipSelected: {
+    borderColor: Colors.red,
+    borderWidth: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  orientationPreviewFrame: {
+    width: 44,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orientationLabel: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.inkSoft,
+  },
+  orientationLabelSelected: {
+    color: Colors.ink,
   },
   resetBtn: {
     marginTop: Spacing.md,

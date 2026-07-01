@@ -9,6 +9,8 @@
 
 import type { PostgrestError } from '@supabase/supabase-js';
 
+import { proRequiredMessage } from './upsell-copy';
+
 export type AppErrorKey =
   // Genéricos
   | 'auth_required'
@@ -225,6 +227,11 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
 
 export const errorMessage = (err: unknown): string => {
   const appErr = toAppError(err);
+  // pro_required cambia copy por plataforma (ver lib/upsell-copy.ts).
+  // En web mostramos "bajate la app Android" porque no hay paywall web.
+  if (appErr.key === 'pro_required') {
+    return proRequiredMessage();
+  }
   // qr_on_cooldown trae el timestamp del próximo escaneo permitido en el raw
   // (formato "qr_on_cooldown_until_<ISO>"). Lo parseamos para darle al user
   // un mensaje específico con el horario en vez del genérico.

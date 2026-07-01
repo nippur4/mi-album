@@ -1,6 +1,7 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
@@ -11,7 +12,12 @@ import { useAlbumsProgress, useMyOwnedAlbums } from '@/lib/queries/albums';
 
 export default function ManageTab() {
   const router = useRouter();
-  const { albums: owned, refetch, isLoading } = useMyOwnedAlbums();
+  const [showArchived, setShowArchived] = useState(false);
+  // Traemos SIEMPRE los archivados y filtramos client-side. Así podemos
+  // mostrar el contador ("Mostrar archivados (N)") sin hacer una segunda query.
+  const { albums: all, refetch, isLoading } = useMyOwnedAlbums({ includeHidden: true });
+  const archivedCount = all.filter((a) => (a as any).owner_hidden === true).length;
+  const owned = showArchived ? all : all.filter((a) => (a as any).owner_hidden !== true);
   const { progress, refetch: refetchProgress } = useAlbumsProgress(owned.map((a) => a.id));
 
   useFocusEffect(useCallback(() => {
@@ -37,10 +43,16 @@ export default function ManageTab() {
 
         {owned.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Todavía no creaste ningún álbum.</Text>
-            <Text style={styles.emptyBody}>
-              Creá uno y vas a poder cargar las figuritas, publicarlo y compartirlo.
+            <Text style={styles.emptyTitle}>
+              {showArchived
+                ? 'No hay álbumes archivados.'
+                : 'Todavía no creaste ningún álbum.'}
             </Text>
+            {!showArchived && (
+              <Text style={styles.emptyBody}>
+                Creá uno y vas a poder cargar las figuritas, publicarlo y compartirlo.
+              </Text>
+            )}
           </View>
         ) : (
           <View style={{ gap: Spacing.listGap }}>
@@ -49,17 +61,39 @@ export default function ManageTab() {
               const current = p?.stickers_loaded ?? 0;
               const total = p?.total_stickers ?? album.total_stickers;
               const pct = total > 0 ? current / total : 0;
+              const archived = (album as any).owner_hidden === true;
               return (
                 <AlbumCard
                   key={album.id}
                   album={album}
                   progress={pct}
                   counter={{ current, total }}
+                  roleTag={archived ? 'ARCHIVADO' : undefined}
                   onPress={() => router.push(`/album/${album.id}`)}
                 />
               );
             })}
           </View>
+        )}
+
+        {/* Toggle "mostrar archivados": solo aparece si hay algo para mostrar
+            (evita ruido en cuentas sin archivos). Cuando showArchived=true lo
+            dejamos siempre para poder volver. */}
+        {(archivedCount > 0 || showArchived) && (
+          <Pressable
+            onPress={() => setShowArchived((v) => !v)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.archivedToggle, pressed && { opacity: 0.6 }]}
+          >
+            <Feather
+              name={showArchived ? 'eye-off' : 'archive'}
+              size={13}
+              color={Colors.muted}
+            />
+            <Text style={styles.archivedToggleText}>
+              {showArchived ? 'Ocultar archivados' : `Mostrar archivados${archivedCount ? ` (${archivedCount})` : ''}`}
+            </Text>
+          </Pressable>
         )}
 
         <Button label="Crear álbum nuevo" onPress={() => router.push('/album/new')} />
@@ -112,5 +146,20 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     textAlign: 'center',
     paddingHorizontal: Spacing.xl,
+  },
+  archivedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.xs,
+  },
+  archivedToggleText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
 });

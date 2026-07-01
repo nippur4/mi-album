@@ -72,11 +72,15 @@ export function usePublicAlbums() {
 }
 
 // Álbumes donde el usuario se unió (membership) pero NO es el owner.
-export function useMyMemberAlbums() {
+// includeHidden=true trae también los álbumes que el jugador ocultó (hidden=true),
+// y en el objeto de cada álbum incluye `__hidden: boolean` para que la UI sepa
+// distinguirlos (marcar con badge, ofrecer unhide, etc.).
+export function useMyMemberAlbums(options?: { includeHidden?: boolean }) {
+  const includeHidden = options?.includeHidden ?? false;
   const { session } = useSession();
   const uid = session?.user.id;
 
-  const [albums, setAlbums] = useState<Album[]>([]);
+  const [albums, setAlbums] = useState<(Album & { __hidden?: boolean })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refetch = useCallback(async () => {
@@ -86,11 +90,17 @@ export function useMyMemberAlbums() {
       return;
     }
     setIsLoading(true);
-    const { data: memberships } = await supabase
+    let memQuery = supabase
       .from('user_album_membership')
-      .select('album_id')
+      .select('album_id, hidden')
       .eq('user_id', uid);
+    if (!includeHidden) memQuery = memQuery.eq('hidden', false);
+    const { data: memberships } = await memQuery;
     const ids = (memberships ?? []).map((m: any) => m.album_id);
+    const hiddenByAlbum: Record<string, boolean> = {};
+    for (const m of (memberships ?? []) as any[]) {
+      hiddenByAlbum[m.album_id] = m.hidden === true;
+    }
     if (ids.length === 0) {
       setAlbums([]);
       setIsLoading(false);
@@ -102,9 +112,13 @@ export function useMyMemberAlbums() {
       .in('id', ids)
       .neq('status', 'archived')
       .order('created_at', { ascending: false });
-    setAlbums((albumsData ?? []) as Album[]);
+    const merged = ((albumsData ?? []) as Album[]).map((a) => ({
+      ...a,
+      __hidden: hiddenByAlbum[a.id] === true,
+    }));
+    setAlbums(merged);
     setIsLoading(false);
-  }, [uid]);
+  }, [uid, includeHidden]);
 
   useEffect(() => { refetch(); }, [refetch]);
 
@@ -112,7 +126,10 @@ export function useMyMemberAlbums() {
 }
 
 // Los álbumes que el usuario actual creó (es decir, donde es owner).
-export function useMyOwnedAlbums() {
+// includeHidden=true trae también los que el owner archivó (owner_hidden=true).
+// Se usa en el tab "Gestionar" cuando el toggle "mostrar archivados" está activo.
+export function useMyOwnedAlbums(options?: { includeHidden?: boolean }) {
+  const includeHidden = options?.includeHidden ?? false;
   const { session } = useSession();
   const ownerId = session?.user.id;
 
@@ -127,12 +144,15 @@ export function useMyOwnedAlbums() {
       return;
     }
     setIsLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('albums')
       .select('*')
       .eq('owner_id', ownerId)
-      .neq('status', 'archived')
-      .order('created_at', { ascending: false });
+      .neq('status', 'archived');
+    if (!includeHidden) {
+      query = query.eq('owner_hidden', false);
+    }
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) {
       setError(toAppError(error));
     } else {
@@ -140,7 +160,7 @@ export function useMyOwnedAlbums() {
       setError(null);
     }
     setIsLoading(false);
-  }, [ownerId]);
+  }, [ownerId, includeHidden]);
 
   useEffect(() => { refetch(); }, [refetch]);
 
@@ -177,6 +197,24 @@ export async function updateAlbumContent(albumId: string, patch: UpdateAlbumCont
 
 export async function publishAlbum(albumId: string) {
   return supabase.rpc('fn_publish_album', { p_album_id: albumId });
+}
+
+// Archivar/des-archivar como owner (setea albums.owner_hidden).
+// Los jugadores no ven diferencia — siguen abriendo sobres y pegando normal.
+export async function archiveAlbumByOwner(albumId: string) {
+  return supabase.rpc('fn_archive_album_by_owner', { p_album_id: albumId });
+}
+export async function unarchiveAlbumByOwner(albumId: string) {
+  return supabase.rpc('fn_unarchive_album_by_owner', { p_album_id: albumId });
+}
+
+// Ocultar/des-ocultar como jugador (setea user_album_membership.hidden).
+// Solo afecta la UI de ese jugador; otros no ven diferencia.
+export async function hideAlbumByPlayer(albumId: string) {
+  return supabase.rpc('fn_hide_album_by_player', { p_album_id: albumId });
+}
+export async function unhideAlbumByPlayer(albumId: string) {
+  return supabase.rpc('fn_unhide_album_by_player', { p_album_id: albumId });
 }
 
 // Unirse a un álbum por código. Acepta el código solo o el deep link completo.

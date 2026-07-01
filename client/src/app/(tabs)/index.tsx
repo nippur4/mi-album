@@ -1,6 +1,7 @@
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
@@ -11,12 +12,14 @@ import { PublicAlbumCard } from '@/components/public-album-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
 import {
+  unhideAlbumByPlayer,
   useAlbumsProgress,
   useMyMemberAlbums,
   useMyOwnedAlbums,
   usePublicAlbums,
 } from '@/lib/queries/albums';
 import { useMyProfile } from '@/lib/queries/profile';
+import { errorMessage } from '@/lib/errors';
 
 export default function HomeTab() {
   const router = useRouter();
@@ -35,9 +38,16 @@ export default function HomeTab() {
   }, []);
   const { session } = useSession();
   const { profile } = useMyProfile();
+  const [showHidden, setShowHidden] = useState(false);
   const { albums: owned, refetch: refetchOwned, isLoading: loadingOwned } = useMyOwnedAlbums();
-  const { albums: joined, refetch: refetchJoined, isLoading: loadingJoined } = useMyMemberAlbums();
+  // Traemos SIEMPRE los ocultos y filtramos client-side, para poder mostrar
+  // el contador ("Mostrar ocultos (N)") sin una segunda query.
+  const { albums: joinedAll, refetch: refetchJoined, isLoading: loadingJoined } = useMyMemberAlbums({ includeHidden: true });
   const { albums: publics, refetch: refetchPublics, isLoading: loadingPublics } = usePublicAlbums();
+
+  // Filtramos client-side según el toggle
+  const joined = showHidden ? joinedAll : joinedAll.filter((a) => !a.__hidden);
+  const hiddenJoinedCount = joinedAll.filter((a) => a.__hidden).length;
 
   // Pedimos progreso de TODOS los ids visibles
   const allIds = useMemo(
@@ -55,10 +65,12 @@ export default function HomeTab() {
 
   useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
 
-  // Los owned se gestionan en la tab Gestionar. En home solo mostramos los
-  // álbumes donde el caller juega como member (no owner).
+  // "Donde jugás" incluye TODO álbum donde el caller tiene membership —
+  // también los propios que se joineó como jugador (Fase 10). En esos casos
+  // navegamos con ?as=player para que el thin router muestre la vista de
+  // jugador y no la de owner (que es su lugar en Gestionar).
   const ownedIds = new Set(owned.map((a) => a.id));
-  const joinedAlbums = joined.filter((a) => !ownedIds.has(a.id));
+  const joinedAlbums = joined;
 
   const displayName =
     profile?.display_name ??
@@ -120,39 +132,108 @@ export default function HomeTab() {
           </View>
         )}
 
-        {/* Donde jugás */}
-        {joinedAlbums.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Donde jugás</Text>
-            <View style={{ gap: Spacing.listGap }}>
-              {joinedAlbums.map((album) => {
-                const p = progressMap[album.id];
-                const total = p?.total_stickers ?? album.total_stickers;
-                // Counter siempre visible con el total del álbum; current=?
-                // mientras no llegue el progress (better than mostrar 0).
-                const counter = { current: p?.my_pasted_count ?? 0, total };
-                const progress = p && total > 0 ? p.my_pasted_count / total : 0;
-                return (
-                  <AlbumCard
-                    key={album.id}
-                    album={album}
-                    progress={progress}
-                    counter={counter}
-                    onPress={() => router.push(`/album/${album.id}`)}
-                  />
-                );
-              })}
-            </View>
-          </View>
-        )}
+        {/* Split de joined en "en curso" vs "completados" (100% pegado).
+            Usamos el progressMap; si aún no llegó, tratamos como en curso. */}
+        {(() => {
+          const inProgress: typeof joinedAlbums = [];
+          const completed: typeof joinedAlbums = [];
+          for (const a of joinedAlbums) {
+            const p = progressMap[a.id];
+            const total = p?.total_stickers ?? a.total_stickers;
+            const done = !!p && total > 0 && p.my_pasted_count >= total;
+            (done ? completed : inProgress).push(a);
+          }
 
-        {joinedAlbums.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Todavía no estás jugando ningún álbum.</Text>
-            <Text style={styles.emptyBody}>
-              Unite con un código abajo o explorá los álbumes públicos.
+          const renderCard = (album: typeof joinedAlbums[number]) => {
+            const p = progressMap[album.id];
+            const total = p?.total_stickers ?? album.total_stickers;
+            const counter = { current: p?.my_pasted_count ?? 0, total };
+            const progress = p && total > 0 ? p.my_pasted_count / total : 0;
+            const isHidden = (album as any).__hidden === true;
+            const isOwn = ownedIds.has(album.id);
+            const href = isOwn ? `/album/${album.id}?as=player` : `/album/${album.id}`;
+            const tag = isHidden ? 'OCULTO' : isOwn ? 'TUYO' : undefined;
+            return (
+              <View key={album.id} style={{ gap: 4 }}>
+                <AlbumCard
+                  album={album}
+                  progress={progress}
+                  counter={counter}
+                  roleTag={tag}
+                  onPress={() => router.push(href)}
+                />
+                {isHidden && (
+                  <Pressable
+                    onPress={async () => {
+                      const { error } = await unhideAlbumByPlayer(album.id);
+                      if (error) {
+                        Alert.alert('No se pudo mostrar', errorMessage(error));
+                        return;
+                      }
+                      refetchJoined();
+                    }}
+                    style={({ pressed }) => [styles.unhideBtn, pressed && { opacity: 0.6 }]}
+                  >
+                    <Feather name="eye" size={12} color={Colors.muted} />
+                    <Text style={styles.unhideBtnText}>Volver a mostrar</Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          };
+
+          return (
+            <>
+              {inProgress.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>Donde jugás</Text>
+                  <View style={{ gap: Spacing.listGap }}>
+                    {inProgress.map(renderCard)}
+                  </View>
+                </View>
+              )}
+
+              {completed.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHead}>
+                    <Text style={styles.sectionLabel}>Completados</Text>
+                    <Text style={styles.sectionTag}>100%</Text>
+                  </View>
+                  <View style={{ gap: Spacing.listGap }}>
+                    {completed.map(renderCard)}
+                  </View>
+                </View>
+              )}
+
+              {inProgress.length === 0 && completed.length === 0 && !showHidden && (
+                <View style={styles.empty}>
+                  <Text style={styles.emptyTitle}>Todavía no estás jugando ningún álbum.</Text>
+                  <Text style={styles.emptyBody}>
+                    Unite con un código abajo o explorá los álbumes públicos.
+                  </Text>
+                </View>
+              )}
+            </>
+          );
+        })()}
+
+        {(hiddenJoinedCount > 0 || showHidden) && (
+          <Pressable
+            onPress={() => setShowHidden((v) => !v)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.hiddenToggle, pressed && { opacity: 0.6 }]}
+          >
+            <Feather
+              name={showHidden ? 'eye-off' : 'eye'}
+              size={13}
+              color={Colors.muted}
+            />
+            <Text style={styles.hiddenToggleText}>
+              {showHidden
+                ? 'Ocultar los tuyos ocultos'
+                : `Mostrar ocultos${hiddenJoinedCount ? ` (${hiddenJoinedCount})` : ''}`}
             </Text>
-          </View>
+          </Pressable>
         )}
 
         <JoinCodeInput
@@ -239,5 +320,35 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,
     color: Colors.inkSoft,
+  },
+  hiddenToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.xs,
+  },
+  hiddenToggleText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  unhideBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  unhideBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
 });

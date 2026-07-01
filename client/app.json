@@ -24,7 +24,15 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Mi Álbum de Figuritas",
+      "shortName": "Mi Álbum",
+      "description": "Creá y completá álbumes digitales de figuritas. Intercambiá con amigos.",
+      "lang": "es",
+      "themeColor": "#D23A2E",
+      "backgroundColor": "#FBF3E2",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",

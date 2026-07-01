@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Avatar } from '@/components/avatar';
 import { PresetBackground } from '@/components/preset-background';
 import { ProgressBar } from '@/components/progress-bar';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -47,13 +47,26 @@ export function AlbumCard({ album, progress, counter, roleTag, onPress }: Props)
   );
 }
 
-// Thumbnail circular del álbum: usa la carátula (preset o imagen R2). Si el
-// álbum aún no tiene carátula (típicamente en draft), fallback al Avatar
-// con iniciales del nombre.
+// Thumbnail del álbum en el MISMO formato que se le pide al owner cargar
+// (4:5, carátula). Puede ser preset (gradient) o imagen R2. Si el álbum aún
+// no tiene carátula, fallback: bloque de color hasheado + iniciales.
+const THUMB_FALLBACK_PALETTE = [
+  Colors.red, '#5B8DEF', '#7FB83E', Colors.gold,
+  '#3FB6A8', '#B36BD4', '#EE6FA0', '#F2A03D',
+];
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 function AlbumThumb({ album }: { album: Album }) {
   const key = album.cover_thumb_key;
-  if (!key) return <Avatar source={album.name} />;
-  if (isPreset(key)) {
+  const bg = useMemo(
+    () => THUMB_FALLBACK_PALETTE[hashStr(album.name) % THUMB_FALLBACK_PALETTE.length],
+    [album.name],
+  );
+  const initial = (album.name.trim()[0] ?? '?').toUpperCase();
+  if (key && isPreset(key)) {
     return (
       <View style={styles.thumb}>
         <PresetBackground id={presetIdFromKey(key)} />
@@ -61,10 +74,16 @@ function AlbumThumb({ album }: { album: Album }) {
     );
   }
   const url = r2Url(key);
-  if (!url) return <Avatar source={album.name} />;
+  if (url) {
+    return (
+      <View style={styles.thumb}>
+        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      </View>
+    );
+  }
   return (
-    <View style={styles.thumb}>
-      <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
+    <View style={[styles.thumb, { backgroundColor: bg }]}>
+      <Text style={styles.thumbFallbackText}>{initial}</Text>
     </View>
   );
 }
@@ -128,11 +147,20 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     lineHeight: 12,
   },
+  // 4:5 = mismo aspect que se le pide al owner al subir la carátula.
   thumb: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 44,
+    height: 55,
+    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: Colors.paper2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbFallbackText: {
+    fontFamily: FontFamily.display,
+    fontSize: 26,
+    color: Colors.paper,
+    letterSpacing: 1,
   },
 });

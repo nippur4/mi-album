@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, FontFamily, FontSize, Layout, RarityFrame, Radius } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
@@ -13,18 +13,21 @@ interface Props {
   // Si > 0, hay repetidas adicionales.
   extraCount?: number;
   onPress?: () => void;
+  // Override de estilos (se aplica al final para pisar aspectRatio, etc.).
+  // Se usa desde AlbumPager para forzar orientación landscape en algunos layouts.
+  style?: StyleProp<ViewStyle>;
 }
 
 // Celda de figurita en la grilla. Tres modos de uso:
 //   - state='pasted' (default): pegada en el álbum, borde de rareza
 //   - state='to_paste': tengo sin pegar (gold, tap para pegar)
 //   - extraCount>0: badge REPE ×N abajo-derecha
-export function StickerCell({ sticker, state = 'pasted', extraCount = 0, onPress }: Props) {
+export function StickerCell({ sticker, state = 'pasted', extraCount = 0, onPress, style }: Props) {
   const url = r2Url(sticker.thumb_key);
   const borderColor = state === 'to_paste' ? Colors.gold : RarityFrame[sticker.rarity];
 
   return (
-    <Pressable onPress={onPress} style={[styles.cell, { borderColor }, state === 'to_paste' && styles.cellToPaste]}>
+    <Pressable onPress={onPress} style={[styles.cell, { borderColor }, state === 'to_paste' && styles.cellToPaste, style]}>
       {url && (
         <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
       )}
@@ -51,10 +54,11 @@ interface EmptyCellProps {
   number: number;
   showPlus?: boolean;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 }
-export function StickerCellEmpty({ number, showPlus, onPress }: EmptyCellProps) {
+export function StickerCellEmpty({ number, showPlus, onPress, style }: EmptyCellProps) {
   return (
-    <Pressable onPress={onPress} style={styles.cellEmpty}>
+    <Pressable onPress={onPress} style={[styles.cellEmpty, style]}>
       <Text style={styles.emptyNumber}>{String(number).padStart(3, '0')}</Text>
       {showPlus && <Text style={styles.plus}>+</Text>}
     </Pressable>
@@ -65,10 +69,11 @@ export function StickerCellEmpty({ number, showPlus, onPress }: EmptyCellProps) 
 interface MissingCellProps {
   number: number;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 }
-export function StickerCellMissing({ number, onPress }: MissingCellProps) {
+export function StickerCellMissing({ number, onPress, style }: MissingCellProps) {
   return (
-    <Pressable onPress={onPress} style={styles.cellMissing}>
+    <Pressable onPress={onPress} style={[styles.cellMissing, style]}>
       <Text style={styles.missingNumber}>{String(number).padStart(3, '0')}</Text>
       <View style={styles.silhouette} />
     </Pressable>

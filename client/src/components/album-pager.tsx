@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -25,7 +25,9 @@ import { PageTexture } from '@/components/page-texture';
 
 interface Props {
   totalStickers: number;
-  renderCell: (number: number) => ReactNode;
+  // cellStyle viene con el aspectRatio efectivo (respeta orientation de la
+  // hoja). El caller debe pasarlo al StickerCell/Empty/Missing como `style`.
+  renderCell: (number: number, cellStyle: ViewStyle) => ReactNode;
   headerLabel?: string;
   pageBgColor?: string;
   pageTexture?: string;
@@ -191,7 +193,7 @@ interface AnimatedPageProps {
   pageHeight: number;
   innerWidth: number;
   page: BuiltPage;
-  renderCell: (number: number) => ReactNode;
+  renderCell: (number: number, cellStyle: ViewStyle) => ReactNode;
 }
 
 function AnimatedPage({
@@ -203,10 +205,14 @@ function AnimatedPage({
   page,
   renderCell,
 }: AnimatedPageProps) {
-  const { layout, numbers, colorKey } = page;
+  const { layout, numbers, colorKey, orientation } = page;
   const bg = resolveColor(colorKey);
 
-  const aspect = Layout.gridCellAspect;
+  // Portrait: aspect original (0.82, más alto que ancho).
+  // Landscape: invertido (~1.22, más ancho que alto). El grid resultante
+  // seguramente termina alineado horizontal en la misma hoja de tamaño fijo.
+  const baseAspect = Layout.gridCellAspect;
+  const aspect = orientation === 'landscape' ? 1 / baseAspect : baseAspect;
   const SAFETY_MARGIN = 4;
   const availW = innerWidth - Spacing.gridGap * (layout.cols - 1) - SAFETY_MARGIN;
   const availH = pageHeight - Spacing.md * 2 - Spacing.gridGap * (layout.rows - 1);
@@ -282,7 +288,7 @@ function AnimatedPage({
                 key={n ?? `empty-${i}`}
                 style={{ width: cellW, aspectRatio: aspect, overflow: 'hidden' }}
               >
-                {n !== undefined && renderCell(n)}
+                {n !== undefined && renderCell(n, { aspectRatio: aspect })}
               </View>
             );
           })}

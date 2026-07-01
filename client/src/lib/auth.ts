@@ -12,10 +12,15 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './supabase';
+
+// Necesario para que openAuthSessionAsync cierre el browser embebido al
+// volver del OAuth callback (en algunos Safari). No-op en mobile fuera de iOS.
+WebBrowser.maybeCompleteAuthSession();
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -60,6 +65,68 @@ export async function signInWithMagicLink(email: string) {
     email: email.trim().toLowerCase(),
     options: { emailRedirectTo },
   });
+}
+
+// Google OAuth via Supabase, cross-platform.
+//
+// Web: usa el redirect estándar (Supabase abre Google, vuelve con tokens en
+// el hash, supabase-js los lee gracias a detectSessionInUrl: true).
+//
+// Mobile: flujo PKCE manual con expo-web-browser. Pasos:
+//   1) Pedimos a Supabase la URL de Google con skipBrowserRedirect: true
+//      (devuelve { data: { url } } sin redirigir nada)
+//   2) Abrimos esa URL con WebBrowser.openAuthSessionAsync, que abre un
+//      browser embebido (SFAuthenticationSession en iOS, Custom Tabs en
+//      Android) y espera el redirect a `mialbum://`
+//   3) Cuando vuelve, parseamos el ?code=... del deep link y llamamos
+//      exchangeCodeForSession para canjear el code por una sesión
+//
+// IMPORTANTE: requiere config previa (idéntica para web + mobile):
+//   1) Google Cloud Console: crear OAuth Client ID (Web Application)
+//   2) Supabase Dashboard → Authentication → Providers → Google: pegar Client ID/Secret
+//   3) En Google Cloud, agregar Authorized Redirect URI:
+//      https://baexxbixcrhngbjptlkt.supabase.co/auth/v1/callback
+//   4) En Supabase → URL Configuration → Redirect URLs: `mialbum://**` ya debería estar
+export const GOOGLE_SUPPORTED = true;
+
+export async function signInWithGoogle() {
+  if (Platform.OS === 'web') {
+    const redirectTo =
+      typeof window !== 'undefined' ? window.location.origin : 'mialbum://';
+    return supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+  }
+
+  // Mobile: PKCE flow manual con expo-web-browser
+  const redirectTo = 'mialbum://';
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error) return { data: null, error };
+  if (!data?.url) {
+    return { data: null, error: { message: 'no_oauth_url' } as any };
+  }
+
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  if (result.type !== 'success' || !result.url) {
+    // User canceló o cerró el browser sin completar.
+    return { data: null, error: { message: 'oauth_cancelled' } as any };
+  }
+
+  // El callback vuelve como `mialbum://?code=XXXX` (PKCE). Lo canjeamos por
+  // la sesión. URL.parse en RN viene del polyfill de react-native-url-polyfill.
+  const url = new URL(result.url);
+  const code = url.searchParams.get('code');
+  if (!code) {
+    return { data: null, error: { message: 'oauth_no_code' } as any };
+  }
+  const { data: sessionData, error: exchangeError } =
+    await supabase.auth.exchangeCodeForSession(code);
+  if (exchangeError) return { data: null, error: exchangeError };
+  return { data: sessionData, error: null };
 }
 
 export async function signOut() {

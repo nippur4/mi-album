@@ -16,19 +16,27 @@ import { Button } from '@/components/button';
 import { Stepper } from '@/components/stepper';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
+import { proFeatureHint } from '@/lib/upsell-copy';
 import {
   applyMode,
+  DEFAULT_TRADE_CONFIG,
+  limitToPresetKey,
   modeFromConfig,
   PACK_SIZE_OPTIONS,
+  TRADE_LIMIT_OPTIONS,
   updateAlbumEconomy,
+  WELCOME_FREE_OPTIONS,
+  WELCOME_PRO_OPTIONS,
   type DeliveryMode,
   type PackConfig,
+  type TradeConfig,
 } from '@/lib/queries/economy';
 
 interface Props {
   visible: boolean;
   albumId: string;
   currentConfig: PackConfig;
+  currentTradeConfig: TradeConfig;
   isPro: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -44,11 +52,13 @@ export function EditEconomyModal({
   visible,
   albumId,
   currentConfig,
+  currentTradeConfig,
   isPro,
   onClose,
   onSaved,
 }: Props) {
   const [config, setConfig] = useState<PackConfig>(currentConfig);
+  const [tradeConfig, setTradeConfig] = useState<TradeConfig>(currentTradeConfig);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,13 +66,38 @@ export function EditEconomyModal({
   useEffect(() => {
     if (visible) {
       setConfig(currentConfig);
+      setTradeConfig(currentTradeConfig);
       setError(null);
     }
-  }, [visible, currentConfig]);
+  }, [visible, currentConfig, currentTradeConfig]);
 
   const mode = modeFromConfig(config);
   const packSize = config.pack_size ?? 5;
   const weekly = config.daily.cooldown_hours >= WEEKLY_HOURS;
+  const welcomeCount = config.welcome?.enabled ? (config.welcome.count ?? 1) : 0;
+  const welcomeOptions = isPro ? WELCOME_PRO_OPTIONS : WELCOME_FREE_OPTIONS;
+  const tradeLimitKey = limitToPresetKey(tradeConfig.limit);
+
+  function setWelcomeCount(n: number) {
+    setConfig((c) => ({
+      ...c,
+      welcome: n === 0
+        ? { enabled: false, count: 0 }
+        : { enabled: true, count: n },
+    }));
+  }
+
+  function setTradeEnabled(enabled: boolean) {
+    if (!isPro) return; // free no puede tocar el toggle
+    setTradeConfig((t) => ({ ...t, enabled }));
+  }
+
+  function setTradeLimitKey(key: string) {
+    if (!isPro) return;
+    const option = TRADE_LIMIT_OPTIONS.find((o) => o.key === key);
+    if (!option) return;
+    setTradeConfig((t) => ({ ...t, limit: option.value ?? null }));
+  }
 
   function setMode(m: DeliveryMode) {
     // Free no puede elegir QR ni ambos
@@ -101,16 +136,17 @@ export function EditEconomyModal({
   async function onSave() {
     setError(null);
     setSaving(true);
-    // Sanitizar antes de mandar: si daily no está activo, dejamos sus valores
-    // como estén (no molestan). Si qr no está activo, idem.
     const payload: PackConfig = {
       ...config,
-      // Free: normalizar
+      // Free: normalizar daily.count=1 y cooldown_hours=24
       daily: !isPro && mode === 'daily'
         ? { ...config.daily, count: 1, cooldown_hours: DAILY_HOURS }
         : config.daily,
     };
-    const { error: rpcErr } = await updateAlbumEconomy(albumId, payload);
+    // Free no puede editar trades, así que mandamos siempre el default enabled
+    // sin límite. Si el owner era Pro antes y ahora es free, esto normaliza.
+    const tradePayload: TradeConfig = isPro ? tradeConfig : DEFAULT_TRADE_CONFIG;
+    const { error: rpcErr } = await updateAlbumEconomy(albumId, payload, tradePayload);
     setSaving(false);
     if (rpcErr) {
       setError(errorMessage(rpcErr));
@@ -195,7 +231,7 @@ export function EditEconomyModal({
                     ) : (
                       <View style={styles.freeNotice}>
                         <Text style={styles.freeNoticeText}>
-                          Gratis: 1 sobre por día. Activá Pro para configurar más.
+                          {proFeatureHint('Gratis: 1 sobre por día. Configurar más es Pro.')}
                         </Text>
                       </View>
                     )}
@@ -234,6 +270,72 @@ export function EditEconomyModal({
                       />
                     ))}
                   </View>
+                </View>
+
+                {/* Welcome pack */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Sobre de bienvenida</Text>
+                  <Text style={styles.fieldLabel}>CUÁNTOS SOBRES AL UNIRSE</Text>
+                  <View style={styles.chipRow}>
+                    {welcomeOptions.map((n) => (
+                      <Chip
+                        key={n}
+                        label={n === 0 ? 'Sin welcome' : String(n)}
+                        selected={welcomeCount === n}
+                        onPress={() => setWelcomeCount(n)}
+                      />
+                    ))}
+                  </View>
+                  {!isPro && (
+                    <Text style={styles.hint}>
+                      {proFeatureHint('Free: 0, 1 o 3 sobres. Cualquier otra cantidad es Pro.')}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Intercambios */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Intercambios</Text>
+                  {!isPro ? (
+                    <View style={styles.freeNotice}>
+                      <Text style={styles.freeNoticeText}>
+                        {proFeatureHint('Gratis: los jugadores pueden intercambiar sin límite. Configurar restricciones es Pro.')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <Text style={styles.fieldLabel}>PERMITIR INTERCAMBIOS</Text>
+                      <View style={styles.chipRow}>
+                        <Chip
+                          label="Sí"
+                          selected={tradeConfig.enabled}
+                          onPress={() => setTradeEnabled(true)}
+                        />
+                        <Chip
+                          label="No"
+                          selected={!tradeConfig.enabled}
+                          onPress={() => setTradeEnabled(false)}
+                        />
+                      </View>
+                      {tradeConfig.enabled && (
+                        <>
+                          <Text style={[styles.fieldLabel, { marginTop: Spacing.md }]}>
+                            LÍMITE POR JUGADOR
+                          </Text>
+                          <View style={styles.chipRow}>
+                            {TRADE_LIMIT_OPTIONS.map((o) => (
+                              <Chip
+                                key={o.key}
+                                label={o.label}
+                                selected={tradeLimitKey === o.key}
+                                onPress={() => setTradeLimitKey(o.key)}
+                              />
+                            ))}
+                          </View>
+                        </>
+                      )}
+                    </>
+                  )}
                 </View>
 
                 {error && <Text style={styles.error}>{error}</Text>}

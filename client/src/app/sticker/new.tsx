@@ -14,6 +14,7 @@ import { Button } from '@/components/button';
 import { ImageUploadCard } from '@/components/image-upload-card';
 import { RarityInfoLine } from '@/components/rarity-info-line';
 import { RarityPills } from '@/components/rarity-pills';
+import { proFeatureHint } from '@/lib/upsell-copy';
 import { ScreenHeader } from '@/components/screen-header';
 import { Stepper } from '@/components/stepper';
 import { TextInput } from '@/components/text-input';
@@ -163,9 +164,9 @@ export default function NewStickerScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>RAREZA</Text>
             <Text style={styles.proHint}>
-              En el plan Free todas las figuritas son comunes. Suscribite a Pro
-              para definir rarezas (rara, épica, legendaria) y configurar las
-              probabilidades del sobre.
+              {proFeatureHint(
+                'En el plan Free todas las figuritas son comunes. Las rarezas (rara, épica, legendaria) y la configuración de probabilidades son Pro.',
+              )}
             </Text>
             <RarityInfoLine rarity="common" packConfig={album?.pack_config as any} />
           </View>

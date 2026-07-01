@@ -39,12 +39,19 @@ export function resolveColor(key: string | null | undefined): string {
   return found?.bg ?? PAGE_COLORS[0].bg;
 }
 
+export type PageOrientation = 'portrait' | 'landscape';
+
 export interface PageLayout {
   key: string;
   name: string;
   cols: number;
   rows: number;
   capacity: number;
+  // Los layouts en formato retrato profundo (más filas que columnas o muy
+  // apretados) no tienen sentido con figuritas apaisadas: la página se estira
+  // hacia abajo y las figus quedan chatas. Se ofrece la opción de orientación
+  // solo en layouts cuadrados o con pocas celdas.
+  supportsLandscape?: boolean;
 }
 
 // Layouts disponibles. capacity = cols * rows. El cliente calcula el tamaño
@@ -52,13 +59,15 @@ export interface PageLayout {
 // dentro de la hoja (que tiene tamaño constante).
 export const PAGE_LAYOUTS: PageLayout[] = [
   { key: '3x4', name: '3 × 4', cols: 3, rows: 4, capacity: 12 },
+  { key: '2x2', name: '2 × 2', cols: 2, rows: 2, capacity: 4,  supportsLandscape: true },
   { key: '2x3', name: '2 × 3', cols: 2, rows: 3, capacity: 6 },
-  { key: '3x3', name: '3 × 3', cols: 3, rows: 3, capacity: 9 },
+  { key: '3x3', name: '3 × 3', cols: 3, rows: 3, capacity: 9,  supportsLandscape: true },
   { key: '2x4', name: '2 × 4', cols: 2, rows: 4, capacity: 8 },
-  { key: '4x4', name: '4 × 4', cols: 4, rows: 4, capacity: 16 },
+  { key: '4x4', name: '4 × 4', cols: 4, rows: 4, capacity: 16, supportsLandscape: true },
 ];
 
 export const DEFAULT_PAGE_LAYOUT = '3x4';
+export const DEFAULT_PAGE_ORIENTATION: PageOrientation = 'portrait';
 
 export function resolveLayout(key: string | null | undefined): PageLayout {
   return (
@@ -95,6 +104,9 @@ export interface PageOverride {
   color?: string;
   layout?: string;
   texture?: string;
+  // Solo aplica si el layout soporta landscape (ver supportsLandscape).
+  // Cuando se persiste 'portrait' es equivalente a no persistirlo (default).
+  orientation?: PageOrientation;
 }
 
 export interface BuiltPage {
@@ -102,6 +114,7 @@ export interface BuiltPage {
   layout: PageLayout;
   colorKey: string;        // resuelto (default si no hay override)
   textureKey: string;
+  orientation: PageOrientation;
   numbers: number[];
 }
 
@@ -128,11 +141,18 @@ export function buildPages(
     for (let i = 0; i < cap && n <= totalStickers; i++) {
       nums.push(n++);
     }
+    // Solo respetamos landscape si el layout lo soporta — evita quedar con
+    // valores viejos guardados en overrides si el owner cambia el layout.
+    const orientation: PageOrientation =
+      ov?.orientation === 'landscape' && layout.supportsLandscape
+        ? 'landscape'
+        : DEFAULT_PAGE_ORIENTATION;
     pages.push({
       index: pageIdx,
       layout,
       colorKey: ov?.color ?? defaultColor,
       textureKey: ov?.texture ?? defaultTexture,
+      orientation,
       numbers: nums,
     });
     pageIdx++;

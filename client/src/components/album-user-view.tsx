@@ -1,7 +1,9 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Feather } from '@expo/vector-icons';
 
 import { AlbumPager } from '@/components/album-pager';
 import { Button } from '@/components/button';
@@ -11,7 +13,8 @@ import { ScreenHeader } from '@/components/screen-header';
 import { StickerCell, StickerCellMissing } from '@/components/sticker-cell';
 import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import type { Album, Sticker } from '@/lib/queries/albums';
+import { useSession } from '@/lib/auth';
+import { hideAlbumByPlayer, type Album, type Sticker } from '@/lib/queries/albums';
 import { useAvailablePacksCount, useUserCollection } from '@/lib/queries/collection';
 import { claimDailyPack, useDailyPackStatus } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
@@ -27,10 +30,15 @@ interface Props {
 // + CTA inferior con 3 estados (sobres listos / daily disponible / countdown).
 export function UserAlbumView({ album, stickers }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { session } = useSession();
   const { collection, refetch: refetchCollection } = useUserCollection(album.id);
   const { count: packsCount, refetch: refetchPacks } = useAvailablePacksCount(album.id);
   const { status: daily, refetch: refetchDaily } = useDailyPackStatus(album.id);
   const [claiming, setClaiming] = useState(false);
+  // Si el session pertenece al owner del álbum, mostramos link para volver
+  // a la vista de gestión (Fase 10).
+  const isOwnerViewing = session?.user.id === album.owner_id;
 
   // FIX: cuando volvemos de /pack/open o /trade/*, los hooks de esta pantalla
   // no se re-disparan solos (Expo Router conserva el componente en el stack).
@@ -56,6 +64,31 @@ export function UserAlbumView({ album, stickers }: Props) {
   }
 
   const [pastingId, setPastingId] = useState<string | null>(null);
+  const [hiding, setHiding] = useState(false);
+
+  function onHidePress() {
+    Alert.alert(
+      'Ocultar álbum',
+      'Se va a esconder de tu Inicio y del tab Sobres. Tu progreso, figuritas y repes se conservan. Podés volver a mostrarlo desde el Inicio.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Ocultar',
+          style: 'destructive',
+          onPress: async () => {
+            setHiding(true);
+            const { error } = await hideAlbumByPlayer(album.id);
+            setHiding(false);
+            if (error) {
+              Alert.alert('No se pudo ocultar', errorMessage(error));
+              return;
+            }
+            router.back();
+          },
+        },
+      ],
+    );
+  }
 
   async function onPaste(stickerId: string) {
     if (pastingId) return;
@@ -99,7 +132,22 @@ export function UserAlbumView({ album, stickers }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title={album.name} back multiline />
+      <ScreenHeader
+        title={album.name}
+        back
+        multiline
+        right={
+          isOwnerViewing ? (
+            <Pressable
+              onPress={() => router.replace(`/album/${album.id}`)}
+              hitSlop={8}
+              style={styles.configLink}
+            >
+              <Text style={styles.configLinkText}>Config</Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
         {isWelcome && (
           <View style={styles.welcomeBanner}>
@@ -126,14 +174,15 @@ export function UserAlbumView({ album, stickers }: Props) {
             pageBgColor={(album as any).page_bg_color}
             pageTexture={(album as any).page_texture}
             pageOverrides={(album as any).page_overrides ?? []}
-            renderCell={(n) => {
+            renderCell={(n, cellStyle) => {
               const s = stickerByNumber.get(n);
-              if (!s) return <StickerCellMissing number={n} />;
+              if (!s) return <StickerCellMissing number={n} style={cellStyle} />;
               const entry = collection.get(s.id);
               if (entry?.pasted) {
                 return (
                   <StickerCell
                     sticker={s}
+                    style={cellStyle}
                     extraCount={Math.max(0, entry.quantity - 1)}
                     onPress={() => router.push(`/sticker/${s.id}`)}
                   />
@@ -142,7 +191,7 @@ export function UserAlbumView({ album, stickers }: Props) {
               // No pegada todavía (sea que la tenga sin pegar o no la tenga):
               // se ve como silueta gris. La acción de pegar/cambiar vive en
               // la lista de abajo.
-              return <StickerCellMissing number={n} />;
+              return <StickerCellMissing number={n} style={cellStyle} />;
             }}
           />
         </View>
@@ -185,13 +234,33 @@ export function UserAlbumView({ album, stickers }: Props) {
             onPress={() => router.push(`/trade/matches?albumId=${album.id}`)}
           />
         )}
+
+        {/* No mostramos "Ocultar" cuando el owner está en modo player: para él
+            "ocultar" no aplica (siempre lo ve porque también es owner). */}
+        {!isOwnerViewing && (
+          <Pressable
+            onPress={onHidePress}
+            disabled={hiding}
+            hitSlop={8}
+            style={({ pressed }) => [styles.hideBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name="eye-off" size={13} color={Colors.muted} />
+            <Text style={styles.hideBtnText}>
+              {hiding ? '...' : 'Ocultar de mi álbum'}
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* CTA inferior con 3 estados: sobres listos / daily disponible / countdown */}
       {packsCount > 0 ? (
         <Pressable
           onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
-          style={({ pressed }) => [styles.packsCta, pressed && styles.packsCtaPressed]}
+          style={({ pressed }) => [
+            styles.packsCta,
+            { bottom: Math.max(insets.bottom, Spacing.md) },
+            pressed && styles.packsCtaPressed,
+          ]}
         >
           <Text style={styles.packsCtaLabel}>
             TENÉS {packsCount}{'\n'}SOBRE{packsCount > 1 ? 'S' : ''}
@@ -204,7 +273,11 @@ export function UserAlbumView({ album, stickers }: Props) {
         <Pressable
           onPress={onClaimDaily}
           disabled={claiming}
-          style={({ pressed }) => [styles.packsCta, pressed && styles.packsCtaPressed]}
+          style={({ pressed }) => [
+            styles.packsCta,
+            { bottom: Math.max(insets.bottom, Spacing.md) },
+            pressed && styles.packsCtaPressed,
+          ]}
         >
           <Text style={styles.packsCtaLabel}>SOBRE DIARIO{'\n'}DISPONIBLE</Text>
           <View style={styles.packsCtaAction}>
@@ -212,7 +285,7 @@ export function UserAlbumView({ album, stickers }: Props) {
           </View>
         </Pressable>
       ) : daily.enabled && daily.nextAvailableAt ? (
-        <View style={styles.dailyCard}>
+        <View style={[styles.dailyCard, { bottom: Math.max(insets.bottom, Spacing.md) }]}>
           <View style={styles.dailyCardLeft}>
             <Text style={styles.dailyCardKicker}>SOBRE DIARIO GRATIS</Text>
             <Text style={styles.dailyCardSub}>PRÓXIMO EN</Text>
@@ -226,6 +299,21 @@ export function UserAlbumView({ album, stickers }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
+  configLink: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+  },
+  configLinkText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.ink,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.md,
@@ -303,7 +391,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.screenX,
     right: Spacing.screenX,
-    bottom: Spacing.xl,
     backgroundColor: Colors.red,
     borderRadius: Radius.cardLg,
     paddingHorizontal: Spacing.lg,
@@ -346,7 +433,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: Spacing.screenX,
     right: Spacing.screenX,
-    bottom: Spacing.xl,
     backgroundColor: Colors.paper2,
     borderRadius: Radius.cardLg,
     borderWidth: 1,
@@ -372,4 +458,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   dailyCountdown: { fontSize: 20 },
+  hideBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  hideBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
 });
