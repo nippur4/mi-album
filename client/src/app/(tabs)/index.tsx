@@ -11,13 +11,8 @@ import { JoinCodeInput } from '@/components/join-code-input';
 import { PublicAlbumCard } from '@/components/public-album-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
-import {
-  unhideAlbumByPlayer,
-  useAlbumsProgress,
-  useMyMemberAlbums,
-  useMyOwnedAlbums,
-  usePublicAlbums,
-} from '@/lib/queries/albums';
+import { unhideAlbumByPlayer, useAlbumsProgress } from '@/lib/queries/albums';
+import { useHomeBundle } from '@/lib/queries/home';
 import { useMyProfile } from '@/lib/queries/profile';
 import { errorMessage } from '@/lib/errors';
 
@@ -39,17 +34,22 @@ export default function HomeTab() {
   const { session } = useSession();
   const { profile } = useMyProfile();
   const [showHidden, setShowHidden] = useState(false);
-  const { albums: owned, refetch: refetchOwned, isLoading: loadingOwned } = useMyOwnedAlbums();
-  // Traemos SIEMPRE los ocultos y filtramos client-side, para poder mostrar
-  // el contador ("Mostrar ocultos (N)") sin una segunda query.
-  const { albums: joinedAll, refetch: refetchJoined, isLoading: loadingJoined } = useMyMemberAlbums({ includeHidden: true });
-  const { albums: publics, refetch: refetchPublics, isLoading: loadingPublics } = usePublicAlbums();
+  // Bundle: owned + joined (con __hidden) + public en 1 sola RPC.
+  // Antes eran 3 queries separadas.
+  const {
+    owned,
+    joined: joinedAll,
+    publics,
+    refetch: refetchHome,
+    isLoading,
+  } = useHomeBundle();
 
   // Filtramos client-side según el toggle
   const joined = showHidden ? joinedAll : joinedAll.filter((a) => !a.__hidden);
   const hiddenJoinedCount = joinedAll.filter((a) => a.__hidden).length;
 
-  // Pedimos progreso de TODOS los ids visibles
+  // Progreso de TODOS los ids visibles. Se cachea aparte por react-query
+  // (key = ids ordenados), invalidación distinta al bundle.
   const allIds = useMemo(
     () => Array.from(new Set([...owned.map((a) => a.id), ...joined.map((a) => a.id), ...publics.map((a) => a.id)])),
     [owned, joined, publics],
@@ -57,11 +57,9 @@ export default function HomeTab() {
   const { progress: progressMap, refetch: refetchProgress } = useAlbumsProgress(allIds);
 
   const refreshAll = useCallback(() => {
-    refetchOwned();
-    refetchJoined();
-    refetchPublics();
+    refetchHome();
     refetchProgress();
-  }, [refetchOwned, refetchJoined, refetchPublics, refetchProgress]);
+  }, [refetchHome, refetchProgress]);
 
   useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
 
@@ -78,7 +76,6 @@ export default function HomeTab() {
     session?.user.email?.split('@')[0] ??
     '';
 
-  const isLoading = loadingOwned || loadingJoined || loadingPublics;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -170,7 +167,7 @@ export default function HomeTab() {
                         Alert.alert('No se pudo mostrar', errorMessage(error));
                         return;
                       }
-                      refetchJoined();
+                      refetchHome();
                     }}
                     style={({ pressed }) => [styles.unhideBtn, pressed && { opacity: 0.6 }]}
                   >

@@ -9,31 +9,15 @@ import { DailyAlbumRow } from '@/components/daily-album-row';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
-import { useMyDailyStatusBatch } from '@/lib/queries/daily';
-import { useMyOpenPacksByAlbum } from '@/lib/queries/packs-by-album';
+import { useMyPacksTabData } from '@/lib/queries/packs-tab';
 
 export default function PacksTab() {
   const router = useRouter();
-  const { items, refetch: refetchPending } = useMyOpenPacksByAlbum();
-  const { albums: joined, refetch: refetchJoined } = useMyMemberAlbums();
-  const { albums: owned } = useMyOwnedAlbums();
+  // Bundle: pending packs + playable albums (con daily status) en 1 sola RPC.
+  // Antes eran 4 queries (pending + owned + joined + daily batch).
+  const { pending, playable, refetch } = useMyPacksTabData();
 
-  // El daily aplica solo a álbumes donde el caller NO es owner (el owner
-  // no juega su propio álbum). Member > owner siempre.
-  const playable = joined.filter(
-    (a) => !owned.some((o) => o.id === a.id) && a.status === 'published',
-  );
-
-  // Batch fetch del status del daily (evita N+1: antes hacíamos 2 queries × N álbumes)
-  const playableIds = playable.map((a) => a.id);
-  const { byAlbum: dailyByAlbum, refetch: refetchDaily } = useMyDailyStatusBatch(playableIds);
-
-  useFocusEffect(useCallback(() => {
-    refetchPending();
-    refetchJoined();
-    refetchDaily();
-  }, [refetchPending, refetchJoined, refetchDaily]));
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -60,7 +44,7 @@ export default function PacksTab() {
         </Pressable>
 
         {/* Sobres pendientes (sin abrir) por álbum */}
-        {items.length === 0 ? (
+        {pending.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No tenés sobres pendientes.</Text>
             <Text style={styles.emptyBody}>
@@ -69,7 +53,7 @@ export default function PacksTab() {
           </View>
         ) : (
           <View style={{ gap: Spacing.listGap }}>
-            {items.map((row) => (
+            {pending.map((row) => (
               <Pressable
                 key={row.album_id}
                 style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
@@ -101,21 +85,18 @@ export default function PacksTab() {
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.sectionLabel}>SOBRE DIARIO GRATIS</Text>
             <View style={{ gap: Spacing.listGap }}>
-              {playable.map((a) => {
-                const status = dailyByAlbum.get(a.id);
-                if (!status) return null;
-                return (
-                  <DailyAlbumRow
-                    key={a.id}
-                    album={a}
-                    status={status}
-                    onClaimed={() => {
-                      refetchPending();
-                      refetchDaily();
-                    }}
-                  />
-                );
-              })}
+              {playable.map((row) => (
+                <DailyAlbumRow
+                  key={row.album_id}
+                  album={{
+                    id: row.album_id,
+                    name: row.album_name,
+                    pack_thumb_key: row.pack_thumb_key,
+                  }}
+                  status={row.daily}
+                  onClaimed={() => refetch()}
+                />
+              ))}
             </View>
           </View>
         )}

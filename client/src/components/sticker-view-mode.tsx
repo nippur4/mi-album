@@ -18,7 +18,7 @@ import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
-import { useUserCollection } from '@/lib/queries/collection';
+import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { r2Url } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
@@ -40,7 +40,10 @@ const RARITY_LABEL: Record<Sticker['rarity'], string> = {
 // Botón "Proponer cambio" lleva a las coincidencias del álbum.
 export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const router = useRouter();
-  const { collection } = useUserCollection(sticker.album_id);
+  // El bundle player devuelve collection + packs + daily. Acá solo usamos
+  // collection, pero comparte cache con album-user-view — si el user viene
+  // desde ahí, no hay round trip extra.
+  const { collection } = usePlayerAlbumSideData(sticker.album_id);
   const entry = collection.get(sticker.id);
   const pasted = !!entry?.pasted;
   const quantity = entry?.quantity ?? 0;

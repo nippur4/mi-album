@@ -746,6 +746,7 @@ export type Database = {
         Args: { p_album_id: string }
         Returns: undefined
       }
+      fn_home_bundle: { Args: never; Returns: Json }
       fn_is_pro: { Args: { p_user: string }; Returns: boolean }
       fn_join_album: { Args: { p_share_code: string }; Returns: Json }
       fn_my_daily_status: {
@@ -758,6 +759,7 @@ export type Database = {
           next_available_at: string
         }[]
       }
+      fn_my_packs_tab_data: { Args: never; Returns: Json }
       fn_my_pending_packs: {
         Args: never
         Returns: {

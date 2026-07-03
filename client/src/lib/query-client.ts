@@ -43,12 +43,6 @@ export const qk = {
   stickers: {
     one: (id: string | undefined) => ['stickers', 'one', id] as const,
   },
-  daily: {
-    batch: (ids: string[]) => ['daily', 'batch', ids.slice().sort().join(',')] as const,
-  },
-  packs: {
-    pendingByAlbum: () => ['packs', 'pending-by-album'] as const,
-  },
   playerAlbum: {
     sideData: (albumId: string | undefined) => ['player-album', 'sidedata', albumId] as const,
   },

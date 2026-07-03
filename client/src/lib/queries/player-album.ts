@@ -1,5 +1,5 @@
-// Hook batch para el data del jugador en un álbum.
-// Reemplaza useUserCollection + useAvailablePacksCount + useDailyPackStatus.
+// Hook batch para el data del jugador en un álbum: colección + sobres
+// disponibles + estado del daily.
 // Ver supabase/migrations/0030_fn_player_album_sidedata.sql.
 
 import { useQuery } from '@tanstack/react-query';
@@ -7,8 +7,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { qk } from '@/lib/query-client';
-import type { CollectionEntry } from '@/lib/queries/collection';
 import type { DailyPackStatus } from '@/lib/queries/daily';
+
+// Una entrada de la colección: un sticker + su cantidad + si está pegado.
+export interface CollectionEntry {
+  sticker_id: string;
+  pasted: boolean;
+  quantity: number;
+}
 
 const DAILY_FALLBACK: DailyPackStatus = {
   enabled: false,

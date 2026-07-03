@@ -6,10 +6,18 @@ import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme
 import { claimDailyPack, type DailyPackStatus } from '@/lib/queries/daily';
 import { errorMessage } from '@/lib/errors';
 import { useState } from 'react';
-import type { Album } from '@/lib/queries/albums';
+
+// Shape mínimo de álbum que renderiza esta row. Aceptamos cualquier objeto
+// con estos campos — el caller le pasa lo que tenga (un Album completo o
+// el sub-shape del bundle del tab Sobres).
+interface AlbumForRow {
+  id: string;
+  name: string;
+  pack_thumb_key: string | null;
+}
 
 interface Props {
-  album: Album;
+  album: AlbumForRow;
   // Status del daily para este álbum. Si no se pasa, no se renderiza nada
   // (el caller usa el hook batch y filtra antes de renderizar).
   status: DailyPackStatus;

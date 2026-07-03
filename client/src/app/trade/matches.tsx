@@ -11,7 +11,7 @@ import { StickerCell } from '@/components/sticker-cell';
 import { StickerMini } from '@/components/sticker-mini';
 import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
 import { useAlbumDetail } from '@/lib/queries/albums';
-import { useUserCollection } from '@/lib/queries/collection';
+import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useAlbumMatches } from '@/lib/queries/trades';
 
 type Tab = 'repes' | 'matches';
@@ -22,7 +22,7 @@ export default function TradeMatchesScreen() {
   const [tab, setTab] = useState<Tab>('repes');
 
   const { album, stickers } = useAlbumDetail(albumId);
-  const { collection } = useUserCollection(albumId);
+  const { collection } = usePlayerAlbumSideData(albumId);
   const { matches, isLoading } = useAlbumMatches(albumId);
 
   // Repes intercambiables: figuritas que tengo con stock = quantity - (pasted?1:0) > 0
