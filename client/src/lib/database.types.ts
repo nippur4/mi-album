@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       albums: {
@@ -47,6 +22,7 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          owner_hidden: boolean
           owner_id: string
           pack_config: Json
           pack_large_key: string | null
@@ -68,6 +44,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           name: string
+          owner_hidden?: boolean
           owner_id: string
           pack_config?: Json
           pack_large_key?: string | null
@@ -89,6 +66,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           name?: string
+          owner_hidden?: boolean
           owner_id?: string
           pack_config?: Json
           pack_large_key?: string | null
@@ -415,6 +393,7 @@ export type Database = {
       user_album_membership: {
         Row: {
           album_id: string
+          hidden: boolean
           joined_at: string
           last_daily_claim_at: string | null
           last_qr_redeem_at: string | null
@@ -423,6 +402,7 @@ export type Database = {
         }
         Insert: {
           album_id: string
+          hidden?: boolean
           joined_at?: string
           last_daily_claim_at?: string | null
           last_qr_redeem_at?: string | null
@@ -431,6 +411,7 @@ export type Database = {
         }
         Update: {
           album_id?: string
+          hidden?: boolean
           joined_at?: string
           last_daily_claim_at?: string | null
           last_qr_redeem_at?: string | null
@@ -675,6 +656,10 @@ export type Database = {
         Returns: Json
       }
       fn_archive_album: { Args: { p_album_id: string }; Returns: undefined }
+      fn_archive_album_by_owner: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_assert_owner: {
         Args: { p_album_id: string }
         Returns: {
@@ -684,6 +669,7 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          owner_hidden: boolean
           owner_id: string
           pack_config: Json
           pack_large_key: string | null
@@ -743,6 +729,10 @@ export type Database = {
         }
         Returns: string[]
       }
+      fn_hide_album_by_player: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_is_pro: { Args: { p_user: string }; Returns: boolean }
       fn_join_album: { Args: { p_share_code: string }; Returns: Json }
       fn_my_daily_status: {
@@ -781,6 +771,14 @@ export type Database = {
       fn_trade_limit_reached: {
         Args: { p_album_id: string; p_trade_config: Json; p_user: string }
         Returns: boolean
+      }
+      fn_unarchive_album_by_owner: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
+      fn_unhide_album_by_player: {
+        Args: { p_album_id: string }
+        Returns: undefined
       }
       fn_update_album_content: {
         Args: {
@@ -966,9 +964,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       album_status: ["draft", "published", "read_only", "archived"],

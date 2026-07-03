@@ -1,9 +1,10 @@
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QrTabModal } from '@/components/qr-tab-modal';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
 
 // Tabs custom para tener control total del look (iconos lucide-style + labels
@@ -11,6 +12,7 @@ import { Colors, FontFamily } from '@/constants/theme';
 // tabPress y abre un modal manejado acá arriba para mantener estado en el layout.
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const [qrModalVisible, setQrModalVisible] = useState(false);
 
   return (
@@ -20,14 +22,18 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: Colors.red,
           tabBarInactiveTintColor: Colors.muted,
-          tabBarStyle: {
-            backgroundColor: Colors.paper,
-            borderTopColor: Colors.border,
-            borderTopWidth: 1,
-            paddingTop: 6,
-            paddingBottom: insets.bottom,
-            height: 64 + insets.bottom,
-          },
+          // En desktop web la nav vive arriba en el DesktopHeader del root
+          // layout — acá escondemos la tab bar mobile.
+          tabBarStyle: isDesktop
+            ? { display: 'none' }
+            : {
+                backgroundColor: Colors.paper,
+                borderTopColor: Colors.border,
+                borderTopWidth: 1,
+                paddingTop: 6,
+                paddingBottom: insets.bottom,
+                height: 64 + insets.bottom,
+              },
           tabBarLabelStyle: {
             fontFamily: FontFamily.mono,
             fontSize: 9,

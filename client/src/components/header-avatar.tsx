@@ -3,6 +3,7 @@ import { Pressable } from 'react-native';
 
 import { Avatar } from '@/components/avatar';
 import { useSession } from '@/lib/auth';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 import { useMyProfile } from '@/lib/queries/profile';
 
 interface Props {
@@ -11,10 +12,16 @@ interface Props {
 
 // Avatar del usuario logueado, en todas las pantallas de tab. Tap lleva a /profile.
 // Resuelve el display_name de profile → user_metadata → mail antes del @.
+//
+// En desktop web devuelve null: el DesktopHeader ya tiene su propio avatar,
+// no queremos duplicarlo dentro de cada tab.
 export function HeaderAvatar({ size = 40 }: Props) {
   const router = useRouter();
   const { session } = useSession();
   const { profile } = useMyProfile();
+  const isDesktop = useIsDesktop();
+
+  if (isDesktop) return null;
 
   const displayName =
     profile?.display_name ??
