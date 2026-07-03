@@ -1,7 +1,8 @@
-// Queries de la colección del usuario: qué tiene pegado/repetido en cada
-// álbum, y cuántos sobres tiene sin abrir.
+// Queries de la colección del usuario para un álbum específico.
+// Nota: si la vista consume varios de estos (collection + packs + daily),
+// preferí usar `usePlayerAlbumSideData` que bundlea todo en 1 RPC.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
@@ -13,31 +14,26 @@ export interface CollectionEntry {
   quantity: number;
 }
 
-// Hook que devuelve un Map<sticker_id, CollectionEntry> para los stickers de
-// un álbum. Si una sticker no está en el map, el user no la tiene (missing).
+// Map<sticker_id, CollectionEntry> para los stickers de un álbum.
+// Si un sticker no está en el map, el user no lo tiene (missing).
 export function useUserCollection(albumId: string | undefined) {
   const { session } = useSession();
   const uid = session?.user.id;
 
-  const [map, setMap] = useState<Map<string, CollectionEntry>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
-
-  const refetch = useCallback(async () => {
-    if (!uid || !albumId) {
-      setMap(new Map());
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('user_collection')
-      .select('sticker_id, pasted, quantity, sticker:stickers!inner(album_id)')
-      .eq('user_id', uid)
-      .eq('stickers.album_id', albumId);
-    if (error) {
-      console.warn('useUserCollection error', toAppError(error));
-      setMap(new Map());
-    } else {
+  const q = useQuery({
+    queryKey: ['collection', albumId, uid ?? 'anon'] as const,
+    enabled: !!uid && !!albumId,
+    staleTime: 10_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_collection')
+        .select('sticker_id, pasted, quantity, sticker:stickers!inner(album_id)')
+        .eq('user_id', uid!)
+        .eq('stickers.album_id', albumId!);
+      if (error) {
+        console.warn('useUserCollection error', toAppError(error));
+        return new Map<string, CollectionEntry>();
+      }
       const m = new Map<string, CollectionEntry>();
       for (const row of (data ?? []) as any[]) {
         m.set(row.sticker_id, {
@@ -46,41 +42,30 @@ export function useUserCollection(albumId: string | undefined) {
           quantity: row.quantity,
         });
       }
-      setMap(m);
-    }
-    setIsLoading(false);
-  }, [uid, albumId]);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { collection: map, isLoading, refetch };
+      return m;
+    },
+  });
+  return { collection: q.data ?? new Map<string, CollectionEntry>(), isLoading: q.isLoading, refetch: q.refetch };
 }
 
 // Cuántos sobres sin abrir tiene el user en un álbum.
 export function useAvailablePacksCount(albumId: string | undefined) {
   const { session } = useSession();
   const uid = session?.user.id;
-  const [count, setCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const refetch = useCallback(async () => {
-    if (!uid || !albumId) {
-      setCount(0);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const { count: c } = await supabase
-      .from('packs')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', uid)
-      .eq('album_id', albumId)
-      .is('opened_at', null);
-    setCount(c ?? 0);
-    setIsLoading(false);
-  }, [uid, albumId]);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { count, isLoading, refetch };
+  const q = useQuery({
+    queryKey: ['packs-count', albumId, uid ?? 'anon'] as const,
+    enabled: !!uid && !!albumId,
+    staleTime: 10_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('packs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', uid!)
+        .eq('album_id', albumId!)
+        .is('opened_at', null);
+      return count ?? 0;
+    },
+  });
+  return { count: q.data ?? 0, isLoading: q.isLoading, refetch: q.refetch };
 }

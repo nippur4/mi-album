@@ -1,5 +1,7 @@
 // Wrapper sobre la Edge Function open_pack + helpers.
 
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
@@ -50,4 +52,18 @@ export async function openPack(packId: string): Promise<OpenedSticker[]> {
 
 export async function pasteSticker(stickerId: string) {
   return supabase.rpc('fn_paste_sticker', { p_sticker_id: stickerId });
+}
+
+// Mutation wrapper: al pegar, invalida el side data del álbum (colección y
+// progreso cambiaron) + el listado de sobres pendientes por si el flujo
+// venía desde /pack/open y ya no queda ninguno.
+export function usePasteSticker(albumId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: pasteSticker,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
+      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+    },
+  });
 }

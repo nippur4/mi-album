@@ -1,8 +1,9 @@
 // Mutations sobre stickers (RPCs del backend) + hook de lectura.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { qk } from '@/lib/query-client';
 import { toAppError, type AppError } from '@/lib/errors';
 import type { Database } from '@/lib/database.types';
 import type { Sticker } from '@/lib/queries/albums';
@@ -55,29 +56,58 @@ export async function deleteSticker(stickerId: string) {
   return supabase.rpc('fn_delete_sticker', { p_sticker_id: stickerId });
 }
 
+// Helpers de mutation con invalidación automática del detail del álbum.
+export function useAddSticker(albumId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addSticker,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
+      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+    },
+  });
+}
+
+export function useUpdateSticker(albumId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: updateSticker,
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: qk.stickers.one(vars.sticker_id) });
+      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
+    },
+  });
+}
+
+export function useDeleteSticker(albumId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSticker,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
+      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+    },
+  });
+}
+
 export function useSticker(id: string | undefined) {
-  const [sticker, setSticker] = useState<Sticker | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<AppError | null>(null);
-
-  const refetch = useCallback(async () => {
-    if (!id) {
-      setSticker(null);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from('stickers')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-    if (error) setError(toAppError(error));
-    else setSticker((data ?? null) as Sticker | null);
-    setIsLoading(false);
-  }, [id]);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { sticker, isLoading, error, refetch };
+  const q = useQuery({
+    queryKey: qk.stickers.one(id),
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stickers')
+        .select('*')
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw toAppError(error);
+      return (data ?? null) as Sticker | null;
+    },
+  });
+  return {
+    sticker: q.data ?? null,
+    isLoading: q.isLoading,
+    error: (q.error as AppError | null) ?? null,
+    refetch: q.refetch,
+  };
 }

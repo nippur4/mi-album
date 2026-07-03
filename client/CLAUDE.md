@@ -115,11 +115,7 @@
 ### Lo que quedó pendiente o a medias
 
 - **Paywall + Confirmación Pro (pantallas 12/13)**: ni RevenueCat real conectado ni screens. El secret de webhook es placeholder.
-- **Tab "Álbum"**: existe placeholder sin contenido — sin concepto de "álbum activo" en el modelo. Decisión UX pendiente.
-- **Push notifications**: cero. `profiles.push_token` existe pero no se setea ni se usa.
-- **Vista figurita grande**: implementada pero **el `conic-gradient` overlay del handoff** (con `mix-blend-mode: overlay`) NO está — RN no lo soporta nativo. El sheen lineal sí. Falta también el **paginador de puntos** para navegar entre figuritas dentro del álbum.
-- **Empty state pulido del owner pre-cargar imágenes**: el "AÚN NO HAY FIGURITAS" Anton aparece pero el grid fantasma de fondo podría tener más drama.
-- **Sobre flotante animado** en el welcome del user (handoff 15) no está implementado.
+- **Vista figurita grande — foil `conic-gradient` del handoff**: DECISIÓN 2026-07-03: se descarta. RN no soporta `conic-gradient` ni `mix-blend-mode` nativos y emular con LinearGradients apilados no valía el trabajo para el resultado. Nos quedamos con el sheen lineal actual + bob vertical, que es aceptable para MVP.
 
 ### Decisiones técnicas tomadas
 
@@ -170,16 +166,7 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 - Pantallas 12 (paywall) + 13 (confirmación pro) del handoff.
 - Test end-to-end con sandbox: comprar → webhook → `subscriptions` row → `useIsPro()` true.
 
-**Alternativas / polish que quedan:**
-- **Sobre flotante animado** en el welcome del user (handoff 15).
-- **Paginador de puntos** en figurita grande para navegar entre stickers del álbum.
-- **Tab "Álbum activo"** (placeholder hoy) o quitarlo / repurpose.
-- **Push notifications** end-to-end (registrar push_token, enviar al claim diario disponible, etc.).
-- **Animación "snap"** al pegar figurita (Reanimated scale spring + tinte verde fugaz).
-- **Polish del empty state del owner** pre-cargar imágenes (grid fantasma más dramático).
-
 **Limpieza técnica pendiente:**
-- `react-native-linear-gradient` quedó instalado (intento fallido de page-flipper). Es dead code pero ya compilado en el dev client. Se saca en el próximo rebuild de rutina con `npm uninstall` + rebuild EAS.
 - `runOnJS` de Reanimated 4 emite warnings de deprecation. Funciona, no hay drop-in replacement obvio. Esperar Reanimated 5 o revisar al refactor.
 
 ### Operativas

@@ -50,8 +50,9 @@ import { errorMessage } from '@/lib/errors';
 interface Props {
   album: Album;
   stickers: Sticker[];
-  // Re-fetch del detalle, llamado tras cualquier mutación
-  refetch: () => Promise<void> | void;
+  // Re-fetch del detalle, llamado tras cualquier mutación.
+  // Retorna Promise<any> para ser compatible con el shape de react-query.
+  refetch: () => Promise<any> | void;
 }
 
 // Vista del owner sobre su propio álbum.

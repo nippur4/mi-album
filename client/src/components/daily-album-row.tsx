@@ -1,14 +1,12 @@
-import { Image } from 'expo-image';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Countdown } from '@/components/countdown';
-import { PresetBackground } from '@/components/preset-background';
+import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { claimDailyPack, type DailyPackStatus } from '@/lib/queries/daily';
 import { errorMessage } from '@/lib/errors';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { Album } from '@/lib/queries/albums';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
 interface Props {
   album: Album;
@@ -45,7 +43,13 @@ export function DailyAlbumRow({ album, status, onClaimed }: Props) {
       disabled={!ready || claiming}
       style={({ pressed }: any) => [styles.row, pressed && styles.pressed]}
     >
-      <PackThumb album={album} />
+      <MediaThumb
+        mediaKey={album.pack_thumb_key}
+        seed={album.name}
+        width={42}
+        aspect={3 / 4}
+        borderRadius={8}
+      />
       <View style={styles.center}>
         <Text style={styles.name} numberOfLines={1}>{album.name}</Text>
         {ready ? (
@@ -68,48 +72,6 @@ export function DailyAlbumRow({ album, status, onClaimed }: Props) {
   );
 }
 
-// Miniatura del sobre en 3:4 (mismo aspect que se le pide al owner cargar).
-// Puede ser preset (gradient) o imagen R2. Si no hay pack_thumb_key, cae en
-// un bloque de color hasheado con la inicial — así el jugador identifica el
-// álbum aunque el owner todavía no haya subido el sobre.
-const PACK_FALLBACK_PALETTE = [
-  Colors.red, '#5B8DEF', '#7FB83E', Colors.gold,
-  '#3FB6A8', '#B36BD4', '#EE6FA0', '#F2A03D',
-];
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-function PackThumb({ album }: { album: Album }) {
-  const key = album.pack_thumb_key;
-  const bg = useMemo(
-    () => PACK_FALLBACK_PALETTE[hashStr(album.name) % PACK_FALLBACK_PALETTE.length],
-    [album.name],
-  );
-  const initial = (album.name.trim()[0] ?? '?').toUpperCase();
-  if (key && isPreset(key)) {
-    return (
-      <View style={styles.packThumb}>
-        <PresetBackground id={presetIdFromKey(key)} />
-      </View>
-    );
-  }
-  const url = r2Url(key);
-  if (url) {
-    return (
-      <View style={styles.packThumb}>
-        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      </View>
-    );
-  }
-  return (
-    <View style={[styles.packThumb, { backgroundColor: bg }]}>
-      <Text style={styles.packThumbFallbackText}>{initial}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -120,21 +82,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     padding: Spacing.md,
-  },
-  packThumb: {
-    width: 42,
-    height: 56, // 3:4
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: Colors.paper3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  packThumbFallbackText: {
-    fontFamily: FontFamily.display,
-    fontSize: 24,
-    color: Colors.paper,
-    letterSpacing: 1,
   },
   pressed: { opacity: 0.85 },
   center: { flex: 1, gap: 2 },

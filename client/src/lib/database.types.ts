@@ -758,7 +758,18 @@ export type Database = {
           next_available_at: string
         }[]
       }
+      fn_my_pending_packs: {
+        Args: never
+        Returns: {
+          album_id: string
+          album_name: string
+          cover_thumb_key: string
+          pack_thumb_key: string
+          pending_count: number
+        }[]
+      }
       fn_paste_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
+      fn_player_album_sidedata: { Args: { p_album_id: string }; Returns: Json }
       fn_publish_album: { Args: { p_album_id: string }; Returns: undefined }
       fn_register_push_token: { Args: { p_token: string }; Returns: undefined }
       fn_resolve_trade_offer: {

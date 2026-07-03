@@ -4,9 +4,10 @@
 // primero los gradientes locales y abajo las imágenes activas de admin
 // filtradas por kind.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { qk } from '@/lib/query-client';
 
 export type PresetKind = 'cover' | 'pack' | 'avatar';
 
@@ -25,51 +26,39 @@ export interface PresetImage {
 
 // Lista de presets activos para un kind dado. Usa RLS (active=true).
 export function useActivePresets(kind: PresetKind) {
-  const [items, setItems] = useState<PresetImage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    supabase
-      .from('preset_images')
-      .select('*')
-      .eq('kind', kind)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (cancelled) return;
-        setItems((data ?? []) as PresetImage[]);
-        setIsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [kind]);
-
-  return { items, isLoading };
+  const q = useQuery({
+    queryKey: qk.presets.byKind(kind),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('preset_images')
+        .select('*')
+        .eq('kind', kind)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false });
+      return (data ?? []) as PresetImage[];
+    },
+  });
+  return { items: q.data ?? [], isLoading: q.isLoading };
 }
 
 // Lista admin (incluye inactive). Vía RPC SECURITY DEFINER.
 export function useAdminPresets() {
-  const [items, setItems] = useState<PresetImage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refetch = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    const { data, error } = await supabase.rpc('fn_admin_list_presets');
-    if (error) {
-      setError(error.message);
-      setItems([]);
-    } else {
-      setItems(((data ?? []) as any[]) as PresetImage[]);
-    }
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { items, isLoading, error, refetch };
+  const q = useQuery({
+    queryKey: ['admin', 'presets', 'all'] as const,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fn_admin_list_presets');
+      if (error) throw error;
+      return ((data ?? []) as any[]) as PresetImage[];
+    },
+  });
+  return {
+    items: q.data ?? [],
+    isLoading: q.isLoading,
+    error: q.error ? (q.error as any).message : null,
+    refetch: q.refetch,
+  };
 }
 
 export async function createAdminPreset(args: {
@@ -106,4 +95,22 @@ export async function updateAdminPreset(args: {
 
 export async function deleteAdminPreset(id: string) {
   return supabase.rpc('fn_admin_delete_preset', { p_id: id });
+}
+
+// Mutation wrapper: invalida ambos listados (admin ve todos, users ven activos).
+export function useInvalidatePresets() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['admin', 'presets'] });
+    qc.invalidateQueries({ queryKey: ['presets'] });
+  };
+}
+
+export function usePresetMutations() {
+  const invalidate = useInvalidatePresets();
+  return {
+    create: useMutation({ mutationFn: createAdminPreset, onSuccess: invalidate }),
+    update: useMutation({ mutationFn: updateAdminPreset, onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: deleteAdminPreset, onSuccess: invalidate }),
+  };
 }

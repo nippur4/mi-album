@@ -4,10 +4,10 @@ import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { DailyAlbumRow } from '@/components/daily-album-row';
 import { HeaderAvatar } from '@/components/header-avatar';
+import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyMemberAlbums, useMyOwnedAlbums } from '@/lib/queries/albums';
 import { useMyDailyStatusBatch } from '@/lib/queries/daily';
@@ -69,17 +69,23 @@ export default function PacksTab() {
           </View>
         ) : (
           <View style={{ gap: Spacing.listGap }}>
-            {items.map(({ album, count }) => (
+            {items.map((row) => (
               <Pressable
-                key={album.id}
+                key={row.album_id}
                 style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
-                onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
+                onPress={() => router.push(`/pack/open?albumId=${row.album_id}`)}
               >
-                <Avatar source={album.name} />
+                <MediaThumb
+                  mediaKey={row.pack_thumb_key}
+                  seed={row.album_name}
+                  width={42}
+                  aspect={3 / 4}
+                  borderRadius={8}
+                />
                 <View style={styles.center}>
-                  <Text style={styles.name} numberOfLines={1}>{album.name}</Text>
+                  <Text style={styles.name} numberOfLines={1}>{row.album_name}</Text>
                   <Text style={styles.subPending}>
-                    {count} sobre{count > 1 ? 's' : ''} sin abrir
+                    {row.count} sobre{row.count > 1 ? 's' : ''} sin abrir
                   </Text>
                 </View>
                 <View style={styles.actionRed}>

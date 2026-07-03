@@ -2,40 +2,31 @@
 // La lectura usa RLS: subs_select_own → solo lee la propia. Si no hay fila
 // o el status no es activo, devuelve free.
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
+import { qk } from '@/lib/query-client';
 
 export function useIsPro() {
   const { session } = useSession();
-  const [isPro, setIsPro] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    if (!session) {
-      setIsPro(false);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    supabase
-      .from('subscriptions')
-      .select('status, expires_at')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!mounted) return;
-        const active =
-          !!data &&
-          (data.status === 'active' || data.status === 'in_grace') &&
-          new Date(data.expires_at) > new Date();
-        setIsPro(active);
-        setIsLoading(false);
-      });
-    return () => { mounted = false; };
-  }, [session]);
-
-  return { isPro, isLoading };
+  const q = useQuery({
+    queryKey: [...qk.subscription.isPro(), session?.user.id ?? 'anon'] as const,
+    enabled: !!session,
+    // Cambia solo por compra o expiración — poca frecuencia, cacheamos duro.
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('status, expires_at')
+        .eq('user_id', session!.user.id)
+        .maybeSingle();
+      return (
+        !!data &&
+        (data.status === 'active' || data.status === 'in_grace') &&
+        new Date(data.expires_at) > new Date()
+      );
+    },
+  });
+  return { isPro: q.data ?? false, isLoading: q.isLoading };
 }

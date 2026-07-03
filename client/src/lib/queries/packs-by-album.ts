@@ -1,64 +1,37 @@
 // Trae los álbumes donde el caller tiene sobres sin abrir, con su count.
+// Backed por la RPC `fn_my_pending_packs` que hace el group by en Postgres.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
-import type { Album } from '@/lib/queries/albums';
+import { qk } from '@/lib/query-client';
 
-export interface AlbumWithPacks {
-  album: Album;
+export interface PendingPacksRow {
+  album_id: string;
+  album_name: string;
+  cover_thumb_key: string | null;
+  pack_thumb_key: string | null;
   count: number;
 }
 
 export function useMyOpenPacksByAlbum() {
   const { session } = useSession();
   const uid = session?.user.id;
-
-  const [items, setItems] = useState<AlbumWithPacks[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const refetch = useCallback(async () => {
-    if (!uid) {
-      setItems([]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-
-    // Packs sin abrir agrupados por album_id
-    const { data: packs } = await supabase
-      .from('packs')
-      .select('album_id')
-      .eq('user_id', uid)
-      .is('opened_at', null);
-
-    const counts = new Map<string, number>();
-    for (const p of (packs ?? []) as any[]) {
-      counts.set(p.album_id, (counts.get(p.album_id) ?? 0) + 1);
-    }
-
-    if (counts.size === 0) {
-      setItems([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const ids = Array.from(counts.keys());
-    const { data: albums } = await supabase
-      .from('albums')
-      .select('*')
-      .in('id', ids);
-
-    const result: AlbumWithPacks[] = ((albums ?? []) as Album[]).map((a) => ({
-      album: a,
-      count: counts.get(a.id) ?? 0,
-    }));
-    setItems(result);
-    setIsLoading(false);
-  }, [uid]);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { items, isLoading, refetch };
+  const q = useQuery({
+    queryKey: [...qk.packs.pendingByAlbum(), uid ?? 'anon'] as const,
+    enabled: !!uid,
+    staleTime: 10_000,
+    queryFn: async () => {
+      const { data } = await supabase.rpc('fn_my_pending_packs');
+      return ((data ?? []) as any[]).map((r) => ({
+        album_id: r.album_id,
+        album_name: r.album_name,
+        cover_thumb_key: r.cover_thumb_key,
+        pack_thumb_key: r.pack_thumb_key,
+        count: Number(r.pending_count ?? 0),
+      } satisfies PendingPacksRow));
+    },
+  });
+  return { items: q.data ?? [], isLoading: q.isLoading, refetch: q.refetch };
 }

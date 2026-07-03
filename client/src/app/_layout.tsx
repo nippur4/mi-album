@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,6 +12,7 @@ import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
 import { useNotificationTapResponder, useRegisterPushToken } from '@/lib/notifications';
 import { ProfileProvider } from '@/lib/queries/profile';
 import { ensurePwaHead } from '@/lib/pwa-head';
+import { queryClient } from '@/lib/query-client';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors } from '@/constants/theme';
 
@@ -56,6 +58,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <StatusBar style="dark" />
         {showDesktopHeader && <DesktopHeader />}
@@ -72,6 +75,7 @@ export default function RootLayout() {
           </Stack>
         </View>
       </ProfileProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

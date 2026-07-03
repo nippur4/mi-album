@@ -4,10 +4,11 @@
 // fn_set_album_public chequean is_admin). El cliente usa useIsAdmin solo para
 // mostrar/ocultar el acceso al panel — no es una garantía de seguridad.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
+import { qk } from '@/lib/query-client';
 
 export interface AdminAlbumRow {
   id: string;
@@ -24,55 +25,55 @@ export interface AdminAlbumRow {
 
 export function useIsAdmin() {
   const { session } = useSession();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!session) {
-      setIsAdmin(false);
-      setIsLoading(false);
-      return;
-    }
-    supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setIsAdmin(!!data?.is_admin);
-        setIsLoading(false);
-      });
-  }, [session]);
-
-  return { isAdmin, isLoading };
+  const q = useQuery({
+    queryKey: [...qk.admin.isAdmin(), session?.user.id ?? 'anon'] as const,
+    enabled: !!session,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session!.user.id)
+        .maybeSingle();
+      return !!data?.is_admin;
+    },
+  });
+  return { isAdmin: q.data ?? false, isLoading: q.isLoading };
 }
 
 export function useAdminAlbums() {
-  const [albums, setAlbums] = useState<AdminAlbumRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refetch = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    const { data, error } = await supabase.rpc('fn_admin_list_albums');
-    if (error) {
-      setError(error.message);
-      setAlbums([]);
-    } else {
-      setAlbums(((data ?? []) as any[]) as AdminAlbumRow[]);
-    }
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => { refetch(); }, [refetch]);
-
-  return { albums, isLoading, error, refetch };
+  const q = useQuery({
+    queryKey: qk.admin.albums(),
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fn_admin_list_albums');
+      if (error) throw error;
+      return ((data ?? []) as any[]) as AdminAlbumRow[];
+    },
+  });
+  return {
+    albums: q.data ?? [],
+    isLoading: q.isLoading,
+    error: q.error ? (q.error as any).message : null,
+    refetch: q.refetch,
+  };
 }
 
 export async function setAlbumPublic(albumId: string, isPublic: boolean) {
   return supabase.rpc('fn_set_album_public', {
     p_album_id: albumId,
     p_is_public: isPublic,
+  });
+}
+
+export function useSetAlbumPublic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { albumId: string; isPublic: boolean }) =>
+      setAlbumPublic(args.albumId, args.isPublic),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.admin.albums() });
+      qc.invalidateQueries({ queryKey: qk.albums.public() });
+    },
   });
 }

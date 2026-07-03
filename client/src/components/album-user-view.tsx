@@ -17,9 +17,9 @@ import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
 import { hideAlbumByPlayer, type Album, type Sticker } from '@/lib/queries/albums';
-import { useAvailablePacksCount, useUserCollection } from '@/lib/queries/collection';
-import { claimDailyPack, useDailyPackStatus } from '@/lib/queries/daily';
+import { claimDailyPack } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
+import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {
@@ -34,24 +34,23 @@ export function UserAlbumView({ album, stickers }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
-  const { collection, refetch: refetchCollection } = useUserCollection(album.id);
-  const { count: packsCount, refetch: refetchPacks } = useAvailablePacksCount(album.id);
-  const { status: daily, refetch: refetchDaily } = useDailyPackStatus(album.id);
+  // Bundle: colección + sobres disponibles + estado del daily en 1 sola RPC.
+  // Antes eran 3 hooks separados (3 round trips).
+  const {
+    collection,
+    packsAvailable: packsCount,
+    daily,
+    refetch: refetchSideData,
+  } = usePlayerAlbumSideData(album.id);
   const [claiming, setClaiming] = useState(false);
   // Si el session pertenece al owner del álbum, mostramos link para volver
   // a la vista de gestión (Fase 10).
   const isOwnerViewing = session?.user.id === album.owner_id;
 
-  // FIX: cuando volvemos de /pack/open o /trade/*, los hooks de esta pantalla
-  // no se re-disparan solos (Expo Router conserva el componente en el stack).
-  // Refetchamos todo al recuperar foco para reflejar las figuritas nuevas.
-  useFocusEffect(
-    useCallback(() => {
-      refetchCollection();
-      refetchPacks();
-      refetchDaily();
-    }, [refetchCollection, refetchPacks, refetchDaily]),
-  );
+  // FIX: cuando volvemos de /pack/open o /trade/*, el hook no se re-dispara
+  // solo (Expo Router conserva el componente en el stack). Refetchamos al
+  // recuperar foco para reflejar las figuritas nuevas.
+  useFocusEffect(useCallback(() => { refetchSideData(); }, [refetchSideData]));
 
   async function onClaimDaily() {
     setClaiming(true);
@@ -61,8 +60,7 @@ export function UserAlbumView({ album, stickers }: Props) {
       Alert.alert('No se pudo reclamar', errorMessage(error));
       return;
     }
-    refetchPacks();
-    refetchDaily();
+    refetchSideData();
   }
 
   const [pastingId, setPastingId] = useState<string | null>(null);
@@ -105,7 +103,7 @@ export function UserAlbumView({ album, stickers }: Props) {
       Alert.alert('No se pudo pegar', errorMessage(error));
       return;
     }
-    await refetchCollection();
+    await refetchSideData();
     setJustPastedId(stickerId);
   }
 
