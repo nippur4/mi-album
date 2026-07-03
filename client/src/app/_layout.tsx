@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { DesktopHeader } from '@/components/desktop-header';
 import { useAppFonts } from '@/lib/fonts';
 import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
+import { useNotificationTapResponder, useRegisterPushToken } from '@/lib/notifications';
 import { ProfileProvider } from '@/lib/queries/profile';
 import { ensurePwaHead } from '@/lib/pwa-head';
 import { useIsDesktop } from '@/lib/use-is-desktop';
@@ -23,6 +24,8 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useAppFonts();
   useDeepLinkAuth();
   useJoinDeepLink();
+  useRegisterPushToken();
+  useNotificationTapResponder();
   const { session, isLoading } = useSession();
   const segments = useSegments();
   const router = useRouter();

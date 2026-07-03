@@ -1,8 +1,9 @@
+import Feather from '@expo/vector-icons/Feather';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -19,6 +20,7 @@ import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/co
 import type { Sticker } from '@/lib/queries/albums';
 import { useUserCollection } from '@/lib/queries/collection';
 import { r2Url } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 interface Props {
   sticker: Sticker;
@@ -47,6 +49,28 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const isLegendary = sticker.rarity === 'legendary';
   const borderColor = RarityFrame[sticker.rarity];
   const url = r2Url(sticker.large_key);
+
+  // Paginador: cargamos id + number de TODAS las figuritas del álbum para
+  // saber cuál es la previa y la siguiente. La consulta es liviana (solo 2
+  // campos) y se cachea a nivel de componente porque la vista se recrea al
+  // navegar entre figuritas (el `id` del route cambia y expo-router monta
+  // un componente nuevo — ver useEffect abajo).
+  const [siblings, setSiblings] = useState<Array<{ id: string; number: number }>>([]);
+  useEffect(() => {
+    supabase
+      .from('stickers')
+      .select('id, number')
+      .eq('album_id', sticker.album_id)
+      .order('number', { ascending: true })
+      .then(({ data }) => setSiblings((data ?? []) as Array<{ id: string; number: number }>));
+  }, [sticker.album_id]);
+
+  const currentIdx = siblings.findIndex((s) => s.id === sticker.id);
+  const prev = currentIdx > 0 ? siblings[currentIdx - 1] : null;
+  const next = currentIdx >= 0 && currentIdx < siblings.length - 1 ? siblings[currentIdx + 1] : null;
+  // Position para mostrar "X / N", en base al orden por número.
+  const positionText =
+    currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : `${sticker.number} / ${albumTotal}`;
 
   // Animaciones: bob vertical sutil + sheen lineal (solo legendarias)
   const bob = useSharedValue(0);
@@ -159,6 +183,37 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
       </View>
 
       <View style={styles.footer}>
+        {/* Paginador: prev + posición + next. Muestra solo si sabemos la lista. */}
+        {siblings.length > 1 && (
+          <View style={styles.pager}>
+            <Pressable
+              onPress={() => prev && router.replace(`/sticker/${prev.id}`)}
+              disabled={!prev}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.pagerBtn,
+                pressed && styles.pagerBtnPressed,
+                !prev && styles.pagerBtnDisabled,
+              ]}
+            >
+              <Feather name="chevron-left" size={20} color={prev ? Colors.paper : Colors.muted} />
+            </Pressable>
+            <Text style={styles.pagerText}>{positionText}</Text>
+            <Pressable
+              onPress={() => next && router.replace(`/sticker/${next.id}`)}
+              disabled={!next}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.pagerBtn,
+                pressed && styles.pagerBtnPressed,
+                !next && styles.pagerBtnDisabled,
+              ]}
+            >
+              <Feather name="chevron-right" size={20} color={next ? Colors.paper : Colors.muted} />
+            </Pressable>
+          </View>
+        )}
+
         <Button
           label="Proponer cambio"
           onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}`)}
@@ -280,5 +335,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     paddingBottom: Spacing.lg,
     gap: Spacing.sm,
+  },
+  pager: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  pagerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pagerBtnPressed: { opacity: 0.6 },
+  pagerBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  pagerText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.body,
+    color: Colors.paper,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    minWidth: 72,
+    textAlign: 'center',
   },
 });

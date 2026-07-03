@@ -8,6 +8,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { AlbumPager } from '@/components/album-pager';
 import { Button } from '@/components/button';
 import { Countdown } from '@/components/countdown';
+import { FloatingPack } from '@/components/floating-pack';
+import { PastedFlash } from '@/components/pasted-flash';
 import { ProgressCard } from '@/components/progress-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { StickerCell, StickerCellMissing } from '@/components/sticker-cell';
@@ -64,6 +66,10 @@ export function UserAlbumView({ album, stickers }: Props) {
   }
 
   const [pastingId, setPastingId] = useState<string | null>(null);
+  // ID de la última figurita pegada — se limpia solo cuando PastedFlash
+  // termina la animación (~800ms). Sirve para envolver la celda de la grilla
+  // con el efecto snap sin acoplar el AlbumPager a la timeline.
+  const [justPastedId, setJustPastedId] = useState<string | null>(null);
   const [hiding, setHiding] = useState(false);
 
   function onHidePress() {
@@ -99,7 +105,8 @@ export function UserAlbumView({ album, stickers }: Props) {
       Alert.alert('No se pudo pegar', errorMessage(error));
       return;
     }
-    refetchCollection();
+    await refetchCollection();
+    setJustPastedId(stickerId);
   }
 
   let myPastedCount = 0;
@@ -151,8 +158,13 @@ export function UserAlbumView({ album, stickers }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         {isWelcome && (
           <View style={styles.welcomeBanner}>
-            <Text style={styles.welcomeKicker}>¡TE UNISTE!</Text>
-            <Text style={styles.welcomeTitle}>EMPEZÁ TU{'\n'}COLECCIÓN</Text>
+            <View style={styles.welcomeText}>
+              <Text style={styles.welcomeKicker}>¡TE UNISTE!</Text>
+              <Text style={styles.welcomeTitle}>EMPEZÁ TU{'\n'}COLECCIÓN</Text>
+            </View>
+            <View style={styles.welcomePackWrap}>
+              <FloatingPack packThumbKey={album.pack_thumb_key} size={92} />
+            </View>
           </View>
         )}
 
@@ -179,7 +191,7 @@ export function UserAlbumView({ album, stickers }: Props) {
               if (!s) return <StickerCellMissing number={n} style={cellStyle} />;
               const entry = collection.get(s.id);
               if (entry?.pasted) {
-                return (
+                const cell = (
                   <StickerCell
                     sticker={s}
                     style={cellStyle}
@@ -187,6 +199,15 @@ export function UserAlbumView({ album, stickers }: Props) {
                     onPress={() => router.push(`/sticker/${s.id}`)}
                   />
                 );
+                // Snap flash cuando esta figurita fue la última pegada.
+                if (justPastedId === s.id) {
+                  return (
+                    <PastedFlash onDone={() => setJustPastedId(null)}>
+                      {cell}
+                    </PastedFlash>
+                  );
+                }
+                return cell;
               }
               // No pegada todavía (sea que la tenga sin pegar o no la tenga):
               // se ve como silueta gris. La acción de pegar/cambiar vive en
@@ -347,8 +368,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.red,
     borderRadius: Radius.cardLg,
     paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
+    paddingLeft: Spacing.lg,
+    paddingRight: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  welcomeText: {
+    flex: 1,
     gap: Spacing.xs,
+  },
+  welcomePackWrap: {
+    // El sobre se "asoma" del banner: levanta hacia arriba y sale por la derecha
+    // para dar drama visual sin ocupar espacio adicional en el layout.
+    width: 92,
+    marginRight: -12,
+    marginTop: -20,
+    marginBottom: -20,
   },
   welcomeKicker: {
     fontFamily: FontFamily.mono,

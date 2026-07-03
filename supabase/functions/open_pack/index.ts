@@ -14,11 +14,23 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
-const RARITY_WEIGHTS: Record<Rarity, number> = {
-  common: 50,
-  rare: 27,
-  epic: 15,
-  legendary: 8,
+// Modelo "caja de figuritas": cada figurita entra a la caja con N copias según
+// su rareza. Sortear un pick = agarrar una copia al azar de la caja.
+// Con estos pesos, en un álbum bien poblado (proporcional a los ratios), el
+// pack se siente:
+//   ~80% comunes, ~14% raras, ~4% épicas, ~0.7% legendarias.
+// Cada legendaria específica es rara pero conseguible (~2 meses con daily
+// para un álbum realista de 100 figuritas con 2 legendarias).
+//
+// Si el owner desbalancea el álbum (ej. muchas comunes vs pocas legendarias),
+// el resultado degrada de forma natural: hay menos "copias" de la rareza
+// escasa relativa a las abundantes, entonces sale menos. Sin dominar el pack
+// como pasaba con el algoritmo anterior (peso-por-rareza total).
+const STICKER_WEIGHTS: Record<Rarity, number> = {
+  common: 40,
+  rare: 25,
+  epic: 18,
+  legendary: 12,
 };
 
 const DEFAULT_PACK_SIZE = 5;
@@ -160,39 +172,19 @@ function clampPackSize(configured: unknown): number {
 }
 
 function pickSticker(stickers: Sticker[]): Sticker {
-  const byRarity: Record<Rarity, Sticker[]> = {
-    common: [],
-    rare: [],
-    epic: [],
-    legendary: [],
-  };
-  for (const s of stickers) byRarity[s.rarity].push(s);
+  // Sortear ponderado sobre TODAS las figuritas, con peso individual según
+  // rareza. Equivale a "poner N copias de cada figurita en una caja y agarrar
+  // una al azar" — modelo intuitivo, robusto a álbumes desbalanceados.
+  let total = 0;
+  for (const s of stickers) total += STICKER_WEIGHTS[s.rarity];
 
-  // Si el álbum no tiene stickers de cierta rareza, esa rareza queda fuera
-  // del sorteo (no re-sorteamos infinitamente).
-  const availableWeights: Array<[Rarity, number]> = [];
-  for (const [rarity, weight] of Object.entries(RARITY_WEIGHTS) as Array<[Rarity, number]>) {
-    if (byRarity[rarity].length > 0) {
-      availableWeights.push([rarity, weight]);
-    }
-  }
-  if (availableWeights.length === 0) {
-    throw new Error('no_rarities_available');
-  }
-
-  const total = availableWeights.reduce((a, [, w]) => a + w, 0);
   let r = Math.random() * total;
-  let chosen: Rarity = availableWeights[0][0];
-  for (const [rarity, weight] of availableWeights) {
-    r -= weight;
-    if (r <= 0) {
-      chosen = rarity;
-      break;
-    }
+  for (const s of stickers) {
+    r -= STICKER_WEIGHTS[s.rarity];
+    if (r <= 0) return s;
   }
-
-  const pool = byRarity[chosen];
-  return pool[Math.floor(Math.random() * pool.length)];
+  // Fallback numérico: por floating-point puede que r > 0 al final.
+  return stickers[stickers.length - 1];
 }
 
 function jsonOk(body: unknown) {

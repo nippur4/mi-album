@@ -21,6 +21,7 @@ import { Checklist, type ChecklistItem } from '@/components/checklist';
 import { EditEconomyModal } from '@/components/edit-economy-modal';
 import { EditTotalModal } from '@/components/edit-total-modal';
 import { ImageUploadCard } from '@/components/image-upload-card';
+import { PackProbabilityCard } from '@/components/pack-probability-card';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
 import { ProgressCard } from '@/components/progress-card';
 import { QrPosterModal } from '@/components/qr-poster-modal';
@@ -390,6 +391,16 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           </View>
         </Pressable>
 
+        {/* Desglose de probabilidades por rareza. Se muestra solo si hay
+            figuritas cargadas y la economía tiene sobres (daily o qr) —
+            sino no tiene sentido calcular nada. */}
+        {stickers.length > 0 && economyMode !== 'none' && (
+          <PackProbabilityCard
+            stickers={stickers}
+            packSize={packConfig.pack_size ?? 5}
+          />
+        )}
+
         {isDraft && (
           <>
             <View style={styles.section}>
@@ -460,27 +471,42 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
           {stickers.length === 0 && isDraft ? (
             <View style={styles.emptyHero}>
-              <View style={styles.grid}>
-                {gridCells.slice(0, 6).map((n) => (
-                  <View key={n} style={styles.gridCell}>
-                    <StickerCellEmpty number={n} showPlus={n === 1} />
-                  </View>
+              {/* Grilla fantasma 3×4 detrás — MUY sutil, sin interceptar taps.
+                  Da la sensación de "hoja del álbum vacía esperando figus". */}
+              <View pointerEvents="none" style={styles.emptyGhostGrid}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.emptyGhostCell,
+                      { opacity: 0.18 - (Math.floor(i / 3) * 0.03) },
+                    ]}
+                  />
                 ))}
               </View>
-              <Text style={styles.emptyHeroTitle}>AÚN NO HAY{'\n'}FIGURITAS</Text>
-              <Text style={styles.emptyHeroBody}>
-                Subí las imágenes y a cada una asigná número y nombre.
-                Recién ahí tus jugadores pueden empezar a coleccionar.
-              </Text>
-              <Button
-                label="Cargar figuritas"
-                onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
-              />
-              <Button
-                label="Carga masiva"
-                variant="outline"
-                onPress={() => setBulkUpload(true)}
-              />
+
+              {/* Contenido centrado por encima */}
+              <View style={styles.emptyCenter}>
+                <View style={styles.emptyIconBubble}>
+                  <Feather name="plus" size={44} color={Colors.paper} />
+                </View>
+                <Text style={styles.emptyHeroTitle}>AÚN NO HAY{'\n'}FIGURITAS</Text>
+                <Text style={styles.emptyHeroBody}>
+                  Subí las imágenes y ponele número y nombre a cada una.
+                  Sin figus, tus jugadores no pueden empezar.
+                </Text>
+                <View style={styles.emptyCtas}>
+                  <Button
+                    label="Cargar la primera"
+                    onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
+                  />
+                  <Button
+                    label="Carga masiva"
+                    variant="outline"
+                    onPress={() => setBulkUpload(true)}
+                  />
+                </View>
+              </View>
             </View>
           ) : (
             <>
@@ -963,23 +989,68 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   emptyHero: {
-    gap: Spacing.lg,
+    position: 'relative',
+    paddingVertical: Spacing.xl,
+    minHeight: 420,
+  },
+  emptyGhostGrid: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.gridGap,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  emptyGhostCell: {
+    width: '31.5%',
+    aspectRatio: 0.82,
+    backgroundColor: Colors.ink,
+    borderRadius: Radius.cell,
+  },
+  emptyCenter: {
     alignItems: 'center',
+    gap: Spacing.md,
+    // Fondo con blur/tint que asegura la lectura del texto sobre la grilla.
+    backgroundColor: 'rgba(251, 243, 226, 0.88)',
+    borderRadius: Radius.cardLg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xl,
+    marginHorizontal: Spacing.xs,
+  },
+  emptyIconBubble: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: Colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.redShadow,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 5,
+    marginBottom: Spacing.xs,
   },
   emptyHeroTitle: {
     fontFamily: FontFamily.display,
-    fontSize: 36,
+    fontSize: 40,
     color: Colors.ink,
     textAlign: 'center',
-    lineHeight: 38,
-    letterSpacing: 1,
+    lineHeight: 42,
+    letterSpacing: 1.5,
   },
   emptyHeroBody: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,
     color: Colors.inkSoft,
     textAlign: 'center',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    lineHeight: 20,
+  },
+  emptyCtas: {
+    width: '100%',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
   gateHint: {
     fontFamily: FontFamily.body,

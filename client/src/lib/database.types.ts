@@ -393,6 +393,7 @@ export type Database = {
       user_album_membership: {
         Row: {
           album_id: string
+          daily_notified_at: string | null
           hidden: boolean
           joined_at: string
           last_daily_claim_at: string | null
@@ -402,6 +403,7 @@ export type Database = {
         }
         Insert: {
           album_id: string
+          daily_notified_at?: string | null
           hidden?: boolean
           joined_at?: string
           last_daily_claim_at?: string | null
@@ -411,6 +413,7 @@ export type Database = {
         }
         Update: {
           album_id?: string
+          daily_notified_at?: string | null
           hidden?: boolean
           joined_at?: string
           last_daily_claim_at?: string | null
@@ -517,6 +520,16 @@ export type Database = {
       }
     }
     Functions: {
+      _cron_notify_daily_available: { Args: never; Returns: undefined }
+      _send_push: {
+        Args: {
+          p_body: string
+          p_data?: Json
+          p_title: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       fn_add_sticker: {
         Args: {
           p_album_id: string
@@ -747,6 +760,7 @@ export type Database = {
       }
       fn_paste_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
       fn_publish_album: { Args: { p_album_id: string }; Returns: undefined }
+      fn_register_push_token: { Args: { p_token: string }; Returns: undefined }
       fn_resolve_trade_offer: {
         Args: { p_action: string; p_offer_id: string }
         Returns: Json

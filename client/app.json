@@ -50,6 +50,13 @@
         {
           "cameraPermission": "Necesitamos la cámara para escanear el QR de sobres del owner."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#D23A2E",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "experiments": {
