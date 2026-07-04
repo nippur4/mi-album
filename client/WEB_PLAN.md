@@ -122,19 +122,27 @@ Las features Pro YA habilitadas (usuario Pro entrando desde web) siguen accesibl
 ---
 
 ### Fase 6 — Deploy a Cloudflare Pages
-**Estado**: pendiente.
+**Estado**: ✅ completada (2026-07-04). URL: `https://mi-album.pages.dev`.
 
-- [ ] Crear proyecto en Cloudflare Pages
-- [ ] Conectar al repo de GitHub
-- [ ] Build command: `npx expo export --platform web`
-- [ ] Output directory: `dist`
-- [ ] Configurar variables de entorno (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_R2_PUBLIC_BASE_URL`)
-- [ ] Verificar SSL automático
-- [ ] Si dominio propio: configurar DNS
-- [ ] Sumar la URL web a Supabase Auth → Redirect URLs (definitivo, no solo localhost)
-- [ ] Smoke test contra prod
+- [x] Proyecto Pages conectado al repo (`nippur4/mi-album`), branch `master`.
+- [x] Build command final: `cd client && npm ci && npx expo export --platform web && mv dist/assets/node_modules dist/assets/vendor && grep -rl "assets/node_modules" dist/_expo | xargs -r sed -i "s|assets/node_modules|assets/vendor|g"`
+- [x] Build output directory: `client/dist`.
+- [x] Env vars en Production: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_R2_PUBLIC_BASE_URL`, `NODE_VERSION=20`.
+- [x] Redirect URLs en Supabase Auth: `https://mi-album.pages.dev/**` sumado.
+- [x] Google OAuth: `https://mi-album.pages.dev` en Authorized JavaScript origins.
+- [x] Login (Google + magic link) validado en prod.
+- [ ] Cross-browser testing (Fase 7).
+- [ ] Dominio propio (opcional): decisión pendiente.
 
-**Esfuerzo**: 1-2 hs.
+**Gotchas clave** (documentados por si pisamos de nuevo):
+
+1. **Cloudflare Pages ignora silenciosamente cualquier archivo dentro de `node_modules/`**. Es una convención del uploader (`wrangler`) — no lo dice en la docs. Expo Web genera assets en `dist/assets/node_modules/@expo-google-fonts/...` → **todas las fuentes + iconos vector se pierden en el upload**. Síntomas: la app carga pero sin tipografías custom y sin iconos Feather; en el network se ven los `.ttf` con status 200 y content-type `font`, pero el body es `<!DOCTYPE html>` (el `index.html` cae al SPA fallback). El fix es el `mv` + `sed` en el build command que renombra la carpeta a `vendor/` y actualiza las referencias en el JS bundle.
+
+2. **Node 20 obligatorio**: default de Cloudflare es 18, y expo SDK 56 requiere 20+. Se setea con `NODE_VERSION=20` en env vars.
+
+3. **`_redirects` con `/* /index.html 200`** es contraproducente en este proyecto: la SPA rewrite auto de Cloudflare Pages ya funciona sin él, y agregarlo empeora el diagnóstico del bug de `node_modules/` (todo se ve como "asset no encontrado + SPA fallback"). No usar salvo que aparezca un caso concreto donde falte.
+
+**Esfuerzo real**: ~2.5 hs (~40 min de setup + ~1.5 hs debuggeando el bug de `node_modules/`).
 
 ---
 
