@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AlbumPager } from '@/components/album-pager';
 import { BulkStickerUploadModal } from '@/components/bulk-sticker-upload-modal';
+import { EditAlbumNameModal } from '@/components/edit-album-name-modal';
 import { EditPagesModal } from '@/components/edit-pages-modal';
 import { Button } from '@/components/button';
 import { Checklist, type ChecklistItem } from '@/components/checklist';
@@ -44,6 +45,7 @@ import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackCon
 import { proFeatureHint } from '@/lib/upsell-copy';
 import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
+import { swapStickerPositions } from '@/lib/queries/stickers';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { uploadImage } from '@/lib/queries/uploads';
 import { enableQrForAlbum } from '@/lib/queries/qr';
@@ -75,10 +77,17 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [enablingQr, setEnablingQr] = useState(false);
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
   const [editingTotal, setEditingTotal] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const [editingEconomy, setEditingEconomy] = useState(false);
   const [editingPages, setEditingPages] = useState(false);
   const [bulkUpload, setBulkUpload] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  // Modo reordenar: primer tap elige la figurita, segundo tap el destino
+  // (ocupado = swap, vacío = move). Solo draft.
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reorderFrom, setReorderFrom] = useState<number | null>(null);
+  const [reorderError, setReorderError] = useState<string | null>(null);
+  const [swapping, setSwapping] = useState(false);
   // Estado "yo me joineé como jugador a mi propio álbum" (Fase 10).
   const [isJoinedAsPlayer, setIsJoinedAsPlayer] = useState<boolean | null>(null);
   const [joiningToPlay, setJoiningToPlay] = useState(false);
@@ -277,6 +286,36 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
   const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
 
+  function toggleReorder() {
+    setReorderMode((v) => !v);
+    setReorderFrom(null);
+    setReorderError(null);
+  }
+
+  async function onReorderTap(n: number, occupied: boolean) {
+    if (swapping) return;
+    setReorderError(null);
+    if (reorderFrom === null) {
+      // El primer tap tiene que ser una figurita cargada (algo para mover).
+      if (occupied) setReorderFrom(n);
+      return;
+    }
+    if (reorderFrom === n) {
+      setReorderFrom(null);
+      return;
+    }
+    setSwapping(true);
+    const { error } = await swapStickerPositions(album.id, reorderFrom, n);
+    setSwapping(false);
+    setReorderFrom(null);
+    if (error) {
+      // Inline y no Alert: en web Alert.alert es no-op.
+      setReorderError(errorMessage(error));
+      return;
+    }
+    await refetch();
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={desktopCap}>
@@ -467,14 +506,24 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 <Text style={styles.editPillText}>Editar hojas</Text>
               </Pressable>
               {isDraft && (
-                <Pressable
-                  onPress={() => setEditingTotal(true)}
-                  style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
-                  hitSlop={6}
-                >
-                  <Feather name="hash" size={12} color={Colors.ink} />
-                  <Text style={styles.editPillText}>Cantidad</Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    onPress={() => setEditingName(true)}
+                    style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                    hitSlop={6}
+                  >
+                    <Feather name="edit-2" size={12} color={Colors.ink} />
+                    <Text style={styles.editPillText}>Nombre</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setEditingTotal(true)}
+                    style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                    hitSlop={6}
+                  >
+                    <Feather name="hash" size={12} color={Colors.ink} />
+                    <Text style={styles.editPillText}>Cantidad</Text>
+                  </Pressable>
+                </>
               )}
             </View>
           </View>
@@ -520,6 +569,38 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             </View>
           ) : (
             <>
+              {isDraft && stickers.length >= 1 && (
+                <View style={styles.reorderRow}>
+                  <Pressable
+                    onPress={toggleReorder}
+                    hitSlop={6}
+                    style={({ pressed }) => [
+                      styles.reorderBtn,
+                      reorderMode && styles.reorderBtnActive,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <Feather
+                      name="shuffle"
+                      size={13}
+                      color={reorderMode ? Colors.paper : Colors.muted}
+                    />
+                    <Text style={[styles.reorderBtnText, reorderMode && styles.reorderBtnTextActive]}>
+                      {reorderMode ? 'Listo' : 'Reordenar'}
+                    </Text>
+                  </Pressable>
+                  {reorderMode && (
+                    <Text style={[styles.reorderHint, reorderError && { color: Colors.red }]}>
+                      {reorderError ??
+                        (swapping
+                          ? 'Moviendo…'
+                          : reorderFrom === null
+                            ? 'Tocá la figurita que querés mover.'
+                            : `#${String(reorderFrom).padStart(3, '0')} → tocá el casillero destino.`)}
+                    </Text>
+                  )}
+                </View>
+              )}
               <AlbumPager
                 totalStickers={album.total_stickers}
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
@@ -527,26 +608,33 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
                 renderCell={(n, cellStyle) => {
                   const s = stickerByNumber.get(n);
+                  const selected = reorderMode && reorderFrom === n;
                   if (s) {
                     // El thin router en [id].tsx bifurca: owner+draft → editor,
-                    // sino → vista grande.
+                    // sino → vista grande. En modo reordenar el tap elige/mueve.
                     return (
                       <StickerCell
                         sticker={s}
-                        style={cellStyle}
-                        onPress={() => router.push(`/sticker/${s.id}`)}
+                        style={[cellStyle, selected && styles.reorderSelected]}
+                        onPress={
+                          reorderMode
+                            ? () => onReorderTap(n, true)
+                            : () => router.push(`/sticker/${s.id}`)
+                        }
                       />
                     );
                   }
                   return (
                     <StickerCellEmpty
                       number={n}
-                      showPlus={isDraft}
+                      showPlus={isDraft && !reorderMode}
                       style={cellStyle}
                       onPress={
-                        isDraft
-                          ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
-                          : undefined
+                        reorderMode
+                          ? () => onReorderTap(n, false)
+                          : isDraft
+                            ? () => router.push(`/sticker/new?albumId=${album.id}&number=${n}`)
+                            : undefined
                       }
                     />
                   );
@@ -585,6 +673,14 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         maxTotal={isPro ? 1000 : 75}
         onClose={() => setEditingTotal(false)}
         onSave={onSaveTotal}
+      />
+
+      <EditAlbumNameModal
+        visible={editingName}
+        albumId={album.id}
+        currentName={album.name}
+        onClose={() => setEditingName(false)}
+        onSaved={() => refetch()}
       />
 
       <QrPosterModal
@@ -793,6 +889,54 @@ const qrStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  // Modo reordenar (grilla draft)
+  reorderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  reorderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.paper2,
+  },
+  reorderBtnActive: {
+    backgroundColor: Colors.ink,
+    borderColor: Colors.ink,
+  },
+  reorderBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  reorderBtnTextActive: {
+    color: Colors.paper,
+  },
+  reorderHint: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+  },
+  reorderSelected: {
+    borderColor: Colors.gold,
+    borderWidth: 3,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   container: { flex: 1, backgroundColor: Colors.paper },
   scroll: {
     paddingHorizontal: Spacing.screenX,

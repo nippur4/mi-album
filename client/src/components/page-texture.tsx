@@ -22,7 +22,10 @@ export function PageTexture({ texture, opacity = 0.18 }: Props) {
   const color = 'rgba(0,0,0,0.9)';
 
   return (
-    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+    // width/height explícitos: en web un <svg> sin tamaño cae al intrínseco
+    // default (300×150) y la textura cubría solo un parche de la hoja. En
+    // native el layout ya lo resolvía, acá lo hacemos explícito para ambos.
+    <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">
       <Defs>{patternDefs(texture, color)}</Defs>
       <Rect x="0" y="0" width="100%" height="100%" fill={`url(#tex)`} opacity={opacity} />
     </Svg>

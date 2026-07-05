@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       albums: {
@@ -795,6 +820,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_swap_sticker_positions: {
+        Args: { p_album_id: string; p_number_a: number; p_number_b: number }
+        Returns: undefined
+      }
       fn_trade_limit_reached: {
         Args: { p_album_id: string; p_trade_config: Json; p_user: string }
         Returns: boolean
@@ -991,6 +1020,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       album_status: ["draft", "published", "read_only", "archived"],

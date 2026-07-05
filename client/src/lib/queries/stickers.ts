@@ -56,6 +56,16 @@ export async function deleteSticker(stickerId: string) {
   return supabase.rpc('fn_delete_sticker', { p_sticker_id: stickerId });
 }
 
+// Intercambia la posición (number) de dos casilleros del álbum. Si el destino
+// está vacío es un move. Owner + draft only (gates en el RPC).
+export async function swapStickerPositions(albumId: string, numberA: number, numberB: number) {
+  return supabase.rpc('fn_swap_sticker_positions', {
+    p_album_id: albumId,
+    p_number_a: numberA,
+    p_number_b: numberB,
+  });
+}
+
 // Helpers de mutation con invalidación automática del detail del álbum.
 export function useAddSticker(albumId: string) {
   const qc = useQueryClient();
