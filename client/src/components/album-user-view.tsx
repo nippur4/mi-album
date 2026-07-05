@@ -20,6 +20,7 @@ import { hideAlbumByPlayer, type Album, type Sticker } from '@/lib/queries/album
 import { claimDailyPack } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
+import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {
@@ -33,6 +34,10 @@ interface Props {
 export function UserAlbumView({ album, stickers }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
+  // Cap desktop en header + contenido (scroll full-bleed → barra en el borde
+  // de la ventana). Los CTA flotantes se centran con floatDesktop.
+  const desktopCap = useDesktopCap(760);
   const { session } = useSession();
   // Bundle: colección + sobres disponibles + estado del daily en 1 sola RPC.
   // Antes eran 3 hooks separados (3 round trips).
@@ -137,23 +142,25 @@ export function UserAlbumView({ album, stickers }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title={album.name}
-        back
-        multiline
-        right={
-          isOwnerViewing ? (
-            <Pressable
-              onPress={() => router.replace(`/album/${album.id}`)}
-              hitSlop={8}
-              style={styles.configLink}
-            >
-              <Text style={styles.configLinkText}>Config</Text>
-            </Pressable>
-          ) : undefined
-        }
-      />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={desktopCap}>
+        <ScreenHeader
+          title={album.name}
+          back
+          multiline
+          right={
+            isOwnerViewing ? (
+              <Pressable
+                onPress={() => router.replace(`/album/${album.id}`)}
+                hitSlop={8}
+                style={styles.configLink}
+              >
+                <Text style={styles.configLinkText}>Config</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
+      </View>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
         {isWelcome && (
           <View style={styles.welcomeBanner}>
             <View style={styles.welcomeText}>
@@ -277,6 +284,7 @@ export function UserAlbumView({ album, stickers }: Props) {
           onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
           style={({ pressed }) => [
             styles.packsCta,
+            isDesktop && styles.floatDesktop,
             { bottom: Math.max(insets.bottom, Spacing.md) },
             pressed && styles.packsCtaPressed,
           ]}
@@ -294,6 +302,7 @@ export function UserAlbumView({ album, stickers }: Props) {
           disabled={claiming}
           style={({ pressed }) => [
             styles.packsCta,
+            isDesktop && styles.floatDesktop,
             { bottom: Math.max(insets.bottom, Spacing.md) },
             pressed && styles.packsCtaPressed,
           ]}
@@ -304,7 +313,13 @@ export function UserAlbumView({ album, stickers }: Props) {
           </View>
         </Pressable>
       ) : daily.enabled && daily.nextAvailableAt ? (
-        <View style={[styles.dailyCard, { bottom: Math.max(insets.bottom, Spacing.md) }]}>
+        <View
+          style={[
+            styles.dailyCard,
+            isDesktop && styles.floatDesktop,
+            { bottom: Math.max(insets.bottom, Spacing.md) },
+          ]}
+        >
           <View style={styles.dailyCardLeft}>
             <Text style={styles.dailyCardKicker}>SOBRE DIARIO GRATIS</Text>
             <Text style={styles.dailyCardSub}>PRÓXIMO EN</Text>
@@ -420,6 +435,16 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,
     color: Colors.inkSoft,
+  },
+  // Desktop: los flotantes absolutos se centran y se capean al mismo ancho
+  // que el contenido (760 menos el padding lateral). marginHorizontal 'auto'
+  // funciona porque isDesktop implica web.
+  floatDesktop: {
+    left: 0,
+    right: 0,
+    width: '100%',
+    maxWidth: 760 - Spacing.screenX * 2,
+    marginHorizontal: 'auto',
   },
   packsCta: {
     position: 'absolute',

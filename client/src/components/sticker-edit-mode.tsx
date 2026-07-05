@@ -26,6 +26,7 @@ import {
 } from '@/lib/queries/stickers';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {
@@ -36,6 +37,7 @@ interface Props {
 // Vista de edición de figurita para el owner del álbum (solo en draft).
 export function EditStickerView({ sticker, packConfig }: Props) {
   const router = useRouter();
+  const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
 
   const [name, setName] = useState('');
@@ -111,8 +113,10 @@ export function EditStickerView({ sticker, packConfig }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title={`Figurita #${sticker.number}`} back />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <View style={desktopCap}>
+        <ScreenHeader title={`Figurita #${sticker.number}`} back />
+      </View>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]} keyboardShouldPersistTaps="handled">
         <View style={styles.imageRow}>
           <View style={{ width: 180 }}>
             <ImageUploadCard

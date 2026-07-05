@@ -11,11 +11,13 @@ import { StickerMini } from '@/components/sticker-mini';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { createTradeOffer } from '@/lib/queries/trades';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 import type { Sticker } from '@/lib/queries/albums';
 
 export default function NewTradeOfferScreen() {
   const router = useRouter();
+  const desktopCap = useDesktopCap(720);
   const { albumId, toUser, offered, requested } = useLocalSearchParams<{
     albumId: string;
     toUser: string;
@@ -64,12 +66,14 @@ export default function NewTradeOfferScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title={`Proponer a ${toUserName || '...'}`}
-        back
-        right={<Avatar source={toUserName || 'Usuario'} size={28} />}
-      />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={desktopCap}>
+        <ScreenHeader
+          title={`Proponer a ${toUserName || '...'}`}
+          back
+          right={<Avatar source={toUserName || 'Usuario'} size={28} />}
+        />
+      </View>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
         ) : (

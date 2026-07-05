@@ -11,6 +11,7 @@ import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { createAlbum } from '@/lib/queries/albums';
 import { useIsPro } from '@/lib/queries/subscriptions';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 const FREE_MAX = 75;
@@ -18,6 +19,7 @@ const PRO_MAX = 1000;
 
 export default function NewAlbumScreen() {
   const router = useRouter();
+  const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
   const maxStickers = isPro ? PRO_MAX : FREE_MAX;
 
@@ -48,9 +50,11 @@ export default function NewAlbumScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title="" back right={<StatusBadge variant={isPro ? 'pro' : 'free'} />} />
+      <View style={desktopCap}>
+        <ScreenHeader title="" back right={<StatusBadge variant={isPro ? 'pro' : 'free'} />} />
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>NUEVO{'\n'}ÁLBUM</Text>
         </View>

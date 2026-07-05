@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DesktopCapped } from '@/components/desktop-capped';
 import { QrTabModal } from '@/components/qr-tab-modal';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
@@ -18,9 +17,6 @@ export default function TabsLayout() {
 
   return (
     <>
-      {/* En desktop las tabs usan el ancho completo hasta 1080 (mismo cap que
-          el DesktopHeader) — cada pantalla arma sus grids adentro. */}
-      <DesktopCapped maxWidth={1080}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -97,7 +93,6 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-      </DesktopCapped>
 
       <QrTabModal
         visible={qrModalVisible}

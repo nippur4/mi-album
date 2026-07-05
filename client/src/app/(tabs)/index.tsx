@@ -14,7 +14,7 @@ import { useSession } from '@/lib/auth';
 import { unhideAlbumByPlayer, useAlbumsProgress } from '@/lib/queries/albums';
 import { useHomeBundle } from '@/lib/queries/home';
 import { useMyProfile } from '@/lib/queries/profile';
-import { useIsDesktop } from '@/lib/use-is-desktop';
+import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 export default function HomeTab() {
@@ -35,6 +35,9 @@ export default function HomeTab() {
   const { session } = useSession();
   const { profile } = useMyProfile();
   const isDesktop = useIsDesktop();
+  // Cap del contenido (no del ScrollView): el scroll ocupa todo el ancho y la
+  // barra queda en el borde de la ventana.
+  const desktopCap = useDesktopCap(1080);
   const [showHidden, setShowHidden] = useState(false);
   // Bundle: owned + joined (con __hidden) + public en 1 sola RPC.
   // Antes eran 3 queries separadas.
@@ -87,7 +90,7 @@ export default function HomeTab() {
       >
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingBottom: Spacing.xxl + kbHeight }]}
+        contentContainerStyle={[styles.scroll, desktopCap, { paddingBottom: Spacing.xxl + kbHeight }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refreshAll} tintColor={Colors.red} />

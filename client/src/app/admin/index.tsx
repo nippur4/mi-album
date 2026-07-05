@@ -19,30 +19,34 @@ import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { setAlbumPublic, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 export default function AdminScreen() {
   const router = useRouter();
+  const desktopCap = useDesktopCap(960);
   const { albums, isLoading, isRefetching, error, refetch } = useAdminAlbums();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title="Admin"
-        back
-        right={<Feather name="shield" size={20} color={Colors.ink} />}
-      />
-      <View style={styles.intro}>
-        <Text style={styles.introText}>
-          Marcá un álbum publicado como público para que aparezca en el carrusel del Landing.
-          Los borradores y pausados no pueden volverse públicos hasta que el owner los publique.
-        </Text>
+      <View style={desktopCap}>
+        <ScreenHeader
+          title="Admin"
+          back
+          right={<Feather name="shield" size={20} color={Colors.ink} />}
+        />
+        <View style={styles.intro}>
+          <Text style={styles.introText}>
+            Marcá un álbum publicado como público para que aparezca en el carrusel del Landing.
+            Los borradores y pausados no pueden volverse públicos hasta que el owner los publique.
+          </Text>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, desktopCap]}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
         }

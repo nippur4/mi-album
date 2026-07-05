@@ -9,11 +9,12 @@ import { Button } from '@/components/button';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useAlbumsProgress, useMyOwnedAlbums } from '@/lib/queries/albums';
-import { useIsDesktop } from '@/lib/use-is-desktop';
+import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 
 export default function ManageTab() {
   const router = useRouter();
   const isDesktop = useIsDesktop();
+  const desktopCap = useDesktopCap(1080);
   const [showArchived, setShowArchived] = useState(false);
   // Traemos SIEMPRE los archivados y filtramos client-side. Así podemos
   // mostrar el contador ("Mostrar archivados (N)") sin hacer una segunda query.
@@ -30,7 +31,7 @@ export default function ManageTab() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, desktopCap]}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
         }

@@ -21,6 +21,7 @@ import type { Sticker } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { r2Url } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 
 interface Props {
   sticker: Sticker;
@@ -40,6 +41,7 @@ const RARITY_LABEL: Record<Sticker['rarity'], string> = {
 // Botón "Proponer cambio" lleva a las coincidencias del álbum.
 export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const router = useRouter();
+  const desktopCap = useDesktopCap(560);
   // El bundle player devuelve collection + packs + daily. Acá solo usamos
   // collection, pero comparte cache con album-user-view — si el user viene
   // desde ahí, no hay round trip extra.
@@ -106,12 +108,14 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScreenHeader
-        title={`FIGURITA ${sticker.number} / ${albumTotal}`}
-        back
-      />
+      <View style={desktopCap}>
+        <ScreenHeader
+          title={`FIGURITA ${sticker.number} / ${albumTotal}`}
+          back
+        />
+      </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, desktopCap]}>
         {/* Carta foil */}
         <Animated.View style={[styles.card, { borderColor }, cardStyle]}>
           {/* Fondo: gradiente dorado para legendarias, sólido para el resto */}

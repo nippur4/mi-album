@@ -13,12 +13,14 @@ import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constan
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useAlbumMatches } from '@/lib/queries/trades';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 
 type Tab = 'repes' | 'matches';
 
 export default function TradeMatchesScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const router = useRouter();
+  const desktopCap = useDesktopCap(720);
   const [tab, setTab] = useState<Tab>('repes');
 
   const { album, stickers } = useAlbumDetail(albumId);
@@ -50,12 +52,15 @@ export default function TradeMatchesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title="Cambios" back />
-      <View style={styles.subhead}>
-        <Text style={styles.subheadAlbum}>{album.name.toUpperCase()}</Text>
+      <View style={desktopCap}>
+        <ScreenHeader title="Cambios" back />
+        <View style={styles.subhead}>
+          <Text style={styles.subheadAlbum}>{album.name.toUpperCase()}</Text>
+        </View>
       </View>
 
       <View style={styles.body}>
+        <View style={desktopCap}>
         <SegmentedControl
           options={[
             { key: 'repes', label: 'Mis repes', count: myRepes.length },
@@ -64,8 +69,9 @@ export default function TradeMatchesScreen() {
           value={tab}
           onChange={(k) => setTab(k as Tab)}
         />
+        </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
           {tab === 'repes' ? (
             myRepes.length === 0 ? (
               <View style={styles.empty}>

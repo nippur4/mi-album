@@ -8,12 +8,13 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { TradeOfferCard } from '@/components/trade-offer-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useMyOffers } from '@/lib/queries/trades';
-import { useIsDesktop } from '@/lib/use-is-desktop';
+import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 
 type Tab = 'received' | 'sent';
 
 export default function TradesTab() {
   const isDesktop = useIsDesktop();
+  const desktopCap = useDesktopCap(1080);
   const [tab, setTab] = useState<Tab>('received');
   const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
 
@@ -26,7 +27,7 @@ export default function TradesTab() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, desktopCap]}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />}
       >
         <View style={styles.header}>

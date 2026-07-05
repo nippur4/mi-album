@@ -31,8 +31,10 @@ import {
 } from '@/lib/queries/presets';
 import { uploadPresetImage } from '@/lib/queries/uploads';
 import { r2Url } from '@/lib/storage';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 
 export default function AdminPresetsScreen() {
+  const desktopCap = useDesktopCap(960);
   const { items, isRefetching, error, refetch } = useAdminPresets();
   const [uploadingFor, setUploadingFor] = useState<PresetKind | null>(null);
   const [renaming, setRenaming] = useState<PresetImage | null>(null);
@@ -86,21 +88,23 @@ export default function AdminPresetsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title="Plantillas"
-        back
-        right={<Feather name="image" size={20} color={Colors.ink} />}
-      />
-      <View style={styles.intro}>
-        <Text style={styles.introText}>
-          Carátulas (4:5) y sobres (3:4) que los owners pueden elegir, y avatares (1:1)
-          que cualquier user puede elegir como foto de perfil. Se suman a los colores
-          predefinidos en el caso de carátulas y sobres.
-        </Text>
+      <View style={desktopCap}>
+        <ScreenHeader
+          title="Plantillas"
+          back
+          right={<Feather name="image" size={20} color={Colors.ink} />}
+        />
+        <View style={styles.intro}>
+          <Text style={styles.introText}>
+            Carátulas (4:5) y sobres (3:4) que los owners pueden elegir, y avatares (1:1)
+            que cualquier user puede elegir como foto de perfil. Se suman a los colores
+            predefinidos en el caso de carátulas y sobres.
+          </Text>
+        </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, desktopCap]}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
         }

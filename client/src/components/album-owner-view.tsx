@@ -44,6 +44,7 @@ import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackCon
 import { proFeatureHint } from '@/lib/upsell-copy';
 import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { uploadImage } from '@/lib/queries/uploads';
 import { enableQrForAlbum } from '@/lib/queries/qr';
 import { errorMessage } from '@/lib/errors';
@@ -62,6 +63,9 @@ interface Props {
 export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // Cap desktop en header + contenido del scroll (el ScrollView queda
+  // full-bleed para que la barra viva en el borde de la ventana).
+  const desktopCap = useDesktopCap(760);
   const { isPro } = useIsPro();
   const { session } = useSession();
   const [coverBusy, setCoverBusy] = useState(false);
@@ -275,13 +279,15 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title={album.name}
-        back
-        multiline
-        right={<StatusBadge variant={album.status as any} />}
-      />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={desktopCap}>
+        <ScreenHeader
+          title={album.name}
+          back
+          multiline
+          right={<StatusBadge variant={album.status as any} />}
+        />
+      </View>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
         <ProgressCard
           current={stickers.length}
           total={album.total_stickers}

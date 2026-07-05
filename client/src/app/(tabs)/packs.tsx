@@ -10,11 +10,12 @@ import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
-import { useIsDesktop } from '@/lib/use-is-desktop';
+import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 
 export default function PacksTab() {
   const router = useRouter();
   const isDesktop = useIsDesktop();
+  const desktopCap = useDesktopCap(1080);
   // Bundle: pending packs + playable albums (con daily status) en 1 sola RPC.
   // Antes eran 4 queries (pending + owned + joined + daily batch).
   const { pending, playable, refetch } = useMyPacksTabData();
@@ -23,7 +24,7 @@ export default function PacksTab() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.kicker}>SOBRES</Text>

@@ -1,17 +1,16 @@
 import { Stack } from 'expo-router';
 
-import { DesktopCapped } from '@/components/desktop-capped';
 import { Colors } from '@/constants/theme';
 
+// El cap desktop NO va acá (dejaría la barra de scroll flotando en el borde
+// del cap). Las pantallas capean su contenido con useDesktopCap(720).
 export default function TradeLayout() {
   return (
-    <DesktopCapped maxWidth={720}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.paper },
-        }}
-      />
-    </DesktopCapped>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: Colors.paper },
+      }}
+    />
   );
 }
