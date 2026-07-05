@@ -7,9 +7,9 @@
 
 import Feather from '@expo/vector-icons/Feather';
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { Colors, FontFamily, FontSize, Radius, RarityFrame, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
@@ -104,11 +104,13 @@ function DetailModal({
   }, [stickers]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.handle} />
-          <Text style={styles.title}>Probabilidad por figurita</Text>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Probabilidad por figurita"
+      maxHeight="92%"
+      footer={<Button label="Cerrar" onPress={onClose} />}
+    >
           <Text style={styles.subtitle}>
             En cada sobre de {packSize}, esta es la chance de que aparezca cada figurita al
             menos una vez, y cuántos sobres necesitás en promedio para verla.
@@ -152,13 +154,7 @@ function DetailModal({
             contentContainerStyle={{ paddingBottom: Spacing.md }}
             style={{ flexShrink: 1 }}
           />
-
-          <SafeAreaView edges={['bottom']}>
-            <Button label="Cerrar" onPress={onClose} />
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -228,30 +224,6 @@ const styles = StyleSheet.create({
   },
 
   // Modal
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    maxHeight: '92%',
-    gap: Spacing.sm,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.xs,
-  },
-  title: {
-    fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
-    color: Colors.ink,
-  },
   subtitle: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,

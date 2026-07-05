@@ -62,7 +62,7 @@ export default function RootLayout() {
       <ProfileProvider>
         <StatusBar style="dark" />
         {showDesktopHeader && <DesktopHeader />}
-        <View style={[styles.body, isDesktop && styles.bodyDesktop]}>
+        <View style={styles.body}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
@@ -80,19 +80,11 @@ export default function RootLayout() {
   );
 }
 
+// El cap de ancho en desktop ya no vive acá: cada grupo de rutas se capea a
+// su medida con <DesktopCapped> en su _layout (tabs 1080, album 760, forms
+// más angostos). Así las pantallas de listado aprovechan el ancho real y las
+// de detalle/formulario no quedan estiradas.
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.paper },
   body: { flex: 1 },
-  // Web ≥ 768px: capamos el contenido a un ancho tipo mobile centrado. Los
-  // costados dejan ver Colors.paper del root. Sombra sutil para dar la idea
-  // de "app dentro del monitor".
-  bodyDesktop: {
-    maxWidth: 480,
-    width: '100%',
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-  },
 });

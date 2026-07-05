@@ -3,7 +3,8 @@
 // generateQrToken: el owner pide el token firmado para mostrarlo como QR.
 // redeemQrToken:   el user (post-scan) lo manda y se le otorgan sobres.
 
-import { env } from '@/lib/env';
+import { callEdgeFunction } from '@/lib/edge';
+import { DEFAULT_PACK_CONFIG } from '@/lib/queries/economy';
 import { supabase } from '@/lib/supabase';
 
 export interface RedeemQrResult {
@@ -14,55 +15,20 @@ export interface RedeemQrResult {
   album_id: string;
 }
 
-async function bearer(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  const t = data.session?.access_token;
-  if (!t) throw { error: 'auth_required' };
-  return t;
-}
-
 export async function generateQrToken(albumId: string): Promise<string> {
-  const token = await bearer();
-  const res = await fetch(`${env.supabaseUrl}/functions/v1/generate_qr`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: env.supabaseAnonKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ album_id: albumId }),
+  const body = await callEdgeFunction<{ token: string }>('generate_qr', {
+    album_id: albumId,
   });
-  const text = await res.text();
-  let body: any = {};
-  try { body = JSON.parse(text); } catch {}
-  if (!res.ok) {
-    throw { error: body.error ?? `generate_qr_failed_${res.status}` };
-  }
-  return body.token as string;
+  return body.token;
 }
 
 export async function redeemQrToken(qrToken: string): Promise<RedeemQrResult> {
-  const token = await bearer();
-  const res = await fetch(`${env.supabaseUrl}/functions/v1/redeem_qr`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: env.supabaseAnonKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ token: qrToken }),
-  });
-  const text = await res.text();
-  let body: any = {};
-  try { body = JSON.parse(text); } catch {}
-  if (!res.ok) {
-    throw { error: body.error ?? `redeem_qr_failed_${res.status}` };
-  }
-  return body as RedeemQrResult;
+  return callEdgeFunction<RedeemQrResult>('redeem_qr', { token: qrToken });
 }
 
 // Helper para activar QR desde el owner sin tener que armar pack_config a mano.
-// Lee el config actual y mergea qr.enabled = true.
+// Lee el config actual y mergea qr.enabled = true (defaults de economy.ts
+// para count/cooldown si el álbum nunca tuvo sección qr).
 export async function enableQrForAlbum(albumId: string): Promise<void> {
   const { data: album, error } = await supabase
     .from('albums')
@@ -74,7 +40,12 @@ export async function enableQrForAlbum(albumId: string): Promise<void> {
   const cur = (album.pack_config as any) ?? {};
   const next = {
     ...cur,
-    qr: { ...(cur.qr ?? {}), enabled: true, count: cur.qr?.count ?? 3, cooldown_hours: cur.qr?.cooldown_hours ?? 24 },
+    qr: {
+      ...(cur.qr ?? {}),
+      enabled: true,
+      count: cur.qr?.count ?? DEFAULT_PACK_CONFIG.qr.count,
+      cooldown_hours: cur.qr?.cooldown_hours ?? DEFAULT_PACK_CONFIG.qr.cooldown_hours,
+    },
   };
   const { error: updErr } = await supabase.rpc('fn_update_album_economy', {
     p_album_id: albumId,

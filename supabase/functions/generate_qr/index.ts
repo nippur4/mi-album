@@ -11,14 +11,8 @@
 //   4xx   { error: string }
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { encodeQrToken } from '../_shared/qr.ts';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { adminClient, CORS, getCallerId, jsonError, jsonOk, userClient } from '../_shared/http.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -38,20 +32,11 @@ serve(async (req) => {
     return jsonError('album_id_required', 400);
   }
 
-  const userSupabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: userResult } = await userSupabase.auth.getUser();
-  const callerId = userResult?.user?.id;
+  const callerId = await getCallerId(userClient(authHeader));
   if (!callerId) return jsonError('auth_required', 401);
 
   // Service role para leer qr_secret (revoke select(qr_secret) to authenticated)
-  const adminSupabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  const adminSupabase = adminClient();
 
   const { data: album, error: albErr } = await adminSupabase
     .from('albums')
@@ -78,16 +63,3 @@ serve(async (req) => {
 
   return jsonOk({ token });
 });
-
-function jsonOk(body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}
-function jsonError(code: string, status: number) {
-  return new Response(JSON.stringify({ error: code }), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}

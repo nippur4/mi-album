@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { PRESETS } from '@/lib/presets';
 import { useActivePresets, type PresetKind } from '@/lib/queries/presets';
@@ -24,115 +24,79 @@ export function PresetPickerModal({ visible, kind, onClose, onSelect }: Props) {
   const { items: adminPresets, isLoading } = useActivePresets(kind ?? 'cover');
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView edges={['bottom']} style={{ width: '100%' }}>
-            <View style={styles.handle} />
-            <Text style={styles.title}>Elegí una plantilla</Text>
-            <ScrollView style={styles.scroll}>
-              <Text style={styles.sectionLabel}>COLORES</Text>
-              <View style={styles.grid}>
-                {PRESETS.map((p) => (
-                  <Pressable
-                    key={p.id}
-                    style={styles.tile}
-                    onPress={() => {
-                      const key = makePresetKey(p.id);
-                      onSelect({ thumb_key: key, large_key: key });
-                      onClose();
-                    }}
-                  >
-                    <LinearGradient
-                      colors={p.colors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 0, y: 1 }}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    <Text style={[styles.tileLabel, { color: p.textColor }]}>{p.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
+    <BottomSheet visible={visible} onClose={onClose} title="Elegí una plantilla" maxHeight="85%">
+      <ScrollView style={styles.scroll}>
+        <Text style={styles.sectionLabel}>COLORES</Text>
+        <View style={styles.grid}>
+          {PRESETS.map((p) => (
+            <Pressable
+              key={p.id}
+              style={styles.tile}
+              onPress={() => {
+                const key = makePresetKey(p.id);
+                onSelect({ thumb_key: key, large_key: key });
+                onClose();
+              }}
+            >
+              <LinearGradient
+                colors={p.colors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Text style={[styles.tileLabel, { color: p.textColor }]}>{p.name}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-              {kind && (
-                <>
-                  <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
-                    IMÁGENES {kind === 'cover' ? 'CARÁTULA' : 'SOBRE'}
-                  </Text>
-                  {isLoading ? (
-                    <View style={styles.empty}><ActivityIndicator color={Colors.red} /></View>
-                  ) : adminPresets.length === 0 ? (
-                    <Text style={styles.emptyText}>
-                      No hay imágenes disponibles todavía.
-                    </Text>
-                  ) : (
-                    <View style={styles.grid}>
-                      {adminPresets.map((p) => {
-                        const url = r2Url(p.thumb_key);
-                        return (
-                          <Pressable
-                            key={p.id}
-                            style={styles.tile}
-                            onPress={() => {
-                              onSelect({ thumb_key: p.thumb_key, large_key: p.large_key });
-                              onClose();
-                            }}
-                          >
-                            {url && (
-                              <Image
-                                source={{ uri: url }}
-                                style={StyleSheet.absoluteFill}
-                                contentFit="cover"
-                              />
-                            )}
-                            <View style={styles.adminLabelBg}>
-                              <Text style={styles.adminLabel}>{p.name}</Text>
-                            </View>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  )}
-                </>
-              )}
-            </ScrollView>
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        {kind && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: Spacing.lg }]}>
+              IMÁGENES {kind === 'cover' ? 'CARÁTULA' : 'SOBRE'}
+            </Text>
+            {isLoading ? (
+              <View style={styles.empty}><ActivityIndicator color={Colors.red} /></View>
+            ) : adminPresets.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No hay imágenes disponibles todavía.
+              </Text>
+            ) : (
+              <View style={styles.grid}>
+                {adminPresets.map((p) => {
+                  const url = r2Url(p.thumb_key);
+                  return (
+                    <Pressable
+                      key={p.id}
+                      style={styles.tile}
+                      onPress={() => {
+                        onSelect({ thumb_key: p.thumb_key, large_key: p.large_key });
+                        onClose();
+                      }}
+                    >
+                      {url && (
+                        <Image
+                          source={{ uri: url }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                        />
+                      )}
+                      <View style={styles.adminLabelBg}>
+                        <Text style={styles.adminLabel}>{p.name}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    maxHeight: '85%',
-  },
   scroll: { maxHeight: '100%' },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
-    color: Colors.ink,
-    marginBottom: Spacing.lg,
-  },
   sectionLabel: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,

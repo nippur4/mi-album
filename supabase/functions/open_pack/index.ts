@@ -10,7 +10,7 @@
 //   4xx   { error: string }
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { CORS, jsonError, jsonOk, userClient } from '../_shared/http.ts';
 
 type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -45,12 +45,6 @@ interface Sticker {
   large_key: string;
 }
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS });
@@ -75,11 +69,7 @@ serve(async (req) => {
     return jsonError('auth_required', 401);
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
+  const supabase = userClient(authHeader);
 
   // 1. Cargar el pack (RLS asegura que sea del caller).
   const { data: pack, error: packErr } = await supabase
@@ -185,18 +175,4 @@ function pickSticker(stickers: Sticker[]): Sticker {
   }
   // Fallback numérico: por floating-point puede que r > 0 al final.
   return stickers[stickers.length - 1];
-}
-
-function jsonOk(body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}
-
-function jsonError(code: string, status: number) {
-  return new Response(JSON.stringify({ error: code }), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
 }

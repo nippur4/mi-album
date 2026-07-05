@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
+import { toAppError } from '@/lib/errors';
 import { qk } from '@/lib/query-client';
 
 export interface MyProfile {
@@ -39,11 +40,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     // nuestras — invalidamos manual al mutar.
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, avatar_url, avatar_thumb_key, is_admin')
         .eq('id', uid!)
         .maybeSingle();
+      if (error) throw toAppError(error);
       return (data ?? null) as MyProfile | null;
     },
   });

@@ -8,12 +8,14 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { TradeOfferCard } from '@/components/trade-offer-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useMyOffers } from '@/lib/queries/trades';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 
 type Tab = 'received' | 'sent';
 
 export default function TradesTab() {
+  const isDesktop = useIsDesktop();
   const [tab, setTab] = useState<Tab>('received');
-  const { received, sent, isLoading, refetch } = useMyOffers();
+  const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -25,7 +27,7 @@ export default function TradesTab() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />}
       >
         <View style={styles.header}>
           <View style={styles.headerText}>
@@ -58,9 +60,11 @@ export default function TradesTab() {
             </Text>
           </View>
         ) : (
-          <View style={{ gap: Spacing.listGap }}>
+          <View style={[styles.cardList, isDesktop && styles.cardGrid]}>
             {list.map((o) => (
-              <TradeOfferCard key={o.id} offer={o} side={tab} onResolved={refetch} />
+              <View key={o.id} style={isDesktop ? styles.gridItem : undefined}>
+                <TradeOfferCard offer={o} side={tab} onResolved={refetch} />
+              </View>
             ))}
           </View>
         )}
@@ -83,6 +87,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerText: { gap: Spacing.xs, flex: 1 },
+  cardList: {
+    gap: Spacing.listGap,
+  },
+  // Desktop: ofertas en 2 columnas.
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  gridItem: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    maxWidth: 540,
+  },
   kicker: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,

@@ -1,9 +1,9 @@
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
@@ -139,94 +139,68 @@ export function BulkStickerUploadModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={requestCancel}>
-      <Pressable style={styles.backdrop} onPress={running ? undefined : onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView edges={['bottom']} style={{ width: '100%' }}>
-            <View style={styles.handle} />
-            <Text style={styles.title}>Carga masiva</Text>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      onRequestClose={requestCancel}
+      dismissable={!running}
+      title="Carga masiva"
+    >
+      {!running ? (
+        <>
+          <Text style={styles.body}>
+            Elegí varias imágenes del rollo y las asignamos a los próximos números
+            libres ({freeCount} disponibles). Cada figurita se crea con nombre
+            "#NN" y rareza común — podés editarlas después desde la grilla.
+          </Text>
 
-            {!running ? (
-              <>
-                <Text style={styles.body}>
-                  Elegí varias imágenes del rollo y las asignamos a los próximos números
-                  libres ({freeCount} disponibles). Cada figurita se crea con nombre
-                  "#NN" y rareza común — podés editarlas después desde la grilla.
-                </Text>
+          <View style={styles.infoRow}>
+            <Feather name="info" size={16} color={Colors.muted} />
+            <Text style={styles.infoText}>
+              Asignación en orden: primer foto → próximo número libre, y así.
+            </Text>
+          </View>
 
-                <View style={styles.infoRow}>
-                  <Feather name="info" size={16} color={Colors.muted} />
-                  <Text style={styles.infoText}>
-                    Asignación en orden: primer foto → próximo número libre, y así.
-                  </Text>
-                </View>
-
-                <View style={styles.actions}>
-                  <Button label="Cancelar" variant="outline" onPress={onClose} />
-                  <Button
-                    label={freeCount === 0 ? 'Sin lugar' : 'Elegir imágenes'}
-                    onPress={pickAndUpload}
-                    disabled={freeCount === 0}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <Text style={styles.body}>
-                  Subiendo {progress?.done ?? 0} de {progress?.total ?? 0}…
-                  {progress?.currentNumber !== null && progress?.currentNumber !== undefined
-                    ? ` (#${String(progress.currentNumber).padStart(2, '0')})`
-                    : ''}
-                </Text>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${progress ? (progress.done / Math.max(1, progress.total)) * 100 : 0}%`,
-                      },
-                    ]}
-                  />
-                </View>
-                {progress && progress.failed > 0 && (
-                  <Text style={styles.warn}>{progress.failed} fallidas hasta ahora</Text>
-                )}
-                <View style={styles.actions}>
-                  <Button label="Detener" variant="outline" onPress={requestCancel} />
-                </View>
-              </>
-            )}
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+          <View style={sheetStyles.actions}>
+            <Button label="Cancelar" variant="outline" onPress={onClose} />
+            <Button
+              label={freeCount === 0 ? 'Sin lugar' : 'Elegir imágenes'}
+              onPress={pickAndUpload}
+              disabled={freeCount === 0}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.body}>
+            Subiendo {progress?.done ?? 0} de {progress?.total ?? 0}…
+            {progress?.currentNumber !== null && progress?.currentNumber !== undefined
+              ? ` (#${String(progress.currentNumber).padStart(2, '0')})`
+              : ''}
+          </Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${progress ? (progress.done / Math.max(1, progress.total)) * 100 : 0}%`,
+                },
+              ]}
+            />
+          </View>
+          {progress && progress.failed > 0 && (
+            <Text style={styles.warn}>{progress.failed} fallidas hasta ahora</Text>
+          )}
+          <View style={sheetStyles.actions}>
+            <Button label="Detener" variant="outline" onPress={requestCancel} />
+          </View>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
-    color: Colors.ink,
-    marginBottom: Spacing.lg,
-  },
   body: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,
@@ -266,10 +240,5 @@ const styles = StyleSheet.create({
     color: Colors.amberWarn ?? Colors.red,
     letterSpacing: 1,
     marginTop: Spacing.sm,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
   },
 });

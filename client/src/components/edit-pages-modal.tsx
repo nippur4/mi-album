@@ -1,15 +1,14 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { PageTexture } from '@/components/page-texture';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -126,12 +125,18 @@ export function EditPagesModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.handle} />
-          <Text style={styles.title}>Hojas del álbum</Text>
-
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Hojas del álbum"
+      maxHeight="92%"
+      footer={
+        <View style={sheetStyles.actions}>
+          <Button label="Cancelar" variant="outline" onPress={onClose} />
+          <Button label="Guardar" onPress={onSave} loading={saving} />
+        </View>
+      }
+    >
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -247,16 +252,7 @@ export function EditPagesModal({
               />
             )}
           </ScrollView>
-
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.actions}>
-              <Button label="Cancelar" variant="outline" onPress={onClose} />
-              <Button label="Guardar" onPress={onSave} loading={saving} />
-            </View>
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -596,17 +592,6 @@ function ColorSwatchDefault({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    maxHeight: '92%',
-    overflow: 'hidden',
-  },
   scroll: { flexShrink: 1 },
   scrollContent: { paddingBottom: Spacing.md, gap: Spacing.md },
   // Bloque visual con borde + fondo suave para separar cada sección del modal.
@@ -621,20 +606,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.md,
     gap: Spacing.xs,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
-    color: Colors.ink,
-    marginBottom: Spacing.lg,
   },
   sectionLabel: {
     fontFamily: FontFamily.mono,
@@ -860,10 +831,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.bodySmall,
     color: Colors.red,
     marginTop: Spacing.md,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
   },
 });

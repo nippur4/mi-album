@@ -7,7 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { qk } from '@/lib/query-client';
-import type { DailyPackStatus } from '@/lib/queries/daily';
+import { toAppError } from '@/lib/errors';
+import { parseDailyStatus, type DailyPackStatus } from '@/lib/queries/daily';
 
 // Una entrada de la colección: un sticker + su cantidad + si está pegado.
 export interface CollectionEntry {
@@ -15,14 +16,6 @@ export interface CollectionEntry {
   pasted: boolean;
   quantity: number;
 }
-
-const DAILY_FALLBACK: DailyPackStatus = {
-  enabled: false,
-  canClaim: false,
-  nextAvailableAt: null,
-  count: 1,
-  cooldownHours: 24,
-};
 
 interface Bundle {
   collection: Map<string, CollectionEntry>;
@@ -33,7 +26,7 @@ interface Bundle {
 const EMPTY_BUNDLE: Bundle = {
   collection: new Map(),
   packsAvailable: 0,
-  daily: DAILY_FALLBACK,
+  daily: parseDailyStatus(null),
 };
 
 export function usePlayerAlbumSideData(albumId: string | undefined) {
@@ -45,9 +38,10 @@ export function usePlayerAlbumSideData(albumId: string | undefined) {
     enabled: !!uid && !!albumId,
     staleTime: 10_000,
     queryFn: async (): Promise<Bundle> => {
-      const { data } = await supabase.rpc('fn_player_album_sidedata', {
+      const { data, error } = await supabase.rpc('fn_player_album_sidedata', {
         p_album_id: albumId!,
       });
+      if (error) throw toAppError(error);
       if (!data) return EMPTY_BUNDLE;
       const payload = data as any;
 
@@ -62,19 +56,10 @@ export function usePlayerAlbumSideData(albumId: string | undefined) {
 
       const packsAvailable = Number(payload.packs_available ?? 0);
 
-      const dailyRaw = payload.daily ?? {};
-      const enabled = !!dailyRaw.enabled;
-      const cooldownHours = Number(dailyRaw.cooldown_hours ?? 24);
-      const count = Number(dailyRaw.count ?? 1);
-      const nextMs = dailyRaw.next_available_at
-        ? new Date(dailyRaw.next_available_at).getTime()
-        : null;
-      const canClaim = enabled && (nextMs === null || nextMs <= Date.now());
-
       return {
         collection,
         packsAvailable,
-        daily: { enabled, canClaim, nextAvailableAt: nextMs, count, cooldownHours },
+        daily: parseDailyStatus(payload.daily),
       };
     },
   });

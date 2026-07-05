@@ -56,7 +56,14 @@ export function AlbumPager({
   const { width: screenWidth } = useWindowDimensions();
   const [currentPage, setCurrentPage] = useState(0);
 
-  const pageWidth = screenWidth;
+  // Ancho real del contenedor (medido con onLayout sobre el wrap, que vive
+  // dentro del padding screenX del caller). En mobile coincide con
+  // screenWidth - 2*screenX, así que el fallback inicial no produce salto.
+  // En desktop web el contenido está capeado (DesktopCapped) y acá es donde
+  // window width rompería el layout.
+  const [wrapWidth, setWrapWidth] = useState<number | null>(null);
+
+  const pageWidth = (wrapWidth ?? screenWidth - 2 * Spacing.screenX) + 2 * Spacing.screenX;
   const innerWidth = pageWidth - 2 * Spacing.screenX;
   const defaultCellWidth = (innerWidth - 2 * Spacing.gridGap) / 3;
   const defaultCellHeight = defaultCellWidth / Layout.gridCellAspect;
@@ -114,7 +121,10 @@ export function AlbumPager({
   }
 
   return (
-    <View style={styles.wrap}>
+    <View
+      style={styles.wrap}
+      onLayout={(e) => setWrapWidth(e.nativeEvent.layout.width)}
+    >
       <View style={styles.header}>
         {headerLabel ? (
           <Text style={styles.headerLabel}>{headerLabel}</Text>

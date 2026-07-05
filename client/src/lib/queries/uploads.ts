@@ -8,8 +8,7 @@
 
 import * as ImageManipulator from 'expo-image-manipulator';
 
-import { env } from '@/lib/env';
-import { supabase } from '@/lib/supabase';
+import { callEdgeFunction } from '@/lib/edge';
 
 export type ImageKind = 'cover' | 'pack' | 'sticker';
 
@@ -38,8 +37,6 @@ const SIZES: Record<ImageKind | 'avatar', { thumb: number; large: number }> = {
 const JPEG_QUALITY = 0.85;
 
 async function resizeToBase64(uri: string, width: number): Promise<string> {
-  const t0 = Date.now();
-  console.log(`[upload] resize ${width}px start`);
   const result = await ImageManipulator.manipulateAsync(
     uri,
     [{ resize: { width } }],
@@ -48,9 +45,6 @@ async function resizeToBase64(uri: string, width: number): Promise<string> {
       format: ImageManipulator.SaveFormat.JPEG,
       base64: true,
     },
-  );
-  console.log(
-    `[upload] resize ${width}px done in ${Date.now() - t0}ms; b64len=${result.base64?.length ?? 0}`,
   );
   if (!result.base64) throw { error: 'manipulator_no_base64' };
   return result.base64;
@@ -61,11 +55,6 @@ export async function uploadImage(
   kind: ImageKind,
   asset: UploadAsset,
 ): Promise<UploadedKeys> {
-  console.log(`[upload] start kind=${kind} albumId=${albumId} uri=${asset.uri.slice(0, 60)}`);
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw { error: 'auth_required' };
-
   // Resize + comprimir a JPEG en cliente, para 2 tamaños en paralelo.
   const sizes = SIZES[kind];
   let thumb_base64: string;
@@ -76,54 +65,14 @@ export async function uploadImage(
       resizeToBase64(asset.uri, sizes.large),
     ]);
   } catch (err: any) {
-    console.error('[upload] resize threw', err);
     throw { error: `image_resize_failed: ${err?.message ?? String(err)}` };
   }
 
-  console.log(
-    `[upload] posting to edge: thumb=${thumb_base64.length}B, large=${large_base64.length}B`,
+  return callEdgeFunction<UploadedKeys>(
+    'upload_image',
+    { album_id: albumId, kind, thumb_base64, large_base64 },
+    { timeoutMs: 60_000 },
   );
-
-  // Timeout para no quedar esperando infinito si la Edge Function se cuelga.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
-
-  let res: Response;
-  try {
-    res = await fetch(`${env.supabaseUrl}/functions/v1/upload_image`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: env.supabaseAnonKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        album_id: albumId,
-        kind,
-        thumb_base64,
-        large_base64,
-      }),
-      signal: controller.signal,
-    });
-  } catch (err: any) {
-    clearTimeout(timeout);
-    if (err?.name === 'AbortError') {
-      throw { error: 'upload_timeout_60s (server never responded)' };
-    }
-    throw { error: `fetch_failed: ${err?.message ?? String(err)}` };
-  }
-  clearTimeout(timeout);
-
-  const text = await res.text();
-  console.log(`[upload] edge responded status=${res.status} bodyLen=${text.length}`);
-  let body: any = {};
-  try { body = JSON.parse(text); } catch {}
-
-  if (!res.ok) {
-    console.warn('[upload] edge error body:', text);
-    throw { error: body.error ?? `upload_failed_${res.status}: ${text.slice(0, 200)}` };
-  }
-  return body as UploadedKeys;
 }
 
 export interface UploadedPreset {
@@ -136,40 +85,15 @@ export async function uploadPresetImage(
   kind: 'cover' | 'pack' | 'avatar',
   asset: UploadAsset,
 ): Promise<UploadedPreset> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw { error: 'auth_required' };
-
   const sizes = SIZES[kind];
   const [thumb_base64, large_base64] = await Promise.all([
     resizeToBase64(asset.uri, sizes.thumb),
     resizeToBase64(asset.uri, sizes.large),
   ]);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
-  let res: Response;
-  try {
-    res = await fetch(`${env.supabaseUrl}/functions/v1/upload_preset_image`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: env.supabaseAnonKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ kind, thumb_base64, large_base64 }),
-      signal: controller.signal,
-    });
-  } catch (err: any) {
-    clearTimeout(timeout);
-    if (err?.name === 'AbortError') throw { error: 'upload_timeout_60s' };
-    throw { error: `fetch_failed: ${err?.message ?? String(err)}` };
-  }
-  clearTimeout(timeout);
-
-  const text = await res.text();
-  let body: any = {};
-  try { body = JSON.parse(text); } catch {}
-  if (!res.ok) throw { error: body.error ?? `upload_failed_${res.status}` };
-  return body as UploadedPreset;
+  return callEdgeFunction<UploadedPreset>(
+    'upload_preset_image',
+    { kind, thumb_base64, large_base64 },
+    { timeoutMs: 60_000 },
+  );
 }

@@ -1,17 +1,14 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { Stepper } from '@/components/stepper';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -157,16 +154,19 @@ export function EditEconomyModal({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <Pressable style={styles.backdrop} onPress={onClose}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.handle} />
-            <Text style={styles.title}>Cómo se consiguen las figuritas</Text>
-
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Cómo se consiguen las figuritas"
+      maxHeight="92%"
+      avoidKeyboard="ios"
+      footer={
+        <View style={sheetStyles.actions}>
+          <Button label="Cancelar" variant="outline" onPress={onClose} />
+          <Button label="Guardar" onPress={onSave} disabled={!canSave} loading={saving} />
+        </View>
+      }
+    >
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
@@ -340,17 +340,7 @@ export function EditEconomyModal({
 
                 {error && <Text style={styles.error}>{error}</Text>}
             </ScrollView>
-
-            <SafeAreaView edges={['bottom']}>
-              <View style={styles.actions}>
-                <Button label="Cancelar" variant="outline" onPress={onClose} />
-                <Button label="Guardar" onPress={onSave} disabled={!canSave} loading={saving} />
-              </View>
-            </SafeAreaView>
-          </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -433,36 +423,11 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
-    maxHeight: '92%',
-    overflow: 'hidden',
-  },
   // flexShrink:1 le permite al ScrollView comprimirse cuando el sheet llega
   // al maxHeight, dejando espacio fijo para las actions de abajo. Sin esto
   // el contenido empuja a las actions fuera del viewport y no se ve Guardar.
   scroll: { flexShrink: 1 },
   scrollContent: { paddingBottom: Spacing.md },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.borderStrong,
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontFamily: FontFamily.display,
-    fontSize: FontSize.screenTitle,
-    color: Colors.ink,
-    marginBottom: Spacing.lg,
-  },
   label: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,
@@ -615,10 +580,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.bodySmall,
     color: Colors.red,
     marginTop: Spacing.md,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
   },
 });

@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
+import { toAppError } from '@/lib/errors';
 import type { Album } from '@/lib/queries/albums';
 
 interface Bundle {
@@ -27,7 +28,8 @@ export function useHomeBundle() {
     enabled: !!uid,
     staleTime: 15_000,
     queryFn: async (): Promise<Bundle> => {
-      const { data } = await supabase.rpc('fn_home_bundle');
+      const { data, error } = await supabase.rpc('fn_home_bundle');
+      if (error) throw toAppError(error);
       if (!data) return EMPTY;
       const payload = data as any;
       return {
@@ -43,6 +45,7 @@ export function useHomeBundle() {
     joined: q.data?.joined ?? [],
     publics: q.data?.publics ?? [],
     isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
     refetch: q.refetch,
   };
 }

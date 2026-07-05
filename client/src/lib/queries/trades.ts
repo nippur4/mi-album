@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { qk } from '@/lib/query-client';
+import { toAppError } from '@/lib/errors';
 import type { Database } from '@/lib/database.types';
 import type { Sticker } from '@/lib/queries/albums';
 
@@ -45,7 +46,10 @@ export interface AlbumMatch {
   i_give_sticker_thumb_key: string;
 }
 
-// Ofertas donde el caller participa (from o to). Hidrata con profiles + stickers + album_name.
+// Ofertas donde el caller participa (from o to). Antes hidrataba con 3
+// queries extra (profiles + stickers + albums); ahora PostgREST embebe las
+// relaciones con hints de FK en un solo round trip. RLS aplica igual en las
+// tablas embebidas (misma visibilidad que las queries separadas).
 export function useMyOffers() {
   const { session } = useSession();
   const uid = session?.user.id;
@@ -55,51 +59,34 @@ export function useMyOffers() {
     enabled: !!uid,
     staleTime: 15_000,
     queryFn: async () => {
-      const { data: rows } = await supabase
+      const { data: rows, error } = await supabase
         .from('trade_offers')
-        .select('*')
+        .select(`
+          *,
+          from_profile:profiles!trade_offers_from_user_fkey(display_name, avatar_url),
+          to_profile:profiles!trade_offers_to_user_fkey(display_name, avatar_url),
+          offered:stickers!trade_offers_offered_sticker_id_fkey(*),
+          requested:stickers!trade_offers_requested_sticker_id_fkey(*),
+          album:albums!trade_offers_album_id_fkey(name)
+        `)
         .or(`from_user.eq.${uid},to_user.eq.${uid}`)
         .order('created_at', { ascending: false });
+      if (error) throw toAppError(error);
 
-      if (!rows || rows.length === 0) {
-        return { received: [] as TradeOffer[], sent: [] as TradeOffer[] };
-      }
-
-      const profileIds = new Set<string>();
-      const stickerIds = new Set<string>();
-      const albumIds = new Set<string>();
-      for (const o of rows as any[]) {
-        profileIds.add(o.from_user);
-        profileIds.add(o.to_user);
-        stickerIds.add(o.offered_sticker_id);
-        stickerIds.add(o.requested_sticker_id);
-        albumIds.add(o.album_id);
-      }
-
-      const [profilesRes, stickersRes, albumsRes] = await Promise.all([
-        supabase.from('profiles').select('id, display_name, avatar_url').in('id', Array.from(profileIds)),
-        supabase.from('stickers').select('*').in('id', Array.from(stickerIds)),
-        supabase.from('albums').select('id, name').in('id', Array.from(albumIds)),
-      ]);
-
-      const profiles = new Map<string, any>((profilesRes.data ?? []).map((p: any) => [p.id, p]));
-      const stickers = new Map<string, Sticker>(((stickersRes.data ?? []) as any[]).map((s) => [s.id, s as Sticker]));
-      const albums = new Map<string, any>((albumsRes.data ?? []).map((a: any) => [a.id, a]));
-
-      const enriched: TradeOffer[] = (rows as any[]).map((o) => ({
+      const enriched: TradeOffer[] = ((rows ?? []) as any[]).map((o) => ({
         id: o.id,
         album_id: o.album_id,
-        album_name: albums.get(o.album_id)?.name ?? '',
+        album_name: o.album?.name ?? '',
         from_user: o.from_user,
-        from_user_name: profiles.get(o.from_user)?.display_name ?? '',
-        from_user_avatar_url: profiles.get(o.from_user)?.avatar_url ?? null,
+        from_user_name: o.from_profile?.display_name ?? '',
+        from_user_avatar_url: o.from_profile?.avatar_url ?? null,
         to_user: o.to_user,
-        to_user_name: profiles.get(o.to_user)?.display_name ?? '',
-        to_user_avatar_url: profiles.get(o.to_user)?.avatar_url ?? null,
+        to_user_name: o.to_profile?.display_name ?? '',
+        to_user_avatar_url: o.to_profile?.avatar_url ?? null,
         offered_sticker_id: o.offered_sticker_id,
-        offered_sticker: stickers.get(o.offered_sticker_id) ?? null,
+        offered_sticker: (o.offered as Sticker | null) ?? null,
         requested_sticker_id: o.requested_sticker_id,
-        requested_sticker: stickers.get(o.requested_sticker_id) ?? null,
+        requested_sticker: (o.requested as Sticker | null) ?? null,
         status: o.status,
         created_at: o.created_at,
         resolved_at: o.resolved_at,
@@ -115,6 +102,7 @@ export function useMyOffers() {
     received: q.data?.received ?? [],
     sent: q.data?.sent ?? [],
     isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
     refetch: q.refetch,
   };
 }
@@ -125,10 +113,11 @@ export function useAlbumMatches(albumId: string | undefined) {
     enabled: !!albumId,
     staleTime: 15_000,
     queryFn: async () => {
-      const { data } = await supabase.rpc('fn_album_matches', {
+      const { data, error } = await supabase.rpc('fn_album_matches', {
         p_album_id: albumId!,
         p_limit: 100,
       });
+      if (error) throw toAppError(error);
       return ((data ?? []) as any[]) as AlbumMatch[];
     },
   });

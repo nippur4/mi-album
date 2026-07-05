@@ -2,11 +2,11 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-06-26.
+Última actualización: 2026-07-05.
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 21 migraciones aplicadas (schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, page_color_default_white) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) + `pg_cron` activo.
+**Backend (`supabase/`):** 33 migraciones aplicadas (0001–0033: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, y 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -25,6 +25,28 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-07-04/05 — Refactor dedup + DB + robustez (secciones 1-2 VALIDADAS, sección 3 pendiente de validación)
+
+Salió de una revisión general del proyecto buscando duplicación, optimizaciones de DB y robustez. Tres tandas:
+
+1. **Deduplicación (sección 1, VALIDADO)**:
+   - `components/bottom-sheet.tsx`: componente base de TODOS los modales (Modal + backdrop + sheet + handle + título). Props: `maxHeight`, `footer` (acciones sticky fuera del scroll — preserva el fix del modal de economía), `avoidKeyboard: 'both' | 'ios'`, `dismissable`, `onRequestClose`. Exporta `sheetStyles` (label/hint/error/actions). Los 10 modales migrados. **Modales nuevos: usar BottomSheet, no copiar el esqueleto.**
+   - `lib/edge.ts`: `callEdgeFunction(name, body, { timeoutMs })` — único wrapper para llamar Edge Functions (token + headers + parseo + error `{ error: string }`). Reemplazó 5 fetch duplicados en packs/qr/uploads.
+   - `parseDailyStatus()` en `lib/queries/daily.ts`: único parser del daily crudo de las RPCs.
+   - Edge Functions: boilerplate a `_shared/http.ts` (CORS, jsonOk/jsonError, userClient/adminClient/getCallerId) y `_shared/r2.ts` (putToR2, base64ToBytes). **Fix colateral**: el CORS de `redeem_qr` no permitía el header `apikey` → el preflight fallaba en web.
+   - **Bug fix**: `album-owner-view.tsx` usaba `enableQrForAlbum` sin importarlo (ReferenceError al tocar "Activar QR").
+2. **DB (sección 2, VALIDADO)**:
+   - Migración 0033: índice `user_album_membership(album_id)` (la PK `(user_id, album_id)` no servía para búsquedas por álbum: inventario de matches, member_count admin) + `fn_album_matches` con cap de 5 pares por contraparte vía `row_number()` (antes generaba el producto cartesiano faltantes×repes por usuario antes del limit).
+   - `useMyOffers`: 4 round trips → 1 con embedded resources de PostgREST (hints de FK `trade_offers_*_fkey`; nombres verificables en `database.types.ts` → `Relationships`).
+   - `useIsAdmin` ya no consulta la DB: deriva `is_admin` del `ProfileProvider`.
+3. **Robustez (sección 3, pendiente de validación)**:
+   - Dead code eliminado: `usePublicAlbums`, `useMyMemberAlbums`, keys `qk.albums.member/public`, `qk.trades.offers`, `qk.admin.isAdmin`. Las invalidaciones que apuntaban a `albums.public` ahora invalidan `['home-bundle']` (fix: marcar público desde admin no refrescaba el carrusel del Home).
+   - 9 queries de lectura que silenciaban `error` ahora hacen `if (error) throw toAppError(error)` — patrón obligatorio para queries nuevas.
+   - Pull-to-refresh: los hooks exponen `isRefetching` y las 5 pantallas con RefreshControl lo usan (antes `isLoading`, el spinner se cortaba al instante).
+   - `query-client.ts` cablea `focusManager` a `AppState` (solo nativo): `refetchOnWindowFocus` ahora funciona al volver de background. Los `useFocusEffect` por pantalla siguen (cubren navegación interna).
+   - `console.log` de debugging eliminados de `uploads.ts`.
+   - Baseline de typecheck: 22 errores preexistentes (mayoría `absoluteFillObject`→`absoluteFill` y nulls en params de RPC) — no introducidos por el refactor, quedan como limpieza opcional.
 
 #### Sesión 2026-06-26 (VALIDADO)
 

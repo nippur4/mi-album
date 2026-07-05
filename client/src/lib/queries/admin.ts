@@ -7,8 +7,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
-import { useSession } from '@/lib/auth';
 import { qk } from '@/lib/query-client';
+import { useMyProfile } from '@/lib/queries/profile';
 
 export interface AdminAlbumRow {
   id: string;
@@ -23,22 +23,11 @@ export interface AdminAlbumRow {
   member_count: number;
 }
 
+// El ProfileProvider ya trae is_admin en su fetch del profile — derivamos de
+// ahí en vez de repetir la misma query contra profiles.
 export function useIsAdmin() {
-  const { session } = useSession();
-  const q = useQuery({
-    queryKey: [...qk.admin.isAdmin(), session?.user.id ?? 'anon'] as const,
-    enabled: !!session,
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', session!.user.id)
-        .maybeSingle();
-      return !!data?.is_admin;
-    },
-  });
-  return { isAdmin: q.data ?? false, isLoading: q.isLoading };
+  const { profile, isLoading } = useMyProfile();
+  return { isAdmin: !!profile?.is_admin, isLoading };
 }
 
 export function useAdminAlbums() {
@@ -54,6 +43,7 @@ export function useAdminAlbums() {
   return {
     albums: q.data ?? [],
     isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
     error: q.error ? (q.error as any).message : null,
     refetch: q.refetch,
   };
@@ -73,7 +63,8 @@ export function useSetAlbumPublic() {
       setAlbumPublic(args.albumId, args.isPublic),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.admin.albums() });
-      qc.invalidateQueries({ queryKey: qk.albums.public() });
+      // Los álbumes públicos del Home salen del bundle.
+      qc.invalidateQueries({ queryKey: ['home-bundle'] });
     },
   });
 }

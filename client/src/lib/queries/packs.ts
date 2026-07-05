@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { env } from '@/lib/env';
+import { callEdgeFunction } from '@/lib/edge';
 import { supabase } from '@/lib/supabase';
 
 export interface OpenedSticker {
@@ -28,26 +28,10 @@ export async function fetchNextUnopenedPack(albumId: string): Promise<string | n
 }
 
 export async function openPack(packId: string): Promise<OpenedSticker[]> {
-  const { data: sess } = await supabase.auth.getSession();
-  const token = sess.session?.access_token;
-  if (!token) throw { error: 'auth_required' };
-
-  const res = await fetch(`${env.supabaseUrl}/functions/v1/open_pack`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: env.supabaseAnonKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ pack_id: packId }),
+  const body = await callEdgeFunction<{ stickers?: OpenedSticker[] }>('open_pack', {
+    pack_id: packId,
   });
-  const text = await res.text();
-  let body: any = {};
-  try { body = JSON.parse(text); } catch {}
-  if (!res.ok) {
-    throw { error: body.error ?? `open_pack_failed_${res.status}: ${text.slice(0, 200)}` };
-  }
-  return (body.stickers ?? []) as OpenedSticker[];
+  return body.stickers ?? [];
 }
 
 export async function pasteSticker(stickerId: string) {

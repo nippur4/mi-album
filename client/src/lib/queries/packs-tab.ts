@@ -8,7 +8,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
-import type { DailyPackStatus } from '@/lib/queries/daily';
+import { toAppError } from '@/lib/errors';
+import { parseDailyStatus, type DailyPackStatus } from '@/lib/queries/daily';
 
 export interface PendingPackRow {
   album_id: string;
@@ -42,7 +43,8 @@ export function useMyPacksTabData() {
     enabled: !!uid,
     staleTime: 10_000,
     queryFn: async (): Promise<Bundle> => {
-      const { data } = await supabase.rpc('fn_my_packs_tab_data');
+      const { data, error } = await supabase.rpc('fn_my_packs_tab_data');
+      if (error) throw toAppError(error);
       if (!data) return EMPTY;
       const payload = data as any;
 
@@ -54,25 +56,13 @@ export function useMyPacksTabData() {
         count: Number(r.pending_count ?? 0),
       }));
 
-      const playable: PlayableAlbumRow[] = ((payload.playable_albums ?? []) as any[]).map((r) => {
-        const d = r.daily ?? {};
-        const enabled = !!d.enabled;
-        const nextMs = d.next_available_at ? new Date(d.next_available_at).getTime() : null;
-        const canClaim = enabled && (nextMs === null || nextMs <= Date.now());
-        return {
-          album_id: r.album_id,
-          album_name: r.album_name,
-          cover_thumb_key: r.cover_thumb_key,
-          pack_thumb_key: r.pack_thumb_key,
-          daily: {
-            enabled,
-            canClaim,
-            nextAvailableAt: nextMs,
-            count: Number(d.count ?? 1),
-            cooldownHours: Number(d.cooldown_hours ?? 24),
-          },
-        };
-      });
+      const playable: PlayableAlbumRow[] = ((payload.playable_albums ?? []) as any[]).map((r) => ({
+        album_id: r.album_id,
+        album_name: r.album_name,
+        cover_thumb_key: r.cover_thumb_key,
+        pack_thumb_key: r.pack_thumb_key,
+        daily: parseDailyStatus(r.daily),
+      }));
 
       return { pending, playable };
     },

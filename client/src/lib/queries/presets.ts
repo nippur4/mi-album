@@ -7,6 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { toAppError } from '@/lib/errors';
 import { qk } from '@/lib/query-client';
 
 export type PresetKind = 'cover' | 'pack' | 'avatar';
@@ -30,12 +31,13 @@ export function useActivePresets(kind: PresetKind) {
     queryKey: qk.presets.byKind(kind),
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('preset_images')
         .select('*')
         .eq('kind', kind)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
+      if (error) throw toAppError(error);
       return (data ?? []) as PresetImage[];
     },
   });
@@ -56,6 +58,7 @@ export function useAdminPresets() {
   return {
     items: q.data ?? [],
     isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
     error: q.error ? (q.error as any).message : null,
     refetch: q.refetch,
   };

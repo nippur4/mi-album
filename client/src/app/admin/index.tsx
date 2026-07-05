@@ -23,7 +23,7 @@ import { errorMessage } from '@/lib/errors';
 
 export default function AdminScreen() {
   const router = useRouter();
-  const { albums, isLoading, error, refetch } = useAdminAlbums();
+  const { albums, isLoading, isRefetching, error, refetch } = useAdminAlbums();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -44,7 +44,7 @@ export default function AdminScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
         }
       >
         <Pressable

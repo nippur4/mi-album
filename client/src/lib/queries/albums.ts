@@ -35,7 +35,8 @@ export function useAlbumsProgress(ids: string[]) {
     enabled: ids.length > 0,
     staleTime: 10_000,
     queryFn: async () => {
-      const { data } = await supabase.rpc('fn_album_progress', { p_album_ids: ids });
+      const { data, error } = await supabase.rpc('fn_album_progress', { p_album_ids: ids });
+      if (error) throw toAppError(error);
       const map: Record<string, AlbumProgress> = {};
       for (const row of (data ?? []) as AlbumProgress[]) {
         map[row.album_id] = row;
@@ -46,64 +47,10 @@ export function useAlbumsProgress(ids: string[]) {
   return { progress: q.data ?? {}, refetch: q.refetch };
 }
 
-// Álbumes públicos publicados (RLS los expone a todos). Baja volatilidad.
-export function usePublicAlbums() {
-  const q = useQuery({
-    queryKey: qk.albums.public(),
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('albums')
-        .select('*')
-        .eq('is_public', true)
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .limit(20);
-      return (data ?? []) as Album[];
-    },
-  });
-  return { albums: q.data ?? [], isLoading: q.isLoading, refetch: q.refetch };
-}
-
-// Álbumes donde el usuario se unió (membership) pero NO es el owner.
-// includeHidden=true trae también los álbumes que el jugador ocultó (hidden=true),
-// y en el objeto de cada álbum incluye `__hidden: boolean` para que la UI sepa
-// distinguirlos (marcar con badge, ofrecer unhide, etc.).
-export function useMyMemberAlbums(options?: { includeHidden?: boolean }) {
-  const includeHidden = options?.includeHidden ?? false;
-  const { session } = useSession();
-  const uid = session?.user.id;
-
-  const q = useQuery({
-    queryKey: [...qk.albums.member({ includeHidden }), uid ?? 'anon'] as const,
-    enabled: !!uid,
-    queryFn: async () => {
-      let memQuery = supabase
-        .from('user_album_membership')
-        .select('album_id, hidden')
-        .eq('user_id', uid!);
-      if (!includeHidden) memQuery = memQuery.eq('hidden', false);
-      const { data: memberships } = await memQuery;
-      const ids = (memberships ?? []).map((m: any) => m.album_id);
-      const hiddenByAlbum: Record<string, boolean> = {};
-      for (const m of (memberships ?? []) as any[]) {
-        hiddenByAlbum[m.album_id] = m.hidden === true;
-      }
-      if (ids.length === 0) return [] as (Album & { __hidden?: boolean })[];
-      const { data: albumsData } = await supabase
-        .from('albums')
-        .select('*')
-        .in('id', ids)
-        .neq('status', 'archived')
-        .order('created_at', { ascending: false });
-      return ((albumsData ?? []) as Album[]).map((a) => ({
-        ...a,
-        __hidden: hiddenByAlbum[a.id] === true,
-      }));
-    },
-  });
-  return { albums: q.data ?? [], isLoading: q.isLoading, refetch: q.refetch };
-}
+// Los listados del Home (owned + joined + públicos) salen de useHomeBundle
+// (lib/queries/home.ts). Los hooks individuales que hacían esas queries por
+// separado (usePublicAlbums, useMyMemberAlbums) se eliminaron al quedar sin
+// callers.
 
 // Los álbumes que el usuario actual creó (es decir, donde es owner).
 // includeHidden=true trae también los que el owner archivó (owner_hidden=true).
@@ -131,6 +78,7 @@ export function useMyOwnedAlbums(options?: { includeHidden?: boolean }) {
   return {
     albums: q.data ?? [],
     isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
     error: (q.error as AppError | null) ?? null,
     refetch: q.refetch,
   };
@@ -147,6 +95,7 @@ export function useAlbumDetail(id: string | undefined) {
         supabase.from('stickers').select('*').eq('album_id', id!).order('number', { ascending: true }),
       ]);
       if (albumRes.error) throw toAppError(albumRes.error);
+      if (stickersRes.error) throw toAppError(stickersRes.error);
       return {
         album: (albumRes.data ?? null) as Album | null,
         stickers: (stickersRes.data ?? []) as Sticker[],
@@ -251,8 +200,8 @@ export function useInvalidateAlbums() {
   return {
     detail: (id: string) => qc.invalidateQueries({ queryKey: qk.albums.detail(id) }),
     owned: () => qc.invalidateQueries({ queryKey: ['albums', 'owned'] }),
-    member: () => qc.invalidateQueries({ queryKey: ['albums', 'member'] }),
-    public: () => qc.invalidateQueries({ queryKey: qk.albums.public() }),
+    // Los listados del Home (joined + públicos) viven en el bundle.
+    home: () => qc.invalidateQueries({ queryKey: ['home-bundle'] }),
     progress: () => qc.invalidateQueries({ queryKey: ['albums', 'progress'] }),
     all: () => qc.invalidateQueries({ queryKey: ['albums'] }),
   };

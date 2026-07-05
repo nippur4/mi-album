@@ -33,7 +33,7 @@ import { uploadPresetImage } from '@/lib/queries/uploads';
 import { r2Url } from '@/lib/storage';
 
 export default function AdminPresetsScreen() {
-  const { items, isLoading, error, refetch } = useAdminPresets();
+  const { items, isRefetching, error, refetch } = useAdminPresets();
   const [uploadingFor, setUploadingFor] = useState<PresetKind | null>(null);
   const [renaming, setRenaming] = useState<PresetImage | null>(null);
 
@@ -102,7 +102,7 @@ export default function AdminPresetsScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.red} />
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
         }
       >
         {error && (

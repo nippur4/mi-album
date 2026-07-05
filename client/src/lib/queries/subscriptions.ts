@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
+import { toAppError } from '@/lib/errors';
 import { qk } from '@/lib/query-client';
 
 export function useIsPro() {
@@ -16,11 +17,12 @@ export function useIsPro() {
     // Cambia solo por compra o expiración — poca frecuencia, cacheamos duro.
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('status, expires_at')
         .eq('user_id', session!.user.id)
         .maybeSingle();
+      if (error) throw toAppError(error);
       return (
         !!data &&
         (data.status === 'active' || data.status === 'in_grace') &&

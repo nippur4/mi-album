@@ -9,7 +9,18 @@
 //   - Data que solo cambia por mutation nuestra (profile, isPro): Infinity
 //     (se invalida manualmente al mutar)
 
-import { QueryClient } from '@tanstack/react-query';
+import { AppState, Platform } from 'react-native';
+import { focusManager, QueryClient } from '@tanstack/react-query';
+
+// React Native no emite eventos de window focus, así que refetchOnWindowFocus
+// era un no-op en nativo: le enseñamos a react-query a usar AppState (app
+// vuelve a foreground → queries stale refetchean). En web el listener default
+// (visibilitychange) ya funciona, no lo pisamos.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (status) => {
+    focusManager.setFocused(status === 'active');
+  });
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,8 +46,6 @@ export const queryClient = new QueryClient({
 export const qk = {
   albums: {
     owned: (opts?: { includeHidden?: boolean }) => ['albums', 'owned', opts?.includeHidden ?? false] as const,
-    member: (opts?: { includeHidden?: boolean }) => ['albums', 'member', opts?.includeHidden ?? false] as const,
-    public: () => ['albums', 'public'] as const,
     detail: (id: string | undefined) => ['albums', 'detail', id] as const,
     progress: (ids: string[]) => ['albums', 'progress', ids.slice().sort().join(',')] as const,
   },
@@ -53,7 +62,6 @@ export const qk = {
     isPro: () => ['subscription', 'is-pro'] as const,
   },
   admin: {
-    isAdmin: () => ['admin', 'is-admin'] as const,
     albums: () => ['admin', 'albums'] as const,
     presets: (kind: string) => ['admin', 'presets', kind] as const,
   },
@@ -61,7 +69,6 @@ export const qk = {
     byKind: (kind: string) => ['presets', kind] as const,
   },
   trades: {
-    offers: (kind: 'received' | 'sent') => ['trades', 'offers', kind] as const,
     matches: (albumId: string, stickerId?: string) => ['trades', 'matches', albumId, stickerId ?? 'all'] as const,
   },
 };

@@ -45,6 +45,7 @@ import { proFeatureHint } from '@/lib/upsell-copy';
 import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage } from '@/lib/queries/uploads';
+import { enableQrForAlbum } from '@/lib/queries/qr';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {

@@ -12,10 +12,12 @@ import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme
 import { signOut, useSession } from '@/lib/auth';
 import { useIsAdmin } from '@/lib/queries/admin';
 import { updateAvatar, useMyProfile } from '@/lib/queries/profile';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 export default function ProfileTab() {
   const router = useRouter();
+  const isDesktop = useIsDesktop();
   const { session } = useSession();
   const { profile, refetch } = useMyProfile();
   const { isAdmin } = useIsAdmin();
@@ -36,7 +38,7 @@ export default function ProfileTab() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.inner}>
+      <ScrollView contentContainerStyle={[styles.inner, isDesktop && styles.innerDesktop]}>
         <Text style={styles.title}>Perfil</Text>
 
         {/* Avatar grande + tap para cambiar */}
@@ -109,6 +111,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     paddingVertical: Spacing.xxl,
     gap: Spacing.md,
+  },
+  // Desktop: el perfil es un formulario — capeado angosto y centrado.
+  innerDesktop: {
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
     fontFamily: FontFamily.display,

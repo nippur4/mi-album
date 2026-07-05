@@ -14,6 +14,7 @@ import { useSession } from '@/lib/auth';
 import { unhideAlbumByPlayer, useAlbumsProgress } from '@/lib/queries/albums';
 import { useHomeBundle } from '@/lib/queries/home';
 import { useMyProfile } from '@/lib/queries/profile';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 export default function HomeTab() {
@@ -33,6 +34,7 @@ export default function HomeTab() {
   }, []);
   const { session } = useSession();
   const { profile } = useMyProfile();
+  const isDesktop = useIsDesktop();
   const [showHidden, setShowHidden] = useState(false);
   // Bundle: owned + joined (con __hidden) + public en 1 sola RPC.
   // Antes eran 3 queries separadas.
@@ -41,7 +43,7 @@ export default function HomeTab() {
     joined: joinedAll,
     publics,
     refetch: refetchHome,
-    isLoading,
+    isRefetching,
   } = useHomeBundle();
 
   // Filtramos client-side según el toggle
@@ -88,7 +90,7 @@ export default function HomeTab() {
         contentContainerStyle={[styles.scroll, { paddingBottom: Spacing.xxl + kbHeight }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refreshAll} tintColor={Colors.red} />
+          <RefreshControl refreshing={isRefetching} onRefresh={refreshAll} tintColor={Colors.red} />
         }
       >
         {/* Header con avatar del user */}
@@ -151,7 +153,7 @@ export default function HomeTab() {
             const href = isOwn ? `/album/${album.id}?as=player` : `/album/${album.id}`;
             const tag = isHidden ? 'OCULTO' : isOwn ? 'TUYO' : undefined;
             return (
-              <View key={album.id} style={{ gap: 4 }}>
+              <View key={album.id} style={[{ gap: 4 }, isDesktop && styles.gridItem]}>
                 <AlbumCard
                   album={album}
                   progress={progress}
@@ -184,7 +186,7 @@ export default function HomeTab() {
               {inProgress.length > 0 && (
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>Donde jugás</Text>
-                  <View style={{ gap: Spacing.listGap }}>
+                  <View style={[styles.cardList, isDesktop && styles.cardGrid]}>
                     {inProgress.map(renderCard)}
                   </View>
                 </View>
@@ -196,7 +198,7 @@ export default function HomeTab() {
                     <Text style={styles.sectionLabel}>Completados</Text>
                     <Text style={styles.sectionTag}>100%</Text>
                   </View>
-                  <View style={{ gap: Spacing.listGap }}>
+                  <View style={[styles.cardList, isDesktop && styles.cardGrid]}>
                     {completed.map(renderCard)}
                   </View>
                 </View>
@@ -233,17 +235,21 @@ export default function HomeTab() {
           </Pressable>
         )}
 
-        <JoinCodeInput
-          onJoined={(albumId) => router.push(`/album/${albumId}`)}
-          onInputFocus={() => {
-            // Esperamos a que el teclado termine de aparecer (~300ms en iOS y
-            // ~250ms en Android) antes de scrollear, así el layout ya se
-            // recortó y scrollToEnd nos deja el input arriba del teclado.
-            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
-          }}
-        />
+        {/* En desktop el bloque de acciones se capea a ancho mobile centrado —
+            un input de código de 1000px de ancho no tiene sentido. */}
+        <View style={isDesktop ? styles.actionsDesktop : styles.actionsMobile}>
+          <JoinCodeInput
+            onJoined={(albumId) => router.push(`/album/${albumId}`)}
+            onInputFocus={() => {
+              // Esperamos a que el teclado termine de aparecer (~300ms en iOS y
+              // ~250ms en Android) antes de scrollear, así el layout ya se
+              // recortó y scrollToEnd nos deja el input arriba del teclado.
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
+            }}
+          />
 
-        <Button label="Crear álbum nuevo" variant="outline" onPress={() => router.push('/album/new')} />
+          <Button label="Crear álbum nuevo" variant="outline" onPress={() => router.push('/album/new')} />
+        </View>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -301,6 +307,30 @@ const styles = StyleSheet.create({
   },
   carouselContent: {
     paddingVertical: Spacing.xs,
+  },
+  cardList: {
+    gap: Spacing.listGap,
+  },
+  // Desktop: las cards de álbum en grilla de ~3 columnas en vez de lista.
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  gridItem: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    maxWidth: 360,
+  },
+  // El wrapper mantiene el mismo gap que el scroll para que en mobile el
+  // espaciado entre input y botón no cambie respecto a cuando eran hermanos.
+  actionsMobile: {
+    gap: Spacing.xl,
+  },
+  actionsDesktop: {
+    gap: Spacing.xl,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   empty: {
     paddingVertical: Spacing.xl,

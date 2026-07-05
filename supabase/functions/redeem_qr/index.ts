@@ -10,14 +10,8 @@
 //   4xx   { error: string }
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { decodeQrToken } from '../_shared/qr.ts';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { adminClient, CORS, jsonError, jsonOk, userClient } from '../_shared/http.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,10 +45,7 @@ serve(async (req) => {
   }
 
   // Service-role para leer qr_secret (no expuesto vía RLS).
-  const adminSupabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  const adminSupabase = adminClient();
 
   const { data: album, error: albErr } = await adminSupabase
     .from('albums')
@@ -75,11 +66,7 @@ serve(async (req) => {
   if (payload.album_id !== album.id) return jsonError('token_album_mismatch', 400);
 
   // Aplicar con el JWT del caller para que auth.uid() funcione en el RPC.
-  const userSupabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
+  const userSupabase = userClient(authHeader);
 
   const { data: result, error: rpcErr } = await userSupabase.rpc(
     'fn_apply_qr_redeem',
@@ -120,18 +107,4 @@ function peekAlbumId(token: string): string | null {
   } catch {
     return null;
   }
-}
-
-function jsonOk(body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}
-
-function jsonError(code: string, status: number) {
-  return new Response(JSON.stringify({ error: code }), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
 }

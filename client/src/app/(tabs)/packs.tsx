@@ -10,9 +10,11 @@ import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
+import { useIsDesktop } from '@/lib/use-is-desktop';
 
 export default function PacksTab() {
   const router = useRouter();
+  const isDesktop = useIsDesktop();
   // Bundle: pending packs + playable albums (con daily status) en 1 sola RPC.
   // Antes eran 4 queries (pending + owned + joined + daily batch).
   const { pending, playable, refetch } = useMyPacksTabData();
@@ -52,11 +54,15 @@ export default function PacksTab() {
             </Text>
           </View>
         ) : (
-          <View style={{ gap: Spacing.listGap }}>
+          <View style={[styles.rowList, isDesktop && styles.rowGrid]}>
             {pending.map((row) => (
               <Pressable
                 key={row.album_id}
-                style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.pendingRow,
+                  isDesktop && styles.rowGridItem,
+                  pressed && styles.pressed,
+                ]}
                 onPress={() => router.push(`/pack/open?albumId=${row.album_id}`)}
               >
                 <MediaThumb
@@ -84,18 +90,19 @@ export default function PacksTab() {
         {playable.length > 0 && (
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.sectionLabel}>SOBRE DIARIO GRATIS</Text>
-            <View style={{ gap: Spacing.listGap }}>
+            <View style={[styles.rowList, isDesktop && styles.rowGrid]}>
               {playable.map((row) => (
-                <DailyAlbumRow
-                  key={row.album_id}
-                  album={{
-                    id: row.album_id,
-                    name: row.album_name,
-                    pack_thumb_key: row.pack_thumb_key,
-                  }}
-                  status={row.daily}
-                  onClaimed={() => refetch()}
-                />
+                <View key={row.album_id} style={isDesktop ? styles.rowGridItem : undefined}>
+                  <DailyAlbumRow
+                    album={{
+                      id: row.album_id,
+                      name: row.album_name,
+                      pack_thumb_key: row.pack_thumb_key,
+                    }}
+                    status={row.daily}
+                    onClaimed={() => refetch()}
+                  />
+                </View>
               ))}
             </View>
           </View>
@@ -137,6 +144,19 @@ const styles = StyleSheet.create({
     fontSize: FontSize.monoLabelSmall,
     color: Colors.muted,
     letterSpacing: 1.5,
+  },
+  rowList: {
+    gap: Spacing.listGap,
+  },
+  // Desktop: filas en 2 columnas.
+  rowGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  rowGridItem: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    maxWidth: 540,
   },
   empty: {
     paddingTop: Spacing.lg,

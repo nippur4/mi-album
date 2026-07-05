@@ -17,7 +17,7 @@
 //   - Purchases.logIn(user.id)  ← el app_user_id debe ser el auth.users.id (uuid)
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { adminClient, jsonError } from '../_shared/http.ts';
 
 const PRO_ENTITLEMENT = Deno.env.get('REVENUECAT_PRO_ENTITLEMENT_ID') ?? 'pro';
 
@@ -112,10 +112,7 @@ serve(async (req) => {
   }
   const expiresAt = new Date(expiresAtMs).toISOString();
 
-  const admin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  const admin = adminClient();
 
   const { error } = await admin.rpc('fn_subscription_upsert', {
     p_user_id: userId,
@@ -146,11 +143,4 @@ function inferPlan(productId: unknown): SubPlan {
 function isUuid(s: unknown): s is string {
   return typeof s === 'string'
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-}
-
-function jsonError(code: string, status: number) {
-  return new Response(JSON.stringify({ error: code }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
