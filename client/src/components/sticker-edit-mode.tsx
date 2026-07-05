@@ -121,6 +121,7 @@ export function EditStickerView({ sticker, packConfig }: Props) {
           <View style={{ width: 180 }}>
             <ImageUploadCard
               thumbKey={currentThumbKey}
+              largeKey={pendingKeys?.large_key ?? sticker.large_key}
               label="Foto"
               aspect={[4, 5]}
               onPicked={onPicked}

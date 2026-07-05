@@ -10,6 +10,9 @@ import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 interface Props {
   // key actual de la imagen subida (thumb_key). null si no hay imagen.
   thumbKey: string | null;
+  // key del tamaño grande. Este card renderiza el preview a ancho completo
+  // (~700px en desktop), donde el thumb se pixela — si hay largeKey se usa esa.
+  largeKey?: string | null;
   label: string;
   hint?: string;
   aspect?: [number, number];
@@ -22,6 +25,7 @@ interface Props {
 // Estado lleno = imagen + tap para reemplazar.
 export function ImageUploadCard({
   thumbKey,
+  largeKey,
   label,
   hint,
   aspect = [4, 5],
@@ -65,7 +69,7 @@ export function ImageUploadCard({
     }
   }
 
-  const url = r2Url(thumbKey);
+  const url = r2Url(largeKey ?? thumbKey);
   const isPresetKey = isPreset(thumbKey);
   const showLoader = busy || picking;
   const ratio = aspect[0] / aspect[1];

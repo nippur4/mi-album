@@ -25,13 +25,14 @@ export interface UploadAsset {
 
 // Tamaños target por tipo de imagen. El cliente resizea + comprime.
 // El "thumb" es lo que se renderiza en la mayoría de los lugares (avatares
-// chicos, pickers, listas). En retina 3x un thumb de 160 quedaba pixelado
-// sobre un avatar grande de perfil (120dp = 360px efectivos). 512 cubre
-// hasta avatar de ~170dp sin perder calidad.
+// chicos, pickers, listas). Regla aprendida (avatares 160→512, stickers
+// 300→512): en retina 2x/3x y en las celdas grandes del pager desktop, un
+// thumb chico se estira y pixela. 512 cubre celdas de hasta ~250dp @2x.
+// Las imágenes ya subidas mantienen su tamaño viejo hasta re-subirse.
 const SIZES: Record<ImageKind | 'avatar', { thumb: number; large: number }> = {
-  cover:   { thumb: 400, large: 1200 },
-  pack:    { thumb: 400, large: 1200 },
-  sticker: { thumb: 300, large: 1000 },
+  cover:   { thumb: 512, large: 1200 },
+  pack:    { thumb: 512, large: 1200 },
+  sticker: { thumb: 512, large: 1000 },
   avatar:  { thumb: 512, large: 1024 },
 };
 const JPEG_QUALITY = 0.85;

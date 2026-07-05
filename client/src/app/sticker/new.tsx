@@ -23,9 +23,11 @@ import { useAlbumDetail } from '@/lib/queries/albums';
 import { addSticker, type Rarity } from '@/lib/queries/stickers';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
+import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
 export default function NewStickerScreen() {
+  const desktopCap = useDesktopCap(560);
   const { albumId, number: numberParam } = useLocalSearchParams<{
     albumId: string;
     number?: string;
@@ -114,12 +116,15 @@ export default function NewStickerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScreenHeader title="Nueva figurita" back />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <View style={desktopCap}>
+        <ScreenHeader title="Nueva figurita" back />
+      </View>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]} keyboardShouldPersistTaps="handled">
         <View style={styles.imageRow}>
           <View style={{ width: 180 }}>
             <ImageUploadCard
               thumbKey={keys?.thumb_key ?? null}
+              largeKey={keys?.large_key ?? null}
               label="Foto"
               aspect={[4, 5]}
               onPicked={onPicked}

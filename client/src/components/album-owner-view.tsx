@@ -422,6 +422,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 <View style={styles.imageCol}>
                   <ImageUploadCard
                     thumbKey={album.cover_thumb_key}
+                    largeKey={album.cover_large_key}
                     label="Carátula"
                     hint="4:5"
                     aspect={[4, 5]}
@@ -435,6 +436,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 <View style={styles.imageCol}>
                   <ImageUploadCard
                     thumbKey={album.pack_thumb_key}
+                    largeKey={album.pack_large_key}
                     label="Sobre"
                     hint="3:4"
                     aspect={[3, 4]}

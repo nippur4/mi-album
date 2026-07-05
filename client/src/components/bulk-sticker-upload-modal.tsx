@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
@@ -26,6 +26,15 @@ interface Progress {
   currentNumber: number | null;
 }
 
+// Resumen final de la corrida. Se muestra DENTRO del modal: Alert.alert es
+// un no-op en react-native-web, así que en web el resumen por Alert nunca
+// aparecía y el modal volvía a su estado inicial sin feedback.
+interface Summary {
+  done: number;
+  failed: number;
+  lastError: string | null;
+}
+
 // Carga masiva: el owner selecciona N imágenes del rollo y se asignan a los
 // próximos N números libres del álbum. Cada imagen se sube + se crea como
 // sticker rarity='common' con name "#NN". El user puede editar cada una
@@ -40,6 +49,7 @@ export function BulkStickerUploadModal({
 }: Props) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   // shouldStop vive en un ref para que el loop async lo lea en vivo (un
   // state quedaría capturado en el closure del loop).
   const shouldStopRef = useRef(false);
@@ -47,6 +57,7 @@ export function BulkStickerUploadModal({
   useEffect(() => {
     if (visible) {
       setProgress(null);
+      setSummary(null);
       shouldStopRef.current = false;
     }
   }, [visible]);
@@ -114,18 +125,18 @@ export function BulkStickerUploadModal({
     setRunning(false);
     setProgress(null);
     onFinished();
-
-    const msg = failed === 0
-      ? `Se cargaron ${done} figuritas.`
-      : `Se cargaron ${done} de ${assets.length}. Fallaron ${failed}.${lastError ? `\n\nÚltimo error: ${lastError}` : ''}`;
-    Alert.alert(failed === 0 ? '¡Listo!' : 'Carga parcial', msg, [
-      { text: 'OK', onPress: onClose },
-    ]);
+    setSummary({ done, failed, lastError });
   }
 
   function requestCancel() {
     if (!running) {
       onClose();
+      return;
+    }
+    // En web Alert.alert no existe (no-op): detenemos directo. Lo ya subido
+    // se conserva igual, así que no es destructivo.
+    if (Platform.OS === 'web') {
+      shouldStopRef.current = true;
       return;
     }
     Alert.alert(
@@ -146,7 +157,29 @@ export function BulkStickerUploadModal({
       dismissable={!running}
       title="Carga masiva"
     >
-      {!running ? (
+      {summary ? (
+        <>
+          <View style={styles.doneRow}>
+            <Feather
+              name={summary.failed === 0 ? 'check-circle' : 'alert-circle'}
+              size={22}
+              color={summary.failed === 0 ? Colors.green : Colors.amberWarn ?? Colors.red}
+            />
+            <Text style={styles.doneTitle}>
+              {summary.failed === 0 ? '¡Listo!' : 'Carga parcial'}
+            </Text>
+          </View>
+          <Text style={styles.body}>
+            Se {summary.done === 1 ? 'cargó' : 'cargaron'} {summary.done} figurita
+            {summary.done === 1 ? '' : 's'}.
+            {summary.failed > 0 ? ` Fallaron ${summary.failed}.` : ''}
+            {summary.lastError ? `\n\nÚltimo error: ${summary.lastError}` : ''}
+          </Text>
+          <View style={sheetStyles.actions}>
+            <Button label="Listo" onPress={onClose} />
+          </View>
+        </>
+      ) : !running ? (
         <>
           <Text style={styles.body}>
             Elegí varias imágenes del rollo y las asignamos a los próximos números
@@ -206,6 +239,18 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     color: Colors.inkSoft,
     lineHeight: 22,
+  },
+  doneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  doneTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '800',
+    color: Colors.ink,
   },
   infoRow: {
     flexDirection: 'row',
