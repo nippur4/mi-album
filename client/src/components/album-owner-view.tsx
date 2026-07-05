@@ -492,41 +492,72 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         )}
 
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionLabel}>
-              FIGURITAS · {stickers.length} / {album.total_stickers}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+          <Text style={styles.sectionLabel}>
+            FIGURITAS · {stickers.length} / {album.total_stickers}
+          </Text>
+
+          {/* Herramientas de edición, todas juntas debajo del contador. */}
+          <View style={styles.toolsRow}>
+            {isDraft && (
+              <>
+                <Pressable
+                  onPress={() => setEditingName(true)}
+                  style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                  hitSlop={6}
+                >
+                  <Feather name="edit-2" size={12} color={Colors.ink} />
+                  <Text style={styles.editPillText}>Editar nombre</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setEditingTotal(true)}
+                  style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                  hitSlop={6}
+                >
+                  <Feather name="hash" size={12} color={Colors.ink} />
+                  <Text style={styles.editPillText}>Editar cantidad</Text>
+                </Pressable>
+              </>
+            )}
+            <Pressable
+              onPress={() => setEditingPages(true)}
+              style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+              hitSlop={6}
+            >
+              <Feather name="layers" size={12} color={Colors.ink} />
+              <Text style={styles.editPillText}>Editar hojas</Text>
+            </Pressable>
+            {isDraft && stickers.length >= 1 && (
               <Pressable
-                onPress={() => setEditingPages(true)}
-                style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+                onPress={toggleReorder}
                 hitSlop={6}
+                style={({ pressed }) => [
+                  styles.editPill,
+                  reorderMode && styles.editPillActive,
+                  pressed && styles.editPillPressed,
+                ]}
               >
-                <Feather name="layers" size={12} color={Colors.ink} />
-                <Text style={styles.editPillText}>Editar hojas</Text>
+                <Feather
+                  name="shuffle"
+                  size={12}
+                  color={reorderMode ? Colors.paper : Colors.ink}
+                />
+                <Text style={[styles.editPillText, reorderMode && styles.editPillTextActive]}>
+                  {reorderMode ? 'Listo, terminé' : 'Reordenar figuritas'}
+                </Text>
               </Pressable>
-              {isDraft && (
-                <>
-                  <Pressable
-                    onPress={() => setEditingName(true)}
-                    style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
-                    hitSlop={6}
-                  >
-                    <Feather name="edit-2" size={12} color={Colors.ink} />
-                    <Text style={styles.editPillText}>Nombre</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setEditingTotal(true)}
-                    style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
-                    hitSlop={6}
-                  >
-                    <Feather name="hash" size={12} color={Colors.ink} />
-                    <Text style={styles.editPillText}>Cantidad</Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
+            )}
           </View>
+
+          {reorderMode && (
+            <Text style={[styles.reorderHint, reorderError && { color: Colors.red }]}>
+              {reorderError ??
+                (swapping
+                  ? 'Moviendo…'
+                  : reorderFrom === null
+                    ? 'Tocá la figurita que querés mover.'
+                    : `#${String(reorderFrom).padStart(3, '0')} → tocá el casillero destino.`)}
+            </Text>
+          )}
 
           {stickers.length === 0 && isDraft ? (
             <View style={styles.emptyHero}>
@@ -569,38 +600,6 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             </View>
           ) : (
             <>
-              {isDraft && stickers.length >= 1 && (
-                <View style={styles.reorderRow}>
-                  <Pressable
-                    onPress={toggleReorder}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.reorderBtn,
-                      reorderMode && styles.reorderBtnActive,
-                      pressed && { opacity: 0.8 },
-                    ]}
-                  >
-                    <Feather
-                      name="shuffle"
-                      size={13}
-                      color={reorderMode ? Colors.paper : Colors.muted}
-                    />
-                    <Text style={[styles.reorderBtnText, reorderMode && styles.reorderBtnTextActive]}>
-                      {reorderMode ? 'Listo' : 'Reordenar'}
-                    </Text>
-                  </Pressable>
-                  {reorderMode && (
-                    <Text style={[styles.reorderHint, reorderError && { color: Colors.red }]}>
-                      {reorderError ??
-                        (swapping
-                          ? 'Moviendo…'
-                          : reorderFrom === null
-                            ? 'Tocá la figurita que querés mover.'
-                            : `#${String(reorderFrom).padStart(3, '0')} → tocá el casillero destino.`)}
-                    </Text>
-                  )}
-                </View>
-              )}
               <AlbumPager
                 totalStickers={album.total_stickers}
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
@@ -889,41 +888,13 @@ const qrStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  // Modo reordenar (grilla draft)
-  reorderRow: {
+  // Fila de herramientas de edición debajo del contador de figuritas.
+  toolsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     flexWrap: 'wrap',
-  },
-  reorderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    backgroundColor: Colors.paper2,
-  },
-  reorderBtnActive: {
-    backgroundColor: Colors.ink,
-    borderColor: Colors.ink,
-  },
-  reorderBtnText: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.monoLabelSmall,
-    color: Colors.muted,
-    letterSpacing: 1.2,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  reorderBtnTextActive: {
-    color: Colors.paper,
+    gap: Spacing.sm,
   },
   reorderHint: {
-    flex: 1,
     fontFamily: FontFamily.body,
     fontSize: FontSize.bodySmall,
     color: Colors.inkSoft,
@@ -1075,11 +1046,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   section: { gap: Spacing.sm },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   sectionLabel: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,
@@ -1108,6 +1074,14 @@ const styles = StyleSheet.create({
   },
   editPillPressed: {
     opacity: 0.7,
+  },
+  // Variante activa (modo reordenar encendido).
+  editPillActive: {
+    backgroundColor: Colors.ink,
+    borderColor: Colors.ink,
+  },
+  editPillTextActive: {
+    color: Colors.paper,
   },
   editPillText: {
     fontFamily: FontFamily.body,
