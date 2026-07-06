@@ -16,7 +16,13 @@ import { StickerCell, StickerCellMissing } from '@/components/sticker-cell';
 import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
-import { hideAlbumByPlayer, type Album, type Sticker } from '@/lib/queries/albums';
+import {
+  hideAlbumByPlayer,
+  joinAlbumByCode,
+  useIsMember,
+  type Album,
+  type Sticker,
+} from '@/lib/queries/albums';
 import { claimDailyPack } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
@@ -51,6 +57,28 @@ export function UserAlbumView({ album, stickers }: Props) {
   // Si el session pertenece al owner del álbum, mostramos link para volver
   // a la vista de gestión (Fase 10).
   const isOwnerViewing = session?.user.id === album.owner_id;
+
+  // Un no-miembro puede llegar acá navegando un álbum público desde el Home.
+  // Ve el álbum como preview + CTA "Unirme" (fn_join_album via share_code,
+  // legible por RLS en álbumes públicos). Hasta unirse no hay daily/pegar.
+  const { isMember, isLoading: memberLoading, refetch: refetchMember } = useIsMember(album.id);
+  const showJoinCta = !memberLoading && !isMember;
+  const [joining, setJoining] = useState(false);
+  const [joinFailed, setJoinFailed] = useState(false);
+
+  async function onJoin() {
+    if (joining) return;
+    setJoining(true);
+    setJoinFailed(false);
+    const { error } = await joinAlbumByCode(album.share_code);
+    setJoining(false);
+    if (error) {
+      // Inline (Alert es no-op en web): el CTA pasa a "Reintentar".
+      setJoinFailed(true);
+      return;
+    }
+    await Promise.all([refetchMember(), refetchSideData()]);
+  }
 
   // FIX: cuando volvemos de /pack/open o /trade/*, el hook no se re-dispara
   // solo (Expo Router conserva el componente en el stack). Refetchamos al
@@ -122,7 +150,8 @@ export function UserAlbumView({ album, stickers }: Props) {
     if (extras > 0) repesCount += extras;
   }
   const missingCount = album.total_stickers - myPastedCount - toPasteCount;
-  const isWelcome = myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
+  // Solo miembros: un visitante con colección vacía NO es "recién unido".
+  const isWelcome = isMember && myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
 
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
 
@@ -253,7 +282,7 @@ export function UserAlbumView({ album, stickers }: Props) {
           </View>
         )}
 
-        {(repesCount > 0 || missingCount > 0) && (
+        {isMember && (repesCount > 0 || missingCount > 0) && (
           <Button
             label="Ver cambios posibles"
             variant="outline"
@@ -262,8 +291,9 @@ export function UserAlbumView({ album, stickers }: Props) {
         )}
 
         {/* No mostramos "Ocultar" cuando el owner está en modo player: para él
-            "ocultar" no aplica (siempre lo ve porque también es owner). */}
-        {!isOwnerViewing && (
+            "ocultar" no aplica (siempre lo ve porque también es owner). Los
+            no-miembros tampoco lo ven (no hay membership que ocultar). */}
+        {!isOwnerViewing && isMember && (
           <Pressable
             onPress={onHidePress}
             disabled={hiding}
@@ -278,8 +308,28 @@ export function UserAlbumView({ album, stickers }: Props) {
         )}
       </ScrollView>
 
-      {/* CTA inferior con 3 estados: sobres listos / daily disponible / countdown */}
-      {packsCount > 0 ? (
+      {/* CTA inferior: unirse (no-miembro) / sobres listos / daily / countdown */}
+      {showJoinCta ? (
+        <Pressable
+          onPress={onJoin}
+          disabled={joining}
+          style={({ pressed }) => [
+            styles.packsCta,
+            isDesktop && styles.floatDesktop,
+            { bottom: Math.max(insets.bottom, Spacing.md) },
+            pressed && styles.packsCtaPressed,
+          ]}
+        >
+          <Text style={styles.packsCtaLabel}>
+            {joinFailed ? 'NO SE PUDO\nUNIRTE' : 'EMPEZÁ TU\nCOLECCIÓN'}
+          </Text>
+          <View style={styles.packsCtaAction}>
+            <Text style={styles.packsCtaActionText}>
+              {joining ? '...' : joinFailed ? 'Reintentar' : 'Unirme'}
+            </Text>
+          </View>
+        </Pressable>
+      ) : packsCount > 0 ? (
         <Pressable
           onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
           style={({ pressed }) => [

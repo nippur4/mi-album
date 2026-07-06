@@ -64,6 +64,13 @@ export function useMyPacksTabData() {
         daily: parseDailyStatus(r.daily),
       }));
 
+      // Orden útil para el tab: reclamables ahora primero, después los que
+      // están en countdown (el más próximo arriba).
+      playable.sort((a, b) => {
+        if (a.daily.canClaim !== b.daily.canClaim) return a.daily.canClaim ? -1 : 1;
+        return (a.daily.nextAvailableAt ?? Infinity) - (b.daily.nextAvailableAt ?? Infinity);
+      });
+
       return { pending, playable };
     },
   });

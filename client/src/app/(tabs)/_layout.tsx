@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QrTabModal } from '@/components/qr-tab-modal';
+import { useMyPacksTabData } from '@/lib/queries/packs-tab';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
 
@@ -14,6 +15,13 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const isDesktop = useIsDesktop();
   const [qrModalVisible, setQrModalVisible] = useState(false);
+
+  // Badge de la tab Sobres: sobres sin abrir + dailies reclamables ahora.
+  // Comparte cache (misma query key) con la pantalla del tab.
+  const { pending, playable } = useMyPacksTabData();
+  const packsBadge =
+    pending.reduce((acc, r) => acc + r.count, 0) +
+    playable.filter((r) => r.daily.canClaim).length;
 
   return (
     <>
@@ -75,6 +83,14 @@ export default function TabsLayout() {
           options={{
             title: 'SOBRES',
             tabBarIcon: ({ color }) => <Feather name="mail" size={22} color={color} />,
+            tabBarBadge: packsBadge > 0 ? packsBadge : undefined,
+            tabBarBadgeStyle: {
+              backgroundColor: Colors.red,
+              color: Colors.paper,
+              fontFamily: FontFamily.mono,
+              fontSize: 10,
+              fontWeight: '700',
+            },
           }}
         />
         <Tabs.Screen

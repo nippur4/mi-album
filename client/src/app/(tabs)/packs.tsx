@@ -19,6 +19,9 @@ export default function PacksTab() {
   // Bundle: pending packs + playable albums (con daily status) en 1 sola RPC.
   // Antes eran 4 queries (pending + owned + joined + daily batch).
   const { pending, playable, refetch } = useMyPacksTabData();
+  // Solo álbumes con daily habilitado: DailyAlbumRow renderiza null para los
+  // apagados, pero su wrapper dejaba huecos en el grid desktop.
+  const dailyRows = playable.filter((r) => r.daily.enabled);
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -88,11 +91,11 @@ export default function PacksTab() {
         )}
 
         {/* Sobre diario por álbum jugable */}
-        {playable.length > 0 && (
+        {dailyRows.length > 0 && (
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.sectionLabel}>SOBRE DIARIO GRATIS</Text>
             <View style={[styles.rowList, isDesktop && styles.rowGrid]}>
-              {playable.map((row) => (
+              {dailyRows.map((row) => (
                 <View key={row.album_id} style={isDesktop ? styles.rowGridItem : undefined}>
                   <DailyAlbumRow
                     album={{

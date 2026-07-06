@@ -12,6 +12,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '@/components/avatar';
 import { QrTabModal } from '@/components/qr-tab-modal';
 import { useSession } from '@/lib/auth';
+import { useMyPacksTabData } from '@/lib/queries/packs-tab';
 import { useMyProfile } from '@/lib/queries/profile';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 
@@ -52,6 +53,13 @@ export function DesktopHeader() {
   const [qrOpen, setQrOpen] = useState(false);
   const tabs = buildTabs(() => setQrOpen(true));
 
+  // Badge de SOBRES: sin abrir + dailies reclamables. Misma query key que la
+  // pantalla del tab, así comparten cache e invalidaciones.
+  const { pending, playable } = useMyPacksTabData();
+  const packsBadge =
+    pending.reduce((acc, r) => acc + r.count, 0) +
+    playable.filter((r) => r.daily.canClaim).length;
+
   const displayName =
     profile?.display_name ??
     (session?.user.user_metadata?.display_name as string | undefined) ??
@@ -88,6 +96,11 @@ export function DesktopHeader() {
                   <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
                     {t.label}
                   </Text>
+                  {t.key === 'packs' && packsBadge > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{packsBadge}</Text>
+                    </View>
+                  )}
                 </Pressable>
               );
             })}
@@ -165,6 +178,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.monoLabelSmall,
     color: Colors.muted,
     letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  badge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: Colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    color: Colors.paper,
     fontWeight: '700',
   },
   tabLabelActive: {

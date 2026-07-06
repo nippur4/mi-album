@@ -84,6 +84,30 @@ export function useMyOwnedAlbums(options?: { includeHidden?: boolean }) {
   };
 }
 
+// ¿El caller es miembro de este álbum? Lee su propia fila de membership
+// (RLS membership_select_own). Se usa en la vista user para distinguir
+// "miembro jugando" de "visitante de un álbum público" (que ve el CTA Unirme).
+export function useIsMember(albumId: string | undefined) {
+  const { session } = useSession();
+  const uid = session?.user.id;
+  const q = useQuery({
+    queryKey: ['albums', 'membership', albumId, uid ?? 'anon'] as const,
+    enabled: !!uid && !!albumId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_album_membership')
+        .select('album_id')
+        .eq('album_id', albumId!)
+        .eq('user_id', uid!)
+        .maybeSingle();
+      if (error) throw toAppError(error);
+      return !!data;
+    },
+  });
+  return { isMember: q.data ?? false, isLoading: q.isLoading, refetch: q.refetch };
+}
+
 // Detalle de un álbum: el album + sus stickers cargados (por número).
 export function useAlbumDetail(id: string | undefined) {
   const q = useQuery({

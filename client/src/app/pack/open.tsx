@@ -12,25 +12,42 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/button';
+import { PresetBackground } from '@/components/preset-background';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
+import { useAlbumDetail } from '@/lib/queries/albums';
 import {
   fetchNextUnopenedPack,
   openPack,
   pasteSticker,
   type OpenedSticker,
 } from '@/lib/queries/packs';
-import { r2Url } from '@/lib/storage';
+import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
 type Phase = 'idle' | 'opening' | 'revealed';
 
 export default function OpenPackScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+
+  // El sobre muestra la imagen/preset de sobre del álbum y su nombre real
+  // (antes era un diseño hardcodeado del handoff). Cacheado por react-query
+  // si el user viene del detalle del álbum.
+  const { album } = useAlbumDetail(albumId);
+  const packKey = album?.pack_large_key ?? album?.pack_thumb_key;
+  const packUrl = r2Url(packKey);
+  const packPresetId = packKey && isPreset(packKey) ? presetIdFromKey(packKey) : null;
+  const packSize = Number((album?.pack_config as any)?.pack_size ?? 5);
+  const albumName = (album?.name ?? '').toUpperCase();
+  // Anton grande solo si el nombre entra; nombres largos bajan de cuerpo.
+  const nameSize = albumName.length <= 12 ? 30 : albumName.length <= 26 ? 22 : 17;
 
   const [packId, setPackId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -86,6 +103,8 @@ export default function OpenPackScreen() {
     try {
       const result = await openPack(packId);
       setStickers(result);
+      // El contador de pendientes cambió (badge de la tab Sobres + listados).
+      qc.invalidateQueries({ queryKey: ['packs-tab'] });
       setTimeout(() => setPhase('revealed'), 500);
     } catch (err: any) {
       Alert.alert('No se pudo abrir', errorMessage(err));
@@ -130,7 +149,9 @@ export default function OpenPackScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScreenHeader title=" " back />
-        <ScrollView contentContainerStyle={styles.revealScroll}>
+        <ScrollView
+          contentContainerStyle={[styles.revealScroll, { paddingBottom: 200 + insets.bottom }]}
+        >
           <Text style={styles.revealKicker}>¡{stickers.length} FIGURITAS!</Text>
           <Text style={styles.revealSub}>
             {newCount} nueva{newCount !== 1 ? 's' : ''} · {repeCount} repetida{repeCount !== 1 ? 's' : ''}
@@ -143,7 +164,13 @@ export default function OpenPackScreen() {
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            // Arriba de la barra del sistema (gesture pill o 3 botones Android).
+            { bottom: Math.max(insets.bottom + Spacing.sm, Spacing.xl) },
+          ]}
+        >
           {newCount > 0 && !pasted && (
             <Button
               label={pastingAll ? 'Pegando...' : `Pegar ${newCount} ${newCount === 1 ? 'nueva' : 'nuevas'}`}
@@ -174,17 +201,39 @@ export default function OpenPackScreen() {
         <Text style={styles.idleKicker}>SOBRE DISPONIBLE</Text>
         <Pressable onPress={handleOpen} disabled={phase !== 'idle' || !packId}>
           <Animated.View style={[styles.envelope, envelopeStyle]}>
-            <LinearGradient
-              colors={[Colors.red, Colors.redDark]}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-            />
+            {packUrl ? (
+              <Image source={{ uri: packUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : packPresetId ? (
+              <PresetBackground id={packPresetId} />
+            ) : (
+              <LinearGradient
+                colors={[Colors.red, Colors.redDark]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+              />
+            )}
+            {/* Scrim para que los textos se lean sobre foto/preset */}
+            {(packUrl || packPresetId) && (
+              <LinearGradient
+                colors={['rgba(0,0,0,0.40)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.60)']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+            )}
             <View style={styles.envelopeStripe} />
             <Text style={styles.envelopeBrand}>SOBRE</Text>
             <Text style={styles.envelopeSubBrand}>OFICIAL</Text>
-            <Text style={styles.envelopeBig}>BESTIARIO</Text>
-            <Text style={styles.envelopeFigs}>5 FIGURITAS</Text>
+            <Text
+              style={[styles.envelopeBig, { fontSize: nameSize, lineHeight: nameSize + 3 }]}
+              numberOfLines={3}
+            >
+              {albumName}
+            </Text>
+            <Text style={styles.envelopeFigs}>
+              {packSize} FIGURITA{packSize === 1 ? '' : 'S'}
+            </Text>
           </Animated.View>
         </Pressable>
         <View style={styles.idleHint}>
