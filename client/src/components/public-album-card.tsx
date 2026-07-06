@@ -33,6 +33,10 @@ export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props
     ? `${counter.current}/${counter.total} · ${Math.round((counter.current / counter.total) * 100)}%`
     : `${album.total_stickers}`;
 
+  // El cuerpo del nombre escala según el largo para que entre COMPLETO en la
+  // card (a 26px un nombre largo se comía el "..." a las 3 líneas).
+  const nameSize = album.name.length <= 18 ? 26 : album.name.length <= 32 ? 21 : 17;
+
   return (
     <Pressable onPress={onPress} style={styles.card}>
       {/* Capa de fondo */}
@@ -68,7 +72,12 @@ export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props
 
       {/* Nombre Anton grande + barra + counter */}
       <View style={styles.bottom}>
-        <Text style={styles.name} numberOfLines={3}>{album.name.toUpperCase()}</Text>
+        <Text
+          style={[styles.name, { fontSize: nameSize, lineHeight: nameSize + 2 }]}
+          numberOfLines={4}
+        >
+          {album.name.toUpperCase()}
+        </Text>
         {counter && (
           <>
             <ProgressBar value={progress} variant="gold" trackColor="rgba(0,0,0,0.25)" />

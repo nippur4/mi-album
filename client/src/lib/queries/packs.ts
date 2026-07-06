@@ -48,6 +48,8 @@ export function usePasteSticker(albumId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
       qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+      // Pegar en el álbum de avatares puede desbloquear un avatar.
+      qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
     },
   });
 }

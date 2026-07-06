@@ -44,6 +44,36 @@ export function useActivePresets(kind: PresetKind) {
   return { items: q.data ?? [], isLoading: q.isLoading };
 }
 
+// Estado de desbloqueo de avatares del caller (ver migración 0035).
+// sort_order del preset = número de avatar; free = libres para todos;
+// unlocked = figuritas ya pegadas en el álbum de avatares.
+export interface AvatarUnlocks {
+  albumId: string;
+  albumName: string;
+  free: number[];
+  unlocked: number[];
+}
+
+export function useAvatarUnlocks(enabled = true) {
+  const q = useQuery({
+    queryKey: ['avatars', 'unlocks'] as const,
+    enabled,
+    staleTime: 10_000,
+    queryFn: async (): Promise<AvatarUnlocks> => {
+      const { data, error } = await supabase.rpc('fn_my_avatar_unlocks');
+      if (error) throw toAppError(error);
+      const p = data as any;
+      return {
+        albumId: p?.album_id ?? '',
+        albumName: p?.album_name ?? '',
+        free: (p?.free ?? []) as number[],
+        unlocked: (p?.unlocked ?? []) as number[],
+      };
+    },
+  });
+  return { unlocks: q.data ?? null, isLoading: q.isLoading, isError: q.isError };
+}
+
 // Lista admin (incluye inactive). Vía RPC SECURITY DEFINER.
 export function useAdminPresets() {
   const q = useQuery({
