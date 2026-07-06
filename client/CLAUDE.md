@@ -6,7 +6,7 @@
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 33 migraciones aplicadas (0001–0033: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, y 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
+**Backend (`supabase/`):** 36 migraciones aplicadas (0001–0036: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`, 0034 `fn_swap_sticker_positions`, 0035/0036 avatares desbloqueables `fn_update_avatar` gate + `fn_my_avatar_unlocks`) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -26,7 +26,37 @@
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
 
-#### Sesión 2026-07-04/05 — Refactor dedup + DB + robustez (secciones 1-2 VALIDADAS, sección 3 pendiente de validación)
+#### Sesión 2026-07-05 (parte 2) — Web desktop + features de edición + avatares desbloqueables (VALIDADO, commiteado)
+
+**Objetivo:** aprovechar el ancho en web escritorio SIN afectar mobile (nativo ni web angosto), + varias mejoras de UX pedidas.
+
+1. **Layout web desktop con ancho real** (`useIsDesktop()` = web && width ≥ 768; en nativo siempre false):
+   - **Patrón clave (aprendido en 2 iteraciones):** el cap de ancho va sobre el CONTENIDO, no sobre el ScrollView. Si envolvés el ScrollView, la barra de scroll queda flotando en el borde del cap (mal). Solución: ScrollView full-bleed (todo el ancho) + `contentContainerStyle={[styles.scroll, desktopCap]}` donde `desktopCap = useDesktopCap(n)` (helper nuevo en `lib/use-is-desktop.ts`, devuelve `{maxWidth, width:'100%', alignSelf:'center'}` en desktop, `undefined` en mobile). Los bloques fijos fuera del scroll (ScreenHeader, segmented de matches, intro de admin) se envuelven en `<View style={desktopCap}>` para alinear título con contenido.
+   - **Caps por pantalla:** tabs 1080 (alineado con DesktopHeader), álbum owner/user 760, trade 720, admin 960, forms (sticker, album/new) 560, login/join 480.
+   - **`DesktopCapped` (componente wrapper)** quedó SOLO para grupos SIN scroll: `(auth)`, `join`, `pack` (este con `backgroundColor={Colors.ink}` full-bleed porque es oscuro). El root layout `_layout.tsx` ya NO capea a 480 (se sacó el `bodyDesktop`).
+   - **Grids en las tabs** (mobile sigue lista vertical): Home "Donde jugás"/"Completados" y Gestionar en ~3 col; Sobres y Cambios en 2 col. Perfil = form capeado 560. Los CTA flotantes de la vista jugador (`position:absolute`) se centran en desktop con `floatDesktop` (maxWidth 760 - padding, marginHorizontal 'auto').
+   - **Fix bug pager:** `album-pager.tsx` medía el ancho con `useWindowDimensions` (ancho de VENTANA) → la hoja desbordaba el cap en desktop. Ahora mide su contenedor con `onLayout`. En mobile la cuenta da idéntica, sin cambio visual.
+
+2. **Feedback en carga masiva** (`bulk-sticker-upload-modal.tsx`): el resumen final usaba `Alert.alert` que **es NO-OP en react-native-web** (regla general: Alert.alert no existe en web). Ahora el resumen (check verde / carga parcial + botón "Listo") se muestra DENTRO del modal. "Detener" en web frena directo (Alert de confirm tampoco existía); en nativo mantiene el confirm.
+
+3. **Calidad de imágenes:** `SIZES` en `uploads.ts` — thumbs subidos a 512 (sticker 300→512, cover/pack 400→512; avatar ya estaba 512). Además `ImageUploadCard` renderiza el preview a ancho completo (~700px desktop) donde el thumb se pixelaba → ahora recibe `largeKey` y usa la versión grande. **Las imágenes ya subidas mantienen su thumb viejo hasta re-subirse.**
+
+4. **Reordenar figuritas** (migración 0034 `fn_swap_sticker_positions`, owner+draft, atómico via número temporal por la unique `(album_id,number)`): swap si destino ocupado, move si vacío. UI: modo "Reordenar figuritas" en la grilla del owner (1er tap elige con highlight gold, 2do tap destino). Wrapper `swapStickerPositions` en `stickers.ts`.
+
+5. **Renombrar álbum en draft:** `edit-album-name-modal.tsx` (sobre BottomSheet). El gate ya existía en `fn_update_album_content` (acepta `p_name`, solo draft), no hizo falta backend.
+
+6. **Herramientas de edición unificadas:** los pills (Editar nombre / Editar cantidad / Editar hojas / Reordenar figuritas) van juntos en una fila `toolsRow` debajo del contador "FIGURITAS · X/Y". Draft muestra los 4; published solo "Editar hojas".
+
+7. **Fix texturas de hoja cortadas en web** (`page-texture.tsx`): un `<svg>` sin width/height explícitos en web cae al tamaño intrínseco default (300×150) → la textura cubría solo un parche. Fix: medir con `onLayout` y pasar px exactos al `<Svg>` y `<Rect>` (sin porcentajes). Además ids de `<Pattern>` únicos por textura (`tex-<key>`) porque en web todos los SVG comparten documento y `url(#tex)` repetido podía resolver al pattern de otro SVG.
+
+8. **Avatares desbloqueables via álbum** (migraciones 0035/0036): gimmick — existe un "álbum de avatares" público (`29a1fa90-85b3-48fc-b452-2b7f64bd327b`) con figuritas 1..30 que espejan los 30 presets de avatar. **Mapeo sin columna nueva: `preset_images.sort_order` (kind='avatar') = número de avatar/figurita** (editable desde admin, ordena el picker). Libres para todos: `{1,4,20,22}` (0036 sumó el 20 al set inicial `{1,4,22}` de 0035). El resto se desbloquea al PEGAR la figurita de ese número. `fn_update_avatar` recreada con gate server-side (`avatar_locked_N`, P0180); `fn_my_avatar_unlocks()` devuelve `{album_id, album_name, free[], unlocked[]}` para el picker. Cliente: `useAvatarUnlocks` en `presets.ts`, `usePasteSticker` invalida `['avatars','unlocks']`. **Picker sin spoiler:** los bloqueados NO muestran imagen ni nombre — solo círculo dashed con candado + número `#NN` a conseguir. El ocultamiento es visual (la URL viaja en la respuesta de presets, RLS pública); suficiente para gimmick. La grilla NO se bloquea si los unlocks fallan/tardan (muestra numerados como bloqueados + nota de error).
+   - **Pendiente de setup admin:** numerar los 30 presets de avatar (sort_order=número), cargar las 30 figuritas 1-30 al álbum de avatares, publicarlo + marcarlo público.
+
+9. **`PublicAlbumCard`:** el font del nombre escala según largo (≤18 chars→26px, ≤32→21px, más→17px) + 4 líneas máx, para que nombres largos ("Completa y desbloquea todos los avatares") se lean completos.
+
+**Baseline typecheck:** sigue en 22 errores preexistentes (absoluteFillObject ×7, nulls en params RPC, router.push tipado). Tras cada migración con RPC nueva aparece 1 error transitorio hasta regenerar tipos (`supabase gen types typescript --linked | Out-File -Encoding utf8 src/lib/database.types.ts` — OJO `Out-File -Encoding utf8`, NO `>` que mete BOM UTF-16).
+
+#### Sesión 2026-07-04/05 — Refactor dedup + DB + robustez (VALIDADO, commiteado)
 
 Salió de una revisión general del proyecto buscando duplicación, optimizaciones de DB y robustez. Tres tandas:
 
@@ -180,6 +210,14 @@ Salió de una revisión general del proyecto buscando duplicación, optimizacion
 29. **Default value matters**: `page_bg_color default 'paper'` (que resolvía al mismo #FBF3E2 del body) era invisible. Cambiamos a `'white'` para que la hoja se distinga del fondo + sumamos border + shadow al rendering. Cuando creás una columna con default, asegurate de que el default produzca un resultado VISIBLE/útil para el user.
 30. **Carga masiva**: `allowsMultipleSelection: true` + `selectionLimit: N` del ImagePicker permite picker múltiple nativo en una pasada. Upload secuencial (no paralelo) para no saturar la Edge Function. Cancel entre items con `useRef` (un state quedaría capturado en el closure del loop).
 
+#### Sesión 2026-07-05 (parte 2)
+
+31. **`Alert.alert` es NO-OP en react-native-web**: cualquier feedback (resumen, confirm, error) que dependa de Alert desaparece en web. Regla: para feedback que deba verse en web, renderizar UI in-place (estado del modal, texto inline) o gatear con `Platform.OS === 'web'`. Aplicado en bulk upload y en el modo reordenar (errores inline, no Alert).
+32. **Cap de ancho desktop sobre el CONTENIDO, no el ScrollView**: envolver el ScrollView deja la barra de scroll flotando en el borde del cap. Patrón correcto: ScrollView full-bleed + `contentContainerStyle={[base, useDesktopCap(n)]}` y bloques fijos externos en `<View style={desktopCap}>`. `useDesktopCap` devuelve undefined en mobile (cero impacto). `DesktopCapped` (wrapper de grupo) solo sirve para grupos sin scroll.
+33. **Medir contenedores con `onLayout`, no `useWindowDimensions`, cuando hay caps de ancho**: window width rompe cualquier layout capeado en desktop (pasó con `album-pager` y con `page-texture`). Medir el contenedor real. En mobile la cuenta da idéntica.
+34. **SVG en web necesita width/height explícitos en px**: un `<svg>`/`<rect>` con porcentajes o sin tamaño cae al intrínseco default (300×150). En native el layout lo resuelve, en web no. Medir con onLayout y pasar px. Además `<Pattern id>` debe ser único por instancia (todos los SVG comparten el documento HTML; `url(#id)` repetido resuelve al primero montado).
+35. **Desbloqueables mapeados con columna existente**: los avatares desbloqueables reusan `preset_images.sort_order` como número de figurita en vez de sumar una columna FK. Menos migración, y el campo ya era editable + servía para ordenar. El gate va server-side en la RPC de escritura (`fn_update_avatar`), el estado para la UI en una RPC de lectura (`fn_my_avatar_unlocks`). Ocultar imágenes "sin spoiler" en el cliente es visual, no seguro (RLS pública deja viajar las URLs) — aceptable para gimmick.
+
 ### Próximo paso concreto
 
 Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat real**. Pasos:
@@ -188,8 +226,14 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 - Pantallas 12 (paywall) + 13 (confirmación pro) del handoff.
 - Test end-to-end con sandbox: comprar → webhook → `subscriptions` row → `useIsPro()` true.
 
+**Setup admin del álbum de avatares (data, no código — pendiente):**
+- Numerar los 30 presets de avatar: `sort_order` = número (1-30) desde Admin → Plantillas.
+- Cargar las 30 figuritas (números 1-30) al álbum `29a1fa90-85b3-48fc-b452-2b7f64bd327b`, publicarlo y marcarlo público desde el admin.
+- Sin esto, el gate de desbloqueo funciona pero no hay figuritas que pegar.
+
 **Limpieza técnica pendiente:**
 - `runOnJS` de Reanimated 4 emite warnings de deprecation. Funciona, no hay drop-in replacement obvio. Esperar Reanimated 5 o revisar al refactor.
+- Baseline de 22 errores de typecheck preexistentes (mayoría `absoluteFillObject`→`absoluteFill` y nulls en params de RPC). No los introdujo ningún refactor reciente; limpieza opcional.
 
 ### Operativas
 
