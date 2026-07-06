@@ -418,6 +418,7 @@ export type Database = {
       user_album_membership: {
         Row: {
           album_id: string
+          daily_muted: boolean
           daily_notified_at: string | null
           hidden: boolean
           joined_at: string
@@ -428,6 +429,7 @@ export type Database = {
         }
         Insert: {
           album_id: string
+          daily_muted?: boolean
           daily_notified_at?: string | null
           hidden?: boolean
           joined_at?: string
@@ -438,6 +440,7 @@ export type Database = {
         }
         Update: {
           album_id?: string
+          daily_muted?: boolean
           daily_notified_at?: string | null
           hidden?: boolean
           joined_at?: string
@@ -546,6 +549,10 @@ export type Database = {
     }
     Functions: {
       _cron_notify_daily_available: { Args: never; Returns: undefined }
+      _fn_album_completed: {
+        Args: { p_album_id: string; p_total: number; p_user: string }
+        Returns: boolean
+      }
       _send_push: {
         Args: {
           p_body: string
@@ -774,6 +781,7 @@ export type Database = {
       fn_home_bundle: { Args: never; Returns: Json }
       fn_is_pro: { Args: { p_user: string }; Returns: boolean }
       fn_join_album: { Args: { p_share_code: string }; Returns: Json }
+      fn_my_avatar_unlocks: { Args: never; Returns: Json }
       fn_my_daily_status: {
         Args: { p_album_ids: string[] }
         Returns: {
@@ -806,6 +814,10 @@ export type Database = {
       fn_rotate_qr_secret: { Args: { p_album_id: string }; Returns: undefined }
       fn_set_album_public: {
         Args: { p_album_id: string; p_is_public: boolean }
+        Returns: undefined
+      }
+      fn_set_daily_muted: {
+        Args: { p_album_id: string; p_muted: boolean }
         Returns: undefined
       }
       fn_subscription_upsert: {

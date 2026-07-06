@@ -36,6 +36,15 @@ export async function claimDailyPack(albumId: string) {
   return supabase.rpc('fn_claim_daily_pack', { p_album_id: albumId });
 }
 
+// Toggle "dejar de recibir sobres diarios" de un álbum (membership.daily_muted).
+// Corta claim + fila del tab Sobres + badge + push del cron.
+export async function setDailyMuted(albumId: string, muted: boolean) {
+  return supabase.rpc('fn_set_daily_muted', {
+    p_album_id: albumId,
+    p_muted: muted,
+  });
+}
+
 // Wrapper de mutation: al reclamar, invalida el bundle Home Sobres y el
 // sidedata del álbum (ambos exponen el daily y packs disponibles).
 export function useClaimDailyPack() {

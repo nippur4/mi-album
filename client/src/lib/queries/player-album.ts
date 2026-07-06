@@ -21,12 +21,15 @@ interface Bundle {
   collection: Map<string, CollectionEntry>;
   packsAvailable: number;
   daily: DailyPackStatus;
+  // El jugador silenció los sobres diarios de este álbum (toggle propio).
+  dailyMuted: boolean;
 }
 
 const EMPTY_BUNDLE: Bundle = {
   collection: new Map(),
   packsAvailable: 0,
   daily: parseDailyStatus(null),
+  dailyMuted: false,
 };
 
 export function usePlayerAlbumSideData(albumId: string | undefined) {
@@ -60,6 +63,7 @@ export function usePlayerAlbumSideData(albumId: string | undefined) {
         collection,
         packsAvailable,
         daily: parseDailyStatus(payload.daily),
+        dailyMuted: !!payload.daily_muted,
       };
     },
   });

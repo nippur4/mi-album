@@ -1,5 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,7 +24,7 @@ import {
   type Album,
   type Sticker,
 } from '@/lib/queries/albums';
-import { claimDailyPack } from '@/lib/queries/daily';
+import { claimDailyPack, setDailyMuted } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
@@ -51,9 +52,26 @@ export function UserAlbumView({ album, stickers }: Props) {
     collection,
     packsAvailable: packsCount,
     daily,
+    dailyMuted,
     refetch: refetchSideData,
   } = usePlayerAlbumSideData(album.id);
   const [claiming, setClaiming] = useState(false);
+  const [muting, setMuting] = useState(false);
+  const qc = useQueryClient();
+
+  async function onToggleMuted() {
+    if (muting) return;
+    setMuting(true);
+    const { error } = await setDailyMuted(album.id, !dailyMuted);
+    setMuting(false);
+    if (error) {
+      Alert.alert('No se pudo cambiar', errorMessage(error));
+      return;
+    }
+    refetchSideData();
+    // El tab Sobres (fila + badge) también cambia con el mute.
+    qc.invalidateQueries({ queryKey: ['packs-tab'] });
+  }
   // Si el session pertenece al owner del álbum, mostramos link para volver
   // a la vista de gestión (Fase 10).
   const isOwnerViewing = session?.user.id === album.owner_id;
@@ -152,6 +170,10 @@ export function UserAlbumView({ album, stickers }: Props) {
   const missingCount = album.total_stickers - myPastedCount - toPasteCount;
   // Solo miembros: un visitante con colección vacía NO es "recién unido".
   const isWelcome = isMember && myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
+  // Completado = todas pegadas → no más daily (el server también lo gatea).
+  const isCompleted = album.total_stickers > 0 && myPastedCount >= album.total_stickers;
+  // El daily solo se ofrece si el jugador no lo silenció y no completó.
+  const dailyActive = !dailyMuted && !isCompleted;
 
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
 
@@ -290,6 +312,23 @@ export function UserAlbumView({ album, stickers }: Props) {
           />
         )}
 
+        {/* Silenciar el sobre diario de este álbum. Solo tiene sentido si el
+            álbum lo ofrece y el jugador no lo completó (completado ya corta
+            solo). El estado real vive en membership.daily_muted. */}
+        {isMember && daily.enabled && !isCompleted && (
+          <Pressable
+            onPress={onToggleMuted}
+            disabled={muting}
+            hitSlop={8}
+            style={({ pressed }) => [styles.hideBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name={dailyMuted ? 'bell' : 'bell-off'} size={13} color={Colors.muted} />
+            <Text style={styles.hideBtnText}>
+              {muting ? '...' : dailyMuted ? 'Volver a recibir sobres' : 'Dejar de recibir sobres'}
+            </Text>
+          </Pressable>
+        )}
+
         {/* No mostramos "Ocultar" cuando el owner está en modo player: para él
             "ocultar" no aplica (siempre lo ve porque también es owner). Los
             no-miembros tampoco lo ven (no hay membership que ocultar). */}
@@ -346,7 +385,7 @@ export function UserAlbumView({ album, stickers }: Props) {
             <Text style={styles.packsCtaActionText}>Abrir</Text>
           </View>
         </Pressable>
-      ) : daily.canClaim ? (
+      ) : dailyActive && daily.canClaim ? (
         <Pressable
           onPress={onClaimDaily}
           disabled={claiming}
@@ -362,7 +401,7 @@ export function UserAlbumView({ album, stickers }: Props) {
             <Text style={styles.packsCtaActionText}>{claiming ? '...' : 'Reclamar'}</Text>
           </View>
         </Pressable>
-      ) : daily.enabled && daily.nextAvailableAt ? (
+      ) : dailyActive && daily.enabled && daily.nextAvailableAt ? (
         <View
           style={[
             styles.dailyCard,
