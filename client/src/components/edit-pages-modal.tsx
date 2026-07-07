@@ -1,6 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme
 import { errorMessage } from '@/lib/errors';
 import {
   buildPages,
+  CELL_ASPECTS,
+  DEFAULT_CELL_ASPECT,
   DEFAULT_PAGE_COLOR,
   DEFAULT_PAGE_LAYOUT,
   DEFAULT_PAGE_ORIENTATION,
@@ -25,6 +28,7 @@ import {
   resolveColor,
   resolveLayout,
   updateAlbumPages,
+  type BuiltPage,
   type PageOrientation,
   type PageOverride,
 } from '@/lib/page-config';
@@ -38,6 +42,10 @@ interface Props {
   numberStart?: number;
   currentBgColor: string;
   currentTexture: string;
+  // Proporción de figurita por defecto (key de CELL_ASPECTS).
+  currentCellAspect?: string;
+  // Composición por defecto (key de PAGE_LAYOUTS).
+  currentLayout?: string;
   currentOverrides: PageOverride[];
   onClose: () => void;
   onSaved: () => void;
@@ -53,12 +61,16 @@ export function EditPagesModal({
   numberStart = 1,
   currentBgColor,
   currentTexture,
+  currentCellAspect = DEFAULT_CELL_ASPECT,
+  currentLayout = DEFAULT_PAGE_LAYOUT,
   currentOverrides,
   onClose,
   onSaved,
 }: Props) {
   const [bgColor, setBgColor] = useState(currentBgColor);
   const [texture, setTexture] = useState(currentTexture);
+  const [cellAspect, setCellAspect] = useState(currentCellAspect);
+  const [layoutKey, setLayoutKey] = useState(currentLayout);
   const [overrides, setOverrides] = useState<PageOverride[]>(currentOverrides);
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -68,16 +80,18 @@ export function EditPagesModal({
     if (visible) {
       setBgColor(currentBgColor);
       setTexture(currentTexture);
+      setCellAspect(currentCellAspect);
+      setLayoutKey(currentLayout);
       setOverrides(currentOverrides);
       setError(null);
       setEditingPage(null);
     }
-  }, [visible, currentBgColor, currentTexture, currentOverrides]);
+  }, [visible, currentBgColor, currentTexture, currentCellAspect, currentLayout, currentOverrides]);
 
   // Recalculamos las páginas en vivo para que el preview refleje los cambios.
   const pages = useMemo(
-    () => buildPages(totalStickers, bgColor, texture, overrides, numberStart),
-    [totalStickers, bgColor, texture, overrides, numberStart],
+    () => buildPages(totalStickers, bgColor, texture, overrides, numberStart, cellAspect, layoutKey),
+    [totalStickers, bgColor, texture, overrides, numberStart, cellAspect, layoutKey],
   );
 
   function getOverride(page: number): PageOverride | undefined {
@@ -94,8 +108,13 @@ export function EditPagesModal({
       if (merged.color) cleaned.color = merged.color;
       if (merged.layout) cleaned.layout = merged.layout;
       if (merged.texture) cleaned.texture = merged.texture;
-      // Si el override solo tiene 'page' (sin color/layout/texture), lo eliminamos.
-      const hasContent = cleaned.color || cleaned.layout || cleaned.texture;
+      if (merged.cellAspect) cleaned.cellAspect = merged.cellAspect;
+      // 'portrait' es el default — solo persistimos landscape. (Antes este
+      // clean directamente descartaba orientation y el chip no persistía.)
+      if (merged.orientation === 'landscape') cleaned.orientation = 'landscape';
+      // Si el override solo tiene 'page', lo eliminamos.
+      const hasContent =
+        cleaned.color || cleaned.layout || cleaned.texture || cleaned.cellAspect || cleaned.orientation;
       if (!hasContent) {
         return prev.filter((o) => o.page !== page);
       }
@@ -111,13 +130,22 @@ export function EditPagesModal({
   function resetAll() {
     setBgColor(DEFAULT_PAGE_COLOR);
     setTexture(DEFAULT_PAGE_TEXTURE);
+    setCellAspect(DEFAULT_CELL_ASPECT);
+    setLayoutKey(DEFAULT_PAGE_LAYOUT);
     setOverrides([]);
   }
 
   async function onSave() {
     setError(null);
     setSaving(true);
-    const { error: rpcErr } = await updateAlbumPages(albumId, bgColor, texture, overrides);
+    const { error: rpcErr } = await updateAlbumPages(
+      albumId,
+      bgColor,
+      texture,
+      overrides,
+      cellAspect,
+      layoutKey,
+    );
     setSaving(false);
     if (rpcErr) {
       setError(errorMessage(rpcErr));
@@ -140,13 +168,34 @@ export function EditPagesModal({
         </View>
       }
     >
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {editingPage === null ? (
-              <>
+          {editingPage === null ? (
+            /* FlatList y no ScrollView: con álbumes grandes (1001 figus ≈ 84
+               hojas) las filas no-virtualizadas + un SVG de textura por fila
+               trababan el scroll. */
+            <FlatList
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              data={pages}
+              keyExtractor={(p) => String(p.index)}
+              initialNumToRender={12}
+              windowSize={7}
+              removeClippedSubviews
+              renderItem={({ item: p }) => {
+                const ov = getOverride(p.index);
+                const hasOverride = !!(
+                  ov && (ov.color || ov.layout || ov.texture || ov.orientation || ov.cellAspect)
+                );
+                return (
+                  <PageRowItem
+                    page={p}
+                    hasOverride={hasOverride}
+                    onPress={() => setEditingPage(p.index)}
+                  />
+                );
+              }}
+              ListHeaderComponent={
+                <View style={styles.listHeader}>
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>COLOR DE HOJA POR DEFECTO</Text>
                   <View style={styles.colorRow}>
@@ -178,74 +227,87 @@ export function EditPagesModal({
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>HOJAS · {pages.length}</Text>
+                  <Text style={styles.sectionLabel}>TAMAÑO DE FIGURITA</Text>
                   <Text style={styles.hint}>
-                    Tocá una hoja para cambiar su color o composición.
+                    Elegí la proporción que mejor le queda a tus imágenes.
                   </Text>
-                  <View style={styles.pageList}>
-                    {pages.map((p) => {
-                      const ov = getOverride(p.index);
-                      const hasOverride = !!(ov && (ov.color || ov.layout || ov.texture || ov.orientation));
-                      return (
-                        <Pressable
-                          key={p.index}
-                          onPress={() => setEditingPage(p.index)}
-                          style={({ pressed }) => [
-                            styles.pageRow,
-                            pressed && styles.pageRowPressed,
-                          ]}
-                        >
-                          <View
-                            style={[
-                              styles.pagePreview,
-                              { backgroundColor: resolveColor(p.colorKey) },
-                            ]}
-                          >
-                            <PageTexture texture={p.textureKey} opacity={0.22} />
-                            <LayoutPreviewGrid
-                              cols={p.layout.cols}
-                              rows={p.layout.rows}
-                              orientation={p.orientation}
-                              cellColor="rgba(42,30,22,0.18)"
-                            />
-                          </View>
-                          <View style={styles.pageText}>
-                            <Text style={styles.pageTitle}>
-                              Hoja {p.index + 1}
-                            </Text>
-                            <Text style={styles.pageMeta}>
-                              {p.layout.name}
-                              {p.orientation === 'landscape' ? ' · horizontal' : ''}
-                              {' · '}
-                              {p.numbers.length} figus
-                            </Text>
-                            {hasOverride && (
-                              <Text style={styles.overrideBadge}>PERSONALIZADA</Text>
-                            )}
-                          </View>
-                          <Feather name="chevron-right" size={20} color={Colors.muted} />
-                        </Pressable>
-                      );
-                    })}
+                  <View style={styles.aspectRow}>
+                    {CELL_ASPECTS.map((a) => (
+                      <AspectChip
+                        key={a.key}
+                        label={a.name}
+                        ratio={a.ratio}
+                        selected={cellAspect === a.key}
+                        onPress={() => setCellAspect(a.key)}
+                      />
+                    ))}
                   </View>
                 </View>
 
-                {(bgColor !== DEFAULT_PAGE_COLOR || overrides.length > 0) && (
-                  <Pressable onPress={resetAll} style={styles.resetBtn}>
-                    <Text style={styles.resetText}>Restablecer todo al default</Text>
-                  </Pressable>
-                )}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>COMPOSICIÓN POR DEFECTO</Text>
+                  <Text style={styles.hint}>
+                    La grilla que usan todas las hojas (salvo las personalizadas).
+                  </Text>
+                  <View style={styles.layoutList}>
+                    {PAGE_LAYOUTS.map((l) => (
+                      <Pressable
+                        key={l.key}
+                        onPress={() => setLayoutKey(l.key)}
+                        style={({ pressed }) => [
+                          styles.layoutCard,
+                          layoutKey === l.key && styles.layoutCardSelected,
+                          pressed && styles.layoutCardPressed,
+                        ]}
+                      >
+                        <View style={styles.layoutPreview}>
+                          <LayoutPreviewGrid cols={l.cols} rows={l.rows} orientation="portrait" />
+                        </View>
+                        <Text style={styles.layoutName}>{l.name}</Text>
+                        <Text style={styles.layoutCap}>{l.capacity} figus</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
 
-                {error && <Text style={styles.error}>{error}</Text>}
-              </>
-            ) : (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionLabel}>HOJAS · {pages.length}</Text>
+                    <Text style={styles.hint}>
+                      Tocá una hoja para cambiar su color o composición.
+                    </Text>
+                  </View>
+                </View>
+              }
+              ListFooterComponent={
+                <>
+                  {(bgColor !== DEFAULT_PAGE_COLOR ||
+                    texture !== DEFAULT_PAGE_TEXTURE ||
+                    cellAspect !== DEFAULT_CELL_ASPECT ||
+                    layoutKey !== DEFAULT_PAGE_LAYOUT ||
+                    overrides.length > 0) && (
+                    <Pressable onPress={resetAll} style={styles.resetBtn}>
+                      <Text style={styles.resetText}>Restablecer todo al default</Text>
+                    </Pressable>
+                  )}
+                  {error && <Text style={styles.error}>{error}</Text>}
+                </>
+              }
+            />
+          ) : (
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
               <PageEditor
                 page={editingPage}
                 override={getOverride(editingPage)}
                 defaultColor={bgColor}
+                defaultLayout={layoutKey}
                 onSetColor={(color) => setOverride(editingPage, { color })}
                 onSetLayout={(layout) => setOverride(editingPage, { layout })}
                 onSetTexture={(t) => setOverride(editingPage, { texture: t })}
+                onSetCellAspect={(a) => setOverride(editingPage, { cellAspect: a })}
                 onSetOrientation={(o) => setOverride(editingPage, { orientation: o })}
                 onClear={() => {
                   setOverrides((prev) => prev.filter((o) => o.page !== editingPage));
@@ -253,19 +315,61 @@ export function EditPagesModal({
                 }}
                 onBack={() => setEditingPage(null)}
               />
-            )}
-          </ScrollView>
+            </ScrollView>
+          )}
     </BottomSheet>
   );
 }
+
+// Fila de la lista de hojas. Memoizada: con álbumes grandes hay ~84 filas y
+// cada una lleva un SVG de textura — sin memo, cada tap re-renderizaba todas.
+const PageRowItem = memo(function PageRowItem({
+  page: p,
+  hasOverride,
+  onPress,
+}: {
+  page: BuiltPage;
+  hasOverride: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.pageRow, pressed && styles.pageRowPressed]}
+    >
+      <View style={[styles.pagePreview, { backgroundColor: resolveColor(p.colorKey) }]}>
+        <PageTexture texture={p.textureKey} opacity={0.22} />
+        <LayoutPreviewGrid
+          cols={p.layout.cols}
+          rows={p.layout.rows}
+          orientation={p.orientation}
+          cellColor="rgba(42,30,22,0.18)"
+        />
+      </View>
+      <View style={styles.pageText}>
+        <Text style={styles.pageTitle}>Hoja {p.index + 1}</Text>
+        <Text style={styles.pageMeta}>
+          {p.layout.name}
+          {p.orientation === 'landscape' ? ' · horizontal' : ''}
+          {' · '}
+          {p.numbers.length} figus
+        </Text>
+        {hasOverride && <Text style={styles.overrideBadge}>PERSONALIZADA</Text>}
+      </View>
+      <Feather name="chevron-right" size={20} color={Colors.muted} />
+    </Pressable>
+  );
+});
 
 function PageEditor({
   page,
   override,
   defaultColor,
+  defaultLayout,
   onSetColor,
   onSetLayout,
   onSetTexture,
+  onSetCellAspect,
   onSetOrientation,
   onClear,
   onBack,
@@ -273,16 +377,19 @@ function PageEditor({
   page: number;
   override?: PageOverride;
   defaultColor: string;
+  defaultLayout: string;
   onSetColor: (color: string | undefined) => void;
   onSetLayout: (layout: string | undefined) => void;
   onSetTexture: (t: string | undefined) => void;
+  onSetCellAspect: (a: string | undefined) => void;
   onSetOrientation: (o: PageOrientation | undefined) => void;
   onClear: () => void;
   onBack: () => void;
 }) {
   const selectedColor = override?.color;
-  const selectedLayout = override?.layout ?? DEFAULT_PAGE_LAYOUT;
+  const selectedLayout = override?.layout ?? defaultLayout;
   const selectedTexture = override?.texture;
+  const selectedCellAspect = override?.cellAspect;
   const selectedOrientation: PageOrientation = override?.orientation ?? DEFAULT_PAGE_ORIENTATION;
   const layoutObj = resolveLayout(selectedLayout);
   const canPickOrientation = !!layoutObj.supportsLandscape;
@@ -340,13 +447,36 @@ function PageEditor({
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionLabel}>TAMAÑO DE FIGURITA EN ESTA HOJA</Text>
+        <Text style={styles.hint}>Sin marcar = usa el tamaño por defecto.</Text>
+        <View style={styles.aspectRow}>
+          <AspectChip
+            label="Default"
+            ratio={null}
+            selected={!selectedCellAspect}
+            onPress={() => onSetCellAspect(undefined)}
+          />
+          {CELL_ASPECTS.map((a) => (
+            <AspectChip
+              key={a.key}
+              label={a.name}
+              ratio={a.ratio}
+              selected={selectedCellAspect === a.key}
+              onPress={() => onSetCellAspect(a.key)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionLabel}>COMPOSICIÓN</Text>
         <View style={styles.layoutList}>
           {PAGE_LAYOUTS.map((l) => (
             <Pressable
               key={l.key}
               onPress={() => {
-                const nextKey = l.key === DEFAULT_PAGE_LAYOUT ? undefined : l.key;
+                // Elegir el layout default del álbum = quitar el override.
+                const nextKey = l.key === defaultLayout ? undefined : l.key;
                 onSetLayout(nextKey);
                 // Si el layout nuevo no soporta landscape, limpiamos la
                 // orientación (evita persistir un valor inaplicable).
@@ -397,7 +527,11 @@ function PageEditor({
         </View>
       )}
 
-      {(override?.color || override?.layout || override?.texture || override?.orientation) && (
+      {(override?.color ||
+        override?.layout ||
+        override?.texture ||
+        override?.orientation ||
+        override?.cellAspect) && (
         <Pressable onPress={onClear} style={styles.resetBtn}>
           <Text style={styles.resetText}>Quitar personalización de esta hoja</Text>
         </Pressable>
@@ -407,6 +541,49 @@ function PageEditor({
 }
 
 // Chip visual portrait/landscape para el toggle de orientación.
+// Chip de proporción de figurita: miniatura con el ratio real + label.
+// ratio=null renderiza la opción "Default" (recuadro punteado).
+function AspectChip({
+  label,
+  ratio,
+  selected,
+  onPress,
+}: {
+  label: string;
+  ratio: number | null;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.aspectChip,
+        selected && styles.orientationChipSelected,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <View style={styles.orientationPreviewFrame}>
+        {ratio === null ? (
+          <View style={styles.aspectDefaultShape} />
+        ) : (
+          <View
+            style={{
+              height: 30,
+              width: 30 * ratio,
+              backgroundColor: selected ? Colors.ink : Colors.borderStrong,
+              borderRadius: 2,
+            }}
+          />
+        )}
+      </View>
+      <Text style={[styles.orientationLabel, selected && styles.orientationLabelSelected]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function OrientationChip({
   label,
   orientation,
@@ -683,9 +860,10 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     letterSpacing: 0.5,
   },
-  pageList: {
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+  // Header de la FlatList: las secciones de defaults, con el mismo gap que
+  // tenían como hijos directos del scroll.
+  listHeader: {
+    gap: Spacing.md,
   },
   pageRow: {
     flexDirection: 'row',
@@ -779,6 +957,32 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: Colors.muted,
     letterSpacing: 0.5,
+  },
+  aspectRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  // Como orientationChip pero SIN flex:1: se auto-dimensiona al contenido
+  // (con 4 chips en fila el flex apretaba y el label desbordaba).
+  aspectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  aspectDefaultShape: {
+    height: 30,
+    width: 24,
+    borderRadius: 2,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.borderStrong,
   },
   orientationRow: {
     flexDirection: 'row',

@@ -29,6 +29,13 @@ export const PAGE_COLORS: PageColor[] = [
   { key: 'sage',     name: 'Salvia',   bg: '#C8D8B5' },
   { key: 'slate',    name: 'Pizarra',  bg: '#DDE2E6' },
   { key: 'stone',    name: 'Piedra',   bg: '#C9C2BC' },
+  // Tonos un escalón más oscuros que el resto de la paleta.
+  { key: 'clay',     name: 'Arcilla',  bg: '#C49A6C' },
+  { key: 'grape',    name: 'Uva',      bg: '#9A87B8' },
+  { key: 'pine',     name: 'Pino',     bg: '#8FAF97' },
+  { key: 'wine',     name: 'Vino',     bg: '#A86B7E' },
+  { key: 'ocean',    name: 'Océano',   bg: '#7D93B5' },
+  { key: 'graphite', name: 'Grafito',  bg: '#8A8D94' },
 ];
 
 export const DEFAULT_PAGE_COLOR = 'white';
@@ -99,11 +106,48 @@ export const PAGE_TEXTURES: PageTexture[] = [
 
 export const DEFAULT_PAGE_TEXTURE = 'none';
 
+export interface CellAspect {
+  key: string;
+  name: string;
+  // Relación w/h de la celda (antes de aplicar orientation landscape).
+  ratio: number;
+  // Par [w,h] para el crop del ImagePicker al subir la foto de una figurita.
+  crop: [number, number];
+}
+
+// Proporciones de figurita disponibles. La key se guarda en DB (default a
+// nivel álbum + override por hoja); el ratio se resuelve en cliente.
+// 'tall' existe porque las imágenes generadas tipo carta (2:3) se recortaban
+// en la celda clásica.
+export const CELL_ASPECTS: CellAspect[] = [
+  { key: 'classic', name: 'Clásica',  ratio: 0.82,  crop: [4, 5] },
+  { key: 'tall',    name: 'Carta',    ratio: 2 / 3, crop: [2, 3] },
+  { key: 'square',  name: 'Cuadrada', ratio: 1,     crop: [1, 1] },
+];
+
+export const DEFAULT_CELL_ASPECT = 'classic';
+
+export function resolveCellAspect(key: string | null | undefined): number {
+  return (
+    CELL_ASPECTS.find((a) => a.key === (key ?? DEFAULT_CELL_ASPECT))?.ratio ??
+    CELL_ASPECTS[0].ratio
+  );
+}
+
+export function cellAspectCrop(key: string | null | undefined): [number, number] {
+  return (
+    CELL_ASPECTS.find((a) => a.key === (key ?? DEFAULT_CELL_ASPECT))?.crop ??
+    CELL_ASPECTS[0].crop
+  );
+}
+
 export interface PageOverride {
   page: number;            // 0-indexed
   color?: string;
   layout?: string;
   texture?: string;
+  // Proporción de figurita de esta hoja (key de CELL_ASPECTS).
+  cellAspect?: string;
   // Solo aplica si el layout soporta landscape (ver supportsLandscape).
   // Cuando se persiste 'portrait' es equivalente a no persistirlo (default).
   orientation?: PageOrientation;
@@ -114,6 +158,7 @@ export interface BuiltPage {
   layout: PageLayout;
   colorKey: string;        // resuelto (default si no hay override)
   textureKey: string;
+  cellAspectKey: string;
   orientation: PageOrientation;
   numbers: number[];
 }
@@ -127,6 +172,8 @@ export function buildPages(
   defaultTexture: string,
   overrides: PageOverride[],
   startNumber = 1,
+  defaultCellAspect = DEFAULT_CELL_ASPECT,
+  defaultLayout = DEFAULT_PAGE_LAYOUT,
 ): BuiltPage[] {
   const overrideByPage = new Map<number, PageOverride>();
   for (const o of overrides) overrideByPage.set(o.page, o);
@@ -138,7 +185,7 @@ export function buildPages(
 
   while (n <= lastNumber) {
     const ov = overrideByPage.get(pageIdx);
-    const layout = resolveLayout(ov?.layout);
+    const layout = resolveLayout(ov?.layout ?? defaultLayout);
     const cap = layout.capacity;
     const nums: number[] = [];
     for (let i = 0; i < cap && n <= lastNumber; i++) {
@@ -155,6 +202,7 @@ export function buildPages(
       layout,
       colorKey: ov?.color ?? defaultColor,
       textureKey: ov?.texture ?? defaultTexture,
+      cellAspectKey: ov?.cellAspect ?? defaultCellAspect,
       orientation,
       numbers: nums,
     });
@@ -169,11 +217,15 @@ export async function updateAlbumPages(
   bgColor: string,
   texture: string,
   overrides: PageOverride[],
+  cellAspect: string = DEFAULT_CELL_ASPECT,
+  layout: string = DEFAULT_PAGE_LAYOUT,
 ) {
   return supabase.rpc('fn_update_album_pages', {
     p_album_id: albumId,
     p_bg_color: bgColor,
     p_texture: texture,
+    p_cell_aspect: cellAspect,
+    p_layout: layout,
     p_overrides: overrides as any,
-  });
+  } as any);
 }

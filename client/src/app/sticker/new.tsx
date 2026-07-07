@@ -20,6 +20,7 @@ import { Stepper } from '@/components/stepper';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { albumNumberStart, useAlbumDetail } from '@/lib/queries/albums';
+import { cellAspectCrop } from '@/lib/page-config';
 import { addSticker, type Rarity } from '@/lib/queries/stickers';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
@@ -129,7 +130,8 @@ export default function NewStickerScreen() {
               thumbKey={keys?.thumb_key ?? null}
               largeKey={keys?.large_key ?? null}
               label="Foto"
-              aspect={[4, 5]}
+              // El crop del picker sigue la proporción de figurita del álbum.
+              aspect={cellAspectCrop((album as any)?.page_cell_aspect)}
               onPicked={onPicked}
               busy={uploading}
             />

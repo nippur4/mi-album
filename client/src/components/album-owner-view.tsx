@@ -46,7 +46,12 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackConfig, type TradeConfig } from '@/lib/queries/economy';
 import { proFeatureHint } from '@/lib/upsell-copy';
-import { DEFAULT_PAGE_COLOR, DEFAULT_PAGE_TEXTURE, type PageOverride } from '@/lib/page-config';
+import {
+  DEFAULT_CELL_ASPECT,
+  DEFAULT_PAGE_COLOR,
+  DEFAULT_PAGE_TEXTURE,
+  type PageOverride,
+} from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { swapStickerPositions } from '@/lib/queries/stickers';
 import { useDesktopCap } from '@/lib/use-is-desktop';
@@ -611,6 +616,8 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 numberStart={numberStart}
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
                 pageTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
+                pageCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+                pageLayout={(album as any).page_layout ?? undefined}
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
                 renderCell={(n, cellStyle) => {
                   const s = stickerByNumber.get(n);
@@ -741,6 +748,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         numberStart={numberStart}
         currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
         currentTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
+        currentCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
         currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
         onClose={() => setEditingPages(false)}
         onSaved={refetch}

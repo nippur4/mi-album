@@ -54,6 +54,8 @@ export type Database = {
           pack_large_key: string | null
           pack_thumb_key: string | null
           page_bg_color: string
+          page_cell_aspect: string
+          page_layout: string
           page_overrides: Json
           page_texture: string
           published_at: string | null
@@ -77,6 +79,8 @@ export type Database = {
           pack_large_key?: string | null
           pack_thumb_key?: string | null
           page_bg_color?: string
+          page_cell_aspect?: string
+          page_layout?: string
           page_overrides?: Json
           page_texture?: string
           published_at?: string | null
@@ -100,6 +104,8 @@ export type Database = {
           pack_large_key?: string | null
           pack_thumb_key?: string | null
           page_bg_color?: string
+          page_cell_aspect?: string
+          page_layout?: string
           page_overrides?: Json
           page_texture?: string
           published_at?: string | null
@@ -728,6 +734,8 @@ export type Database = {
           pack_large_key: string | null
           pack_thumb_key: string | null
           page_bg_color: string
+          page_cell_aspect: string
+          page_layout: string
           page_overrides: Json
           page_texture: string
           published_at: string | null
@@ -884,6 +892,8 @@ export type Database = {
         Args: {
           p_album_id: string
           p_bg_color: string
+          p_cell_aspect: string
+          p_layout: string
           p_overrides: Json
           p_texture: string
         }

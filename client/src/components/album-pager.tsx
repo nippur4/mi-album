@@ -15,8 +15,11 @@ import Animated, {
 import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
 import {
   buildPages,
+  DEFAULT_CELL_ASPECT,
   DEFAULT_PAGE_COLOR,
+  DEFAULT_PAGE_LAYOUT,
   DEFAULT_PAGE_TEXTURE,
+  resolveCellAspect,
   resolveColor,
   type BuiltPage,
   type PageOverride,
@@ -33,6 +36,10 @@ interface Props {
   headerLabel?: string;
   pageBgColor?: string;
   pageTexture?: string;
+  // Proporción de figurita por defecto del álbum (key de CELL_ASPECTS).
+  pageCellAspect?: string;
+  // Composición por defecto del álbum (key de PAGE_LAYOUTS).
+  pageLayout?: string;
   pageOverrides?: PageOverride[];
 }
 
@@ -54,6 +61,8 @@ export function AlbumPager({
   headerLabel,
   pageBgColor = DEFAULT_PAGE_COLOR,
   pageTexture = DEFAULT_PAGE_TEXTURE,
+  pageCellAspect = DEFAULT_CELL_ASPECT,
+  pageLayout = DEFAULT_PAGE_LAYOUT,
   pageOverrides = [],
 }: Props) {
   const { width: screenWidth } = useWindowDimensions();
@@ -73,8 +82,9 @@ export function AlbumPager({
   const pageHeight = defaultCellHeight * 4 + Spacing.gridGap * 3 + Spacing.md * 2;
 
   const pages: BuiltPage[] = useMemo(
-    () => buildPages(totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart),
-    [totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart],
+    () =>
+      buildPages(totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart, pageCellAspect, pageLayout),
+    [totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart, pageCellAspect, pageLayout],
   );
   const pageCount = Math.max(1, pages.length);
 
@@ -221,10 +231,10 @@ function AnimatedPage({
   const { layout, numbers, colorKey, orientation } = page;
   const bg = resolveColor(colorKey);
 
-  // Portrait: aspect original (0.82, más alto que ancho).
-  // Landscape: invertido (~1.22, más ancho que alto). El grid resultante
-  // seguramente termina alineado horizontal en la misma hoja de tamaño fijo.
-  const baseAspect = Layout.gridCellAspect;
+  // Portrait: la proporción configurada de la hoja (clásica 0.82, carta 2:3,
+  // cuadrada 1:1). Landscape: invertida. La hoja mantiene su tamaño fijo:
+  // la lógica de fit de abajo achica las celdas si el grid no entra.
+  const baseAspect = resolveCellAspect(page.cellAspectKey);
   const aspect = orientation === 'landscape' ? 1 / baseAspect : baseAspect;
   const SAFETY_MARGIN = 4;
   const availW = innerWidth - Spacing.gridGap * (layout.cols - 1) - SAFETY_MARGIN;

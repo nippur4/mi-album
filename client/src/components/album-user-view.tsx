@@ -243,6 +243,8 @@ export function UserAlbumView({ album, stickers }: Props) {
             numberStart={albumNumberStart(album)}
             pageBgColor={(album as any).page_bg_color}
             pageTexture={(album as any).page_texture}
+            pageCellAspect={(album as any).page_cell_aspect ?? undefined}
+            pageLayout={(album as any).page_layout ?? undefined}
             pageOverrides={(album as any).page_overrides ?? []}
             renderCell={(n, cellStyle) => {
               const s = stickerByNumber.get(n);
