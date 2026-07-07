@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Pressable,
@@ -15,6 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AlbumPager } from '@/components/album-pager';
 import { BulkStickerUploadModal } from '@/components/bulk-sticker-upload-modal';
+import { DeleteAlbumModal } from '@/components/delete-album-modal';
 import { EditAlbumNameModal } from '@/components/edit-album-name-modal';
 import { EditPagesModal } from '@/components/edit-pages-modal';
 import { Button } from '@/components/button';
@@ -66,6 +68,7 @@ interface Props {
 export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   // Cap desktop en header + contenido del scroll (el ScrollView queda
   // full-bleed para que la barra viva en el borde de la ventana).
   const desktopCap = useDesktopCap(760);
@@ -93,6 +96,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [isJoinedAsPlayer, setIsJoinedAsPlayer] = useState<boolean | null>(null);
   const [joiningToPlay, setJoiningToPlay] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
 
   // Chequeamos membership: null = cargando; true/false = respuesta del backend.
   useEffect(() => {
@@ -687,6 +691,22 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         onSaved={() => refetch()}
       />
 
+      <DeleteAlbumModal
+        visible={deletingAlbum}
+        albumId={album.id}
+        albumName={album.name}
+        sessionEmail={session?.user.email ?? ''}
+        onClose={() => setDeletingAlbum(false)}
+        onDeleted={() => {
+          setDeletingAlbum(false);
+          // El álbum ya no existe: limpiar todo cache que lo liste y salir.
+          qc.invalidateQueries({ queryKey: ['albums'] });
+          qc.invalidateQueries({ queryKey: ['home-bundle'] });
+          qc.invalidateQueries({ queryKey: ['packs-tab'] });
+          router.replace('/(tabs)/album');
+        }}
+      />
+
       <QrPosterModal
         visible={showQr}
         albumId={album.id}
@@ -746,6 +766,16 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               : isArchived
                 ? 'Desarchivar álbum'
                 : 'Archivar álbum'}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setDeletingAlbum(true)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Feather name="trash-2" size={13} color={Colors.red} />
+          <Text style={[styles.archiveBtnText, { color: Colors.red }]}>
+            Eliminar álbum
           </Text>
         </Pressable>
         {isDraft && (

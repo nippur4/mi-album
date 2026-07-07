@@ -2,11 +2,11 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-07-05.
+Última actualización: 2026-07-06.
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 36 migraciones aplicadas (0001–0036: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`, 0034 `fn_swap_sticker_positions`, 0035/0036 avatares desbloqueables `fn_update_avatar` gate + `fn_my_avatar_unlocks`) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
+**Backend (`supabase/`):** 42 migraciones aplicadas (0001–0042: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`, 0034 `fn_swap_sticker_positions`, 0035/0036 avatares desbloqueables `fn_update_avatar` gate + `fn_my_avatar_unlocks`, 0037 fix crítico `_send_push`, 0038 tab Sobres incluye owner-as-player, 0039 `daily_muted` + stop por completado, 0040 cooldown con margen de 1h, 0041 `number_start` para el álbum especial 0..1000, 0042 `fn_delete_album` con confirmación de email) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -25,6 +25,17 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-07-06 — Fixes de flujos + economía de sobres + álbum especial + eliminar álbum (migraciones 0037–0042)
+
+1. **FIX CRÍTICO `_send_push` (0037):** `_send_push` y `fn_register_push_token` referenciaban `profiles.user_id` — la columna es `id`. plpgsql NO valida SQL al crear la función, solo al ejecutar: rotos EN SILENCIO desde 0027 todos los flujos que disparan push (unirse a álbum, crear/resolver oferta de trade, cron del daily) — la transacción entera abortaba. Fix: columna correcta + `_send_push` envuelta en `exception when others then null` — **el push es best-effort y NUNCA puede voltear la transacción de negocio del caller**. Lección: cualquier side-effect no esencial dentro de una RPC va con exception handler.
+2. **Sobre de apertura real** (`pack/open.tsx`): el sobre era un diseño hardcodeado del handoff ("BESTIARIO"). Ahora muestra imagen/preset de sobre del álbum + nombre real (font escala por largo) + pack_size real.
+3. **Unirse a álbum público con botón:** un no-miembro navegando un álbum público veía la vista de jugador rota (welcome banner falso, acciones que fallaban con not_member). Nuevo `useIsMember(albumId)` + CTA flotante "EMPEZÁ TU COLECCIÓN → Unirme" que llama `fn_join_album` con el `share_code` (legible por RLS en públicos, cero backend). Gateados para no-miembros: welcome banner, "Ver cambios posibles", "Ocultar de mi álbum".
+4. **Tab Sobres como tablero completo:** badge rojo en la solapa (mobile `tabBarBadge`) y en el DesktopHeader = sobres sin abrir + dailies reclamables. La 0038 sacó el filtro `owner_id <> uid` del bundle (pre-Fase-10): el signal correcto es la MEMBERSHIP — ahora tus propios álbumes jugados como player aparecen. Orden: reclamables primero, countdowns ascendentes. Footer de pack/open sobre la barra del sistema Android (`useSafeAreaInsets`).
+5. **Dejar de recibir sobres (0039):** dos vías — `membership.daily_muted` (toggle "Dejar de recibir sobres" junto a "Ocultar", reversible) y automática al COMPLETAR el álbum (`_fn_album_completed`: pegadas >= total). Ambas cortan: claim (P0181/P0182), fila y badge del tab Sobres, y push del cron. El QR sigue funcionando (escanear es deliberado). Sobres ya otorgados se conservan.
+6. **Cooldown con margen (0040):** helper único `_fn_daily_interval` = nominal − 1h (diario 24→23 efectivas, semanal 168→167). Los configs guardan el nominal — la UI no cambia. Evita que el user de "todos los días a la misma hora" siempre llegue temprano.
+7. **Álbum especial 0..1000 (0041):** `albums.number_start` (0|1, default 1) — números válidos `start..start+total-1`. Solo el álbum `ecbf4497-e5d7-4732-88a2-75f7b39a2749` tiene start=0 y total=1001 (seteado POR MIGRACIÓN, sin UI a propósito — única excepción). Constraint `stickers.number >= 0`, tope tabla 1001. RPCs (`fn_add_sticker`, `fn_update_album_content`, `fn_swap_sticker_positions`) validan por rango. Cliente: helper `albumNumberStart(album)` + `numberStart` propagado a buildPages/AlbumPager/carga masiva/sticker-new/EditTotal — default 1, cero impacto en álbumes normales.
+8. **Eliminar álbum (0042):** `fn_delete_album(album_id, confirm_email)` — triple defensa: modal paso 1 (advertencia de consecuencias + sugerencia de archivar), paso 2 (tipear el email de la cuenta), y el server valida el email contra el JWT (`P0200`). El DELETE cascadea por FKs (stickers → colecciones de jugadores, memberships, packs, ofertas). Link rojo "Eliminar álbum" junto a "Archivar" en la vista owner; post-delete invalida caches y vuelve a Gestionar.
 
 #### Sesión 2026-07-05 (parte 2) — Web desktop + features de edición + avatares desbloqueables (VALIDADO, commiteado)
 
@@ -232,6 +243,7 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 - Sin esto, el gate de desbloqueo funciona pero no hay figuritas que pegar.
 
 **Limpieza técnica pendiente:**
+- **Imágenes huérfanas en R2 (decisión consciente, sin proceso de limpieza).** La DB guarda solo keys y NUNCA se borra nada de R2. Quedan huérfanas en 4 flujos: (1) eliminar álbum (0042) — todas sus keys bajo `albums/<albumId>/...`; (2) eliminar figurita (`fn_delete_sticker`) — su thumb+large; (3) re-subir cualquier imagen (cover/pack/sticker/avatar/preset) — la versión anterior queda colgada porque cada upload genera uuid nuevo; (4) borrar preset admin. Costo hoy: despreciable (keys aisladas que nadie referencia, R2 cobra por GB). Si algún día molesta, el fix natural es una Edge Function "garbage collector" con `aws4fetch` (list por prefijo + delete): para álbumes borrados basta borrar el prefijo `albums/<albumId>/` — conviene registrar los ids borrados en una tablita `deleted_albums` al momento del DELETE si se quiere hacer async, o compararlo contra `select id from albums`. Para los reemplazos sueltos haría falta listar R2 completo y diffear contra las keys vivas en DB (albums.cover/pack keys + stickers.thumb/large + preset_images + profiles.avatar_thumb_key).
 - `runOnJS` de Reanimated 4 emite warnings de deprecation. Funciona, no hay drop-in replacement obvio. Esperar Reanimated 5 o revisar al refactor.
 - Baseline de 22 errores de typecheck preexistentes (mayoría `absoluteFillObject`→`absoluteFill` y nulls en params de RPC). No los introdujo ningún refactor reciente; limpieza opcional.
 
