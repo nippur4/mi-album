@@ -47,6 +47,7 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          number_start: number
           owner_hidden: boolean
           owner_id: string
           pack_config: Json
@@ -69,6 +70,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           name: string
+          number_start?: number
           owner_hidden?: boolean
           owner_id: string
           pack_config?: Json
@@ -91,6 +93,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           name?: string
+          number_start?: number
           owner_hidden?: boolean
           owner_id?: string
           pack_config?: Json
@@ -718,6 +721,7 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          number_start: number
           owner_hidden: boolean
           owner_id: string
           pack_config: Json
@@ -761,6 +765,10 @@ export type Database = {
           p_to_user: string
         }
         Returns: Json
+      }
+      fn_delete_album: {
+        Args: { p_album_id: string; p_confirm_email: string }
+        Returns: undefined
       }
       fn_delete_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
       fn_enforce_expired_subscriptions: { Args: never; Returns: number }
