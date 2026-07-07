@@ -25,6 +25,8 @@ import { PageTexture } from '@/components/page-texture';
 
 interface Props {
   totalStickers: number;
+  // Primer número del álbum (1 salvo el álbum especial que arranca en 0).
+  numberStart?: number;
   // cellStyle viene con el aspectRatio efectivo (respeta orientation de la
   // hoja). El caller debe pasarlo al StickerCell/Empty/Missing como `style`.
   renderCell: (number: number, cellStyle: ViewStyle) => ReactNode;
@@ -47,6 +49,7 @@ const SWIPE_VEL_THRESHOLD = 600;
 // Cada página renderiza con rotateY = interpolate(idx - position).
 export function AlbumPager({
   totalStickers,
+  numberStart = 1,
   renderCell,
   headerLabel,
   pageBgColor = DEFAULT_PAGE_COLOR,
@@ -70,8 +73,8 @@ export function AlbumPager({
   const pageHeight = defaultCellHeight * 4 + Spacing.gridGap * 3 + Spacing.md * 2;
 
   const pages: BuiltPage[] = useMemo(
-    () => buildPages(totalStickers, pageBgColor, pageTexture, pageOverrides),
-    [totalStickers, pageBgColor, pageTexture, pageOverrides],
+    () => buildPages(totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart),
+    [totalStickers, pageBgColor, pageTexture, pageOverrides, numberStart],
   );
   const pageCount = Math.max(1, pages.length);
 

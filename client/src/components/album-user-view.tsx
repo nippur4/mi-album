@@ -18,6 +18,7 @@ import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
 import {
+  albumNumberStart,
   hideAlbumByPlayer,
   joinAlbumByCode,
   useIsMember,
@@ -239,6 +240,7 @@ export function UserAlbumView({ album, stickers }: Props) {
           </Text>
           <AlbumPager
             totalStickers={album.total_stickers}
+            numberStart={albumNumberStart(album)}
             pageBgColor={(album as any).page_bg_color}
             pageTexture={(album as any).page_texture}
             pageOverrides={(album as any).page_overrides ?? []}

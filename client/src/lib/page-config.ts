@@ -120,25 +120,28 @@ export interface BuiltPage {
 
 // Asigna sticker numbers a páginas según los layouts (con overrides).
 // Cada página llena su capacidad y la siguiente sigue desde el último número.
+// startNumber: primer número del álbum (1 salvo el álbum especial 0..1000).
 export function buildPages(
   totalStickers: number,
   defaultColor: string,
   defaultTexture: string,
   overrides: PageOverride[],
+  startNumber = 1,
 ): BuiltPage[] {
   const overrideByPage = new Map<number, PageOverride>();
   for (const o of overrides) overrideByPage.set(o.page, o);
 
   const pages: BuiltPage[] = [];
-  let n = 1;
+  const lastNumber = startNumber + totalStickers - 1;
+  let n = startNumber;
   let pageIdx = 0;
 
-  while (n <= totalStickers) {
+  while (n <= lastNumber) {
     const ov = overrideByPage.get(pageIdx);
     const layout = resolveLayout(ov?.layout);
     const cap = layout.capacity;
     const nums: number[] = [];
-    for (let i = 0; i < cap && n <= totalStickers; i++) {
+    for (let i = 0; i < cap && n <= lastNumber; i++) {
       nums.push(n++);
     }
     // Solo respetamos landscape si el layout lo soporta — evita quedar con

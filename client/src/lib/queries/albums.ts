@@ -19,6 +19,13 @@ import type { Database } from '@/lib/database.types';
 export type Album = Database['public']['Tables']['albums']['Row'];
 export type Sticker = Database['public']['Tables']['stickers']['Row'];
 
+// Primer número de figurita del álbum. Casi siempre 1; el álbum especial de
+// 1001 figuritas usa 0 (números 0..1000) — ver migración 0041. Cast defensivo
+// hasta regenerar tipos.
+export function albumNumberStart(album: Album): number {
+  return ((album as any).number_start as number | null) ?? 1;
+}
+
 export interface AlbumProgress {
   album_id: string;
   total_stickers: number;

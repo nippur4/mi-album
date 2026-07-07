@@ -553,6 +553,10 @@ export type Database = {
         Args: { p_album_id: string; p_total: number; p_user: string }
         Returns: boolean
       }
+      _fn_daily_interval: {
+        Args: { p_cooldown_hours: number }
+        Returns: string
+      }
       _send_push: {
         Args: {
           p_body: string

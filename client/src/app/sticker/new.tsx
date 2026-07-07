@@ -19,7 +19,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Stepper } from '@/components/stepper';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
-import { useAlbumDetail } from '@/lib/queries/albums';
+import { albumNumberStart, useAlbumDetail } from '@/lib/queries/albums';
 import { addSticker, type Rarity } from '@/lib/queries/stickers';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
@@ -38,10 +38,12 @@ export default function NewStickerScreen() {
 
   // Set de números ya ocupados — el Stepper los saltará
   const usedNumbers = new Set(stickers.map((s) => s.number));
+  // Primer número del álbum (1 salvo el especial que arranca en 0).
+  const numberStart = album ? albumNumberStart(album) : 1;
 
   const [number, setNumber] = useState(() => {
     const fromParam = numberParam ? parseInt(numberParam, 10) : NaN;
-    return Number.isFinite(fromParam) && fromParam >= 1 ? fromParam : 1;
+    return Number.isFinite(fromParam) && fromParam >= 0 ? fromParam : 1;
   });
   const [name, setName] = useState('');
   const [rarity, setRarity] = useState<Rarity>('common');
@@ -59,7 +61,8 @@ export default function NewStickerScreen() {
       initialSetRef.current = true;
       return;
     }
-    setNumber(nextFreeNumber(usedNumbers, album.total_stickers));
+    const start = albumNumberStart(album);
+    setNumber(nextFreeNumber(usedNumbers, start, start + album.total_stickers - 1));
     initialSetRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [album, stickers.length]);
@@ -69,12 +72,12 @@ export default function NewStickerScreen() {
     if (!isPro && rarity !== 'common') setRarity('common');
   }, [isPro, rarity]);
 
-  const max = album?.total_stickers ?? 1;
+  const max = album ? numberStart + album.total_stickers - 1 : 1;
   const numberTaken = usedNumbers.has(number);
   const canSubmit =
     !!albumId &&
     name.trim().length > 0 &&
-    number >= 1 &&
+    number >= numberStart &&
     number <= max &&
     !numberTaken &&
     !!keys &&
@@ -138,7 +141,7 @@ export default function NewStickerScreen() {
           <Stepper
             value={number}
             onChange={setNumber}
-            min={1}
+            min={numberStart}
             max={max}
             step={1}
             excluded={usedNumbers}
@@ -191,11 +194,11 @@ export default function NewStickerScreen() {
   );
 }
 
-function nextFreeNumber(used: Set<number>, max: number): number {
-  for (let i = 1; i <= max; i++) {
+function nextFreeNumber(used: Set<number>, from: number, to: number): number {
+  for (let i = from; i <= to; i++) {
     if (!used.has(i)) return i;
   }
-  return max;
+  return to;
 }
 
 const styles = StyleSheet.create({

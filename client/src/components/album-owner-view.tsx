@@ -31,6 +31,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { StickerCell, StickerCellEmpty } from '@/components/sticker-cell';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import {
+  albumNumberStart,
   archiveAlbumByOwner,
   joinAlbumByCode,
   publishAlbum,
@@ -284,7 +285,8 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   }
 
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
-  const gridCells = Array.from({ length: album.total_stickers }, (_, i) => i + 1);
+  // Primer número del álbum (1 salvo el especial 0..1000 — migración 0041).
+  const numberStart = albumNumberStart(album);
 
   function toggleReorder() {
     setReorderMode((v) => !v);
@@ -602,6 +604,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             <>
               <AlbumPager
                 totalStickers={album.total_stickers}
+                numberStart={numberStart}
                 pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
                 pageTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
@@ -668,8 +671,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
       <EditTotalModal
         visible={editingTotal}
         currentTotal={album.total_stickers}
-        minTotal={stickers.reduce((m, s) => Math.max(m, s.number), 1)}
-        maxTotal={isPro ? 1000 : 75}
+        // El total mínimo viene del número más alto ya cargado, mapeado a
+        // cantidad según numberStart (número N ocupa el slot N - start + 1).
+        minTotal={stickers.reduce((m, s) => Math.max(m, s.number - numberStart + 1), 1)}
+        maxTotal={numberStart === 0 ? 1001 : isPro ? 1000 : 75}
         onClose={() => setEditingTotal(false)}
         onSave={onSaveTotal}
       />
@@ -703,6 +708,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         visible={bulkUpload}
         albumId={album.id}
         totalStickers={album.total_stickers}
+        numberStart={numberStart}
         occupiedNumbers={new Set(stickers.map((s) => s.number))}
         onClose={() => setBulkUpload(false)}
         onFinished={refetch}
@@ -712,6 +718,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         visible={editingPages}
         albumId={album.id}
         totalStickers={album.total_stickers}
+        numberStart={numberStart}
         currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
         currentTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
         currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}

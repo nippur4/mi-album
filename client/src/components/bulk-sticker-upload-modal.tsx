@@ -14,6 +14,8 @@ interface Props {
   visible: boolean;
   albumId: string;
   totalStickers: number;
+  // Primer número del álbum (1 salvo el álbum especial que arranca en 0).
+  numberStart?: number;
   occupiedNumbers: Set<number>;   // números ya cargados, se saltean
   onClose: () => void;
   onFinished: () => void;          // refetch del owner view
@@ -43,6 +45,7 @@ export function BulkStickerUploadModal({
   visible,
   albumId,
   totalStickers,
+  numberStart = 1,
   occupiedNumbers,
   onClose,
   onFinished,
@@ -62,9 +65,9 @@ export function BulkStickerUploadModal({
     }
   }, [visible]);
 
-  // Lista de números libres en orden ascendente.
+  // Lista de números libres en orden ascendente (numberStart..último).
   const freeNumbers: number[] = [];
-  for (let n = 1; n <= totalStickers; n++) {
+  for (let n = numberStart; n <= numberStart + totalStickers - 1; n++) {
     if (!occupiedNumbers.has(n)) freeNumbers.push(n);
   }
   const freeCount = freeNumbers.length;

@@ -34,6 +34,8 @@ interface Props {
   visible: boolean;
   albumId: string;
   totalStickers: number;
+  // Primer número del álbum (1 salvo el álbum especial que arranca en 0).
+  numberStart?: number;
   currentBgColor: string;
   currentTexture: string;
   currentOverrides: PageOverride[];
@@ -48,6 +50,7 @@ export function EditPagesModal({
   visible,
   albumId,
   totalStickers,
+  numberStart = 1,
   currentBgColor,
   currentTexture,
   currentOverrides,
@@ -73,8 +76,8 @@ export function EditPagesModal({
 
   // Recalculamos las páginas en vivo para que el preview refleje los cambios.
   const pages = useMemo(
-    () => buildPages(totalStickers, bgColor, texture, overrides),
-    [totalStickers, bgColor, texture, overrides],
+    () => buildPages(totalStickers, bgColor, texture, overrides, numberStart),
+    [totalStickers, bgColor, texture, overrides, numberStart],
   );
 
   function getOverride(page: number): PageOverride | undefined {
