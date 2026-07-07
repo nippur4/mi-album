@@ -301,6 +301,8 @@ export function EditPagesModal({
             >
               <PageEditor
                 page={editingPage}
+                pageCount={pages.length}
+                onNavigate={(i) => setEditingPage(i)}
                 override={getOverride(editingPage)}
                 defaultColor={bgColor}
                 defaultLayout={layoutKey}
@@ -363,6 +365,8 @@ const PageRowItem = memo(function PageRowItem({
 
 function PageEditor({
   page,
+  pageCount,
+  onNavigate,
   override,
   defaultColor,
   defaultLayout,
@@ -375,6 +379,8 @@ function PageEditor({
   onBack,
 }: {
   page: number;
+  pageCount: number;
+  onNavigate: (page: number) => void;
   override?: PageOverride;
   defaultColor: string;
   defaultLayout: string;
@@ -401,10 +407,35 @@ function PageEditor({
 
   return (
     <View>
-      <Pressable onPress={onBack} style={styles.backRow}>
-        <Feather name="chevron-left" size={20} color={Colors.ink} />
-        <Text style={styles.backText}>Hoja {page + 1}</Text>
-      </Pressable>
+      {/* Volver a la lista + paginador de hojas: editar varias seguidas sin
+          volver a la lista (y sin perder el scroll). */}
+      <View style={styles.editorHeaderRow}>
+        <Pressable onPress={onBack} style={styles.backRow}>
+          <Feather name="chevron-left" size={20} color={Colors.ink} />
+          <Text style={styles.backText}>Hojas</Text>
+        </Pressable>
+        <View style={styles.pageNav}>
+          <Pressable
+            onPress={() => onNavigate(page - 1)}
+            disabled={page === 0}
+            hitSlop={8}
+            style={[styles.pageNavBtn, page === 0 && styles.pageNavBtnDisabled]}
+          >
+            <Feather name="chevron-left" size={18} color={Colors.ink} />
+          </Pressable>
+          <Text style={styles.pageNavLabel}>
+            Hoja {page + 1} / {pageCount}
+          </Text>
+          <Pressable
+            onPress={() => onNavigate(page + 1)}
+            disabled={page >= pageCount - 1}
+            hitSlop={8}
+            style={[styles.pageNavBtn, page >= pageCount - 1 && styles.pageNavBtnDisabled]}
+          >
+            <Feather name="chevron-right" size={18} color={Colors.ink} />
+          </Pressable>
+        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>COLOR DE ESTA HOJA</Text>
@@ -647,27 +678,45 @@ function LayoutPreviewGrid({
 }) {
   const baseAspect = ThemeLayout.gridCellAspect;
   const cellAspect = orientation === 'landscape' ? 1 / baseAspect : baseAspect;
-  const cellWidthPct = `${Math.floor((100 - (cols - 1) * 3) / cols)}%` as any;
+  // Fit real dentro del contenedor (misma lógica que el pager): antes las
+  // celdas se dimensionaban solo por ancho y en grillas altas (3×4) la mini
+  // distribución desbordaba el preview — se notó con los colores oscuros.
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  const GAP = 2;
+  let cellW = 0;
+  if (box) {
+    cellW = Math.floor((box.w - GAP * (cols - 1)) / cols);
+    const cellHfromW = cellW / cellAspect;
+    if (cellHfromW * rows + GAP * (rows - 1) > box.h) {
+      const cellH = Math.floor((box.h - GAP * (rows - 1)) / rows);
+      cellW = Math.floor(cellH * cellAspect);
+    }
+  }
   return (
-    <View style={{ flex: 1, gap: 2, alignItems: 'center', justifyContent: 'center' }}>
-      {Array.from({ length: rows }).map((_, r) => (
-        <View
-          key={r}
-          style={{ width: '100%', flexDirection: 'row', gap: 2, justifyContent: 'center' }}
-        >
-          {Array.from({ length: cols }).map((_, c) => (
-            <View
-              key={c}
-              style={{
-                width: cellWidthPct,
-                aspectRatio: cellAspect,
-                backgroundColor: cellColor,
-                borderRadius: 1,
-              }}
-            />
-          ))}
-        </View>
-      ))}
+    <View
+      style={{ flex: 1, gap: GAP, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+      onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+    >
+      {box &&
+        cellW > 0 &&
+        Array.from({ length: rows }).map((_, r) => (
+          <View
+            key={r}
+            style={{ flexDirection: 'row', gap: GAP, justifyContent: 'center' }}
+          >
+            {Array.from({ length: cols }).map((_, c) => (
+              <View
+                key={c}
+                style={{
+                  width: cellW,
+                  aspectRatio: cellAspect,
+                  backgroundColor: cellColor,
+                  borderRadius: 1,
+                }}
+              />
+            ))}
+          </View>
+        ))}
     </View>
   );
 }
@@ -882,6 +931,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: Colors.borderStrong,
+    overflow: 'hidden',
     padding: 4,
   },
   pageText: { flex: 1, gap: 2 },
@@ -905,11 +955,41 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 2,
   },
+  editorHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
   backRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginBottom: Spacing.md,
+  },
+  pageNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  pageNavBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.paper2,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageNavBtnDisabled: {
+    opacity: 0.35,
+  },
+  pageNavLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.ink,
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   backText: {
     fontFamily: FontFamily.body,

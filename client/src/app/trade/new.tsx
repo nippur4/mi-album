@@ -2,7 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
@@ -17,6 +17,7 @@ import type { Sticker } from '@/lib/queries/albums';
 
 export default function NewTradeOfferScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(720);
   const { albumId, toUser, offered, requested } = useLocalSearchParams<{
     albumId: string;
@@ -122,7 +123,13 @@ export default function NewTradeOfferScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          // Arriba de la barra del sistema (3 botones Android / pill de gestos).
+          { paddingBottom: Math.max(insets.bottom + Spacing.sm, Spacing.xl) },
+        ]}
+      >
         <Button
           label={submitting ? 'Enviando...' : 'Enviar oferta'}
           onPress={onSubmit}

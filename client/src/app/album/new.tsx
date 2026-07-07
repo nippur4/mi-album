@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
@@ -19,6 +19,7 @@ const PRO_MAX = 1000;
 
 export default function NewAlbumScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
   const maxStickers = isPro ? PRO_MAX : FREE_MAX;
@@ -85,7 +86,13 @@ export default function NewAlbumScreen() {
         {errMsg && <Text style={styles.error}>{errMsg}</Text>}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          // Arriba de la barra del sistema (3 botones Android / pill de gestos).
+          { paddingBottom: Math.max(insets.bottom + Spacing.sm, Spacing.xl) },
+        ]}
+      >
         <Button label="Crear borrador" onPress={onSubmit} disabled={!canSubmit} loading={submitting} />
         <Text style={styles.fineprint}>
           Después vas a poder cargar las figuritas y la carátula.

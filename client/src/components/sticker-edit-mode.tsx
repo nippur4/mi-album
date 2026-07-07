@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ImageUploadCard } from '@/components/image-upload-card';
@@ -37,6 +37,7 @@ interface Props {
 // Vista de edición de figurita para el owner del álbum (solo en draft).
 export function EditStickerView({ sticker, packConfig }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
 
@@ -157,7 +158,13 @@ export function EditStickerView({ sticker, packConfig }: Props) {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          // Arriba de la barra del sistema (3 botones Android / pill de gestos).
+          { paddingBottom: Math.max(insets.bottom + Spacing.sm, Spacing.xl) },
+        ]}
+      >
         <Button
           label={saving ? 'Guardando...' : 'Guardar cambios'}
           onPress={onSave}

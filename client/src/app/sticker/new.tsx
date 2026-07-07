@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ImageUploadCard } from '@/components/image-upload-card';
@@ -34,6 +34,7 @@ export default function NewStickerScreen() {
     number?: string;
   }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { album, stickers } = useAlbumDetail(albumId);
   const { isPro } = useIsPro();
 
@@ -183,7 +184,13 @@ export default function NewStickerScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          // Arriba de la barra del sistema (3 botones Android / pill de gestos).
+          { paddingBottom: Math.max(insets.bottom + Spacing.sm, Spacing.xl) },
+        ]}
+      >
         <Button
           label={submitting ? 'Guardando...' : 'Cargar figurita'}
           onPress={onSubmit}
