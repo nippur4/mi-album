@@ -749,6 +749,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
         currentTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
         currentCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+        currentLayout={(album as any).page_layout ?? undefined}
         currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
         onClose={() => setEditingPages(false)}
         onSaved={refetch}

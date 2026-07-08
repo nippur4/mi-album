@@ -2,11 +2,11 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-07-06.
+Última actualización: 2026-07-08.
 
 ### Lo que se completó
 
-**Backend (`supabase/`):** 42 migraciones aplicadas (0001–0042: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`, 0034 `fn_swap_sticker_positions`, 0035/0036 avatares desbloqueables `fn_update_avatar` gate + `fn_my_avatar_unlocks`, 0037 fix crítico `_send_push`, 0038 tab Sobres incluye owner-as-player, 0039 `daily_muted` + stop por completado, 0040 cooldown con margen de 1h, 0041 `number_start` para el álbum especial 0..1000, 0042 `fn_delete_album` con confirmación de email) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
+**Backend (`supabase/`):** 45 migraciones aplicadas (0001–0045: schema + RLS + RPCs de owner lifecycle, membership, packs, apply_pack_open, apply_qr_redeem, trades, subscription gates, qr_secret column security, cron jobs, keys-not-urls, album_progress, daily_status_batch, admin_list, display_name unique, pgcrypto search_path + admin list-all, preset_images, avatar_presets, qr_cooldown_iso, album_page_config, archive/hide, push notifications, bundles `fn_my_pending_packs`/`fn_player_album_sidedata`/`fn_my_packs_tab_data`/`fn_home_bundle`, 0033 perf: índice `user_album_membership(album_id)` + cap de pares en `fn_album_matches`, 0034 `fn_swap_sticker_positions`, 0035/0036 avatares desbloqueables `fn_update_avatar` gate + `fn_my_avatar_unlocks`, 0037 fix crítico `_send_push`, 0038 tab Sobres incluye owner-as-player, 0039 `daily_muted` + stop por completado, 0040 cooldown con margen de 1h, 0041 `number_start` para el álbum especial 0..1000, 0042 `fn_delete_album` con confirmación de email, 0043 `page_cell_aspect`, 0044 `page_default_layout`, 0045 `pgrst.db_max_rows=2000` para el álbum especial 1001) + 6 Edge Functions deployadas (`open_pack`, `redeem_qr`, `revenuecat_webhook`, `upload_image`, `generate_qr`, `upload_preset_image`) con helpers compartidos en `_shared/http.ts` y `_shared/r2.ts` + `pg_cron` activo.
 
 **Infra:** proyecto Supabase `baexxbixcrhngbjptlkt` en sa-east-1 + bucket Cloudflare R2 `mi-album-figuritas` con r2.dev público. Secrets cargados: `R2_*` (real) y `REVENUECAT_*` (placeholders).
 
@@ -25,6 +25,16 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-07-08 — FIX álbum especial: PostgREST cortaba la fila 1000 (migración 0045)
+
+**Síntoma:** al cargar la figurita número 1000 del álbum especial (`ecbf4497-e5d7-4732-88a2-75f7b39a2749`, 1001 figuritas numeradas 0..1000) → `23505 duplicate key ... (album_id, number)=(..., 1000) already exists`. Del 0 al 999 cargaban bien.
+
+**Causa raíz — `max_rows` de PostgREST.** El default de Supabase es `max_rows = 1000`: TODA respuesta de listado se corta a 1000 filas. La query de detalle (`from('stickers').select('*').eq('album_id', id).order('number', asc)` en `lib/queries/albums.ts`) venía ordenada por número ascendente, así que devolvía 0..999 y **descartaba en silencio la fila 1000** (la más alta). Secuencia del bug: (1) la carga masiva calcula `freeNumbers` client-side (`numberStart..total-1`, NO de la query capada), así que sí insertó el 1000 en la DB; (2) al recargar, el cliente solo veía 0..999 y mostraba el slot del 1000 como vacío ("+"); (3) al tocarlo, mandaba `number=1000` a `fn_add_sticker` → duplicate porque 1000 ya existía. El especial es el ÚNICO álbum que supera 1000 filas (cap real 1001, constraint en 0041), por eso nadie más lo pegó. Rompía por igual pager/`buildPages`, matches, apertura de sobres y colección del jugador para ese álbum, no solo la carga.
+
+**Fix (0045):** `alter role authenticator set pgrst.db_max_rows = '2000'` + `notify pgrst, 'reload config'`. Sistémico (sube el tope para TODOS los listados, no parche por query). `supabase/config.toml` alineado a `max_rows = 2000` (ese campo es SOLO local; el hosteado se configura por el GUC del rol). Verificado en remoto: `rolconfig` del `authenticator` incluye `pgrst.db_max_rows=2000`. La figurita 1000 siempre estuvo en la DB — solo era invisible; no hubo que re-subir nada, solo refetch del cache de React Query.
+
+**Lección:** cualquier listado sin `.range()`/paginación queda capado a `max_rows`. Con el cap de figuritas en 1001, 2000 da margen holgado sin exponer payloads grandes. Si en el futuro un álbum pudiera superar 2000 filas, hay que paginar o subir de nuevo el GUC.
 
 #### Sesión 2026-07-06 — Fixes de flujos + economía de sobres + álbum especial + eliminar álbum (migraciones 0037–0042)
 
