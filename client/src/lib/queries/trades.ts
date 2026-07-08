@@ -124,6 +124,47 @@ export function useAlbumMatches(albumId: string | undefined) {
   return { matches: q.data ?? [], isLoading: q.isLoading, refetch: q.refetch };
 }
 
+// Reglas de intercambio del álbum para el jugador: si está habilitado, el tope
+// por período y cuántos cambios le quedan. Espeja fn_trade_limit_status.
+export interface TradeLimitStatus {
+  enabled: boolean;
+  unlimited: boolean;
+  count?: number;
+  period?: 'day' | 'week' | 'month';
+  used?: number;
+  remaining?: number;
+}
+
+export function useTradeLimitStatus(albumId: string | undefined) {
+  const q = useQuery({
+    queryKey: ['trades', 'limit-status', albumId ?? ''] as const,
+    enabled: !!albumId,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fn_trade_limit_status', {
+        p_album_id: albumId!,
+      });
+      if (error) throw toAppError(error);
+      return (data ?? null) as TradeLimitStatus | null;
+    },
+  });
+  return { status: q.data ?? null, isLoading: q.isLoading, refetch: q.refetch };
+}
+
+// Settings de intercambio del jugador en un álbum (seguir cambiando con álbum
+// completo / aceptar figuritas que ya tiene). Se editan desde la pantalla CAMBIOS.
+export async function setTradePrefs(
+  albumId: string,
+  tradeWhenComplete: boolean,
+  acceptOwned: boolean,
+) {
+  return supabase.rpc('fn_set_trade_prefs', {
+    p_album_id: albumId,
+    p_trade_when_complete: tradeWhenComplete,
+    p_accept_owned: acceptOwned,
+  });
+}
+
 export async function createTradeOffer(args: {
   album_id: string;
   to_user: string;

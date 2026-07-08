@@ -19,6 +19,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
+import { useTradeLimitStatus } from '@/lib/queries/trades';
 import { r2Url } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { useDesktopCap } from '@/lib/use-is-desktop';
@@ -46,6 +47,8 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   // collection, pero comparte cache con album-user-view — si el user viene
   // desde ahí, no hay round trip extra.
   const { collection } = usePlayerAlbumSideData(sticker.album_id);
+  const { status: tradeLimit } = useTradeLimitStatus(sticker.album_id);
+  const tradesDisabled = tradeLimit?.enabled === false;
   const entry = collection.get(sticker.id);
   const pasted = !!entry?.pasted;
   const quantity = entry?.quantity ?? 0;
@@ -222,9 +225,15 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
         )}
 
         <Button
-          label="Proponer cambio"
+          label={tradesDisabled ? 'Cambios desactivados' : 'Proponer cambio'}
           onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}`)}
+          disabled={tradesDisabled}
         />
+        {tradesDisabled && (
+          <Text style={styles.tradesOffHint}>
+            El creador de este álbum tiene los cambios desactivados.
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -235,6 +244,12 @@ const CARD_H = CARD_W / 0.7;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.ink },
+  tradesOffHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.muted,
+    textAlign: 'center',
+  },
   body: {
     flex: 1,
     alignItems: 'center',

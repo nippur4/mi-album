@@ -58,6 +58,7 @@ export type Database = {
           page_layout: string
           page_overrides: Json
           page_texture: string
+          public_rank: number
           published_at: string | null
           qr_secret: string | null
           retired_at: string | null
@@ -84,6 +85,7 @@ export type Database = {
           page_layout?: string
           page_overrides?: Json
           page_texture?: string
+          public_rank?: number
           published_at?: string | null
           qr_secret?: string | null
           retired_at?: string | null
@@ -110,6 +112,7 @@ export type Database = {
           page_layout?: string
           page_overrides?: Json
           page_texture?: string
+          public_rank?: number
           published_at?: string | null
           qr_secret?: string | null
           retired_at?: string | null
@@ -429,6 +432,7 @@ export type Database = {
       }
       user_album_membership: {
         Row: {
+          accept_owned: boolean
           album_id: string
           daily_muted: boolean
           daily_notified_at: string | null
@@ -436,10 +440,12 @@ export type Database = {
           joined_at: string
           last_daily_claim_at: string | null
           last_qr_redeem_at: string | null
+          trade_when_complete: boolean
           user_id: string
           welcome_granted: boolean
         }
         Insert: {
+          accept_owned?: boolean
           album_id: string
           daily_muted?: boolean
           daily_notified_at?: string | null
@@ -447,10 +453,12 @@ export type Database = {
           joined_at?: string
           last_daily_claim_at?: string | null
           last_qr_redeem_at?: string | null
+          trade_when_complete?: boolean
           user_id: string
           welcome_granted?: boolean
         }
         Update: {
+          accept_owned?: boolean
           album_id?: string
           daily_muted?: boolean
           daily_notified_at?: string | null
@@ -458,6 +466,7 @@ export type Database = {
           joined_at?: string
           last_daily_claim_at?: string | null
           last_qr_redeem_at?: string | null
+          trade_when_complete?: boolean
           user_id?: string
           welcome_granted?: boolean
         }
@@ -629,6 +638,7 @@ export type Database = {
           name: string
           owner_id: string
           owner_name: string
+          public_rank: number
           published_at: string
           status: Database["public"]["Enums"]["album_status"]
           total_stickers: number
@@ -742,6 +752,7 @@ export type Database = {
           page_layout: string
           page_overrides: Json
           page_texture: string
+          public_rank: number
           published_at: string | null
           qr_secret: string | null
           retired_at: string | null
@@ -841,8 +852,20 @@ export type Database = {
         Args: { p_album_id: string; p_is_public: boolean }
         Returns: undefined
       }
+      fn_set_album_public_rank: {
+        Args: { p_album_id: string; p_rank: number }
+        Returns: undefined
+      }
       fn_set_daily_muted: {
         Args: { p_album_id: string; p_muted: boolean }
+        Returns: undefined
+      }
+      fn_set_trade_prefs: {
+        Args: {
+          p_accept_owned: boolean
+          p_album_id: string
+          p_trade_when_complete: boolean
+        }
         Returns: undefined
       }
       fn_subscription_upsert: {
@@ -865,6 +888,7 @@ export type Database = {
         Args: { p_album_id: string; p_trade_config: Json; p_user: string }
         Returns: boolean
       }
+      fn_trade_limit_status: { Args: { p_album_id: string }; Returns: Json }
       fn_unarchive_album_by_owner: {
         Args: { p_album_id: string }
         Returns: undefined

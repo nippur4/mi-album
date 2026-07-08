@@ -21,6 +21,8 @@ export interface AdminAlbumRow {
   published_at: string | null;
   created_at: string;
   member_count: number;
+  // Orden en el carrusel de públicos: mayor = aparece antes (0 = sin fijar).
+  public_rank: number;
 }
 
 // El ProfileProvider ya trae is_admin en su fetch del profile — derivamos de
@@ -53,6 +55,14 @@ export async function setAlbumPublic(albumId: string, isPublic: boolean) {
   return supabase.rpc('fn_set_album_public', {
     p_album_id: albumId,
     p_is_public: isPublic,
+  });
+}
+
+// Fija el orden del álbum en el carrusel de públicos (mayor = antes).
+export async function setAlbumPublicRank(albumId: string, rank: number) {
+  return supabase.rpc('fn_set_album_public_rank', {
+    p_album_id: albumId,
+    p_rank: rank,
   });
 }
 

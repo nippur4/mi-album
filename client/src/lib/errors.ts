@@ -60,6 +60,8 @@ export type AppErrorKey =
   | 'not_offer_party'
   | 'trade_limit_exceeded'
   | 'trades_disabled'
+  | 'trade_complete_disabled'
+  | 'already_owned'
   | 'self_trade_not_allowed'
   | 'to_user_not_member'
   | 'same_sticker_offered_and_requested'
@@ -138,6 +140,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0160: 'invalid_color',
   P0161: 'invalid_overrides',
   P0162: 'invalid_texture',
+  P0183: 'trade_complete_disabled',
+  P0184: 'already_owned',
   P0200: 'email_confirmation_mismatch',
   P0201: 'album_protected',
 };
@@ -213,6 +217,8 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   not_offer_party: 'No participás de esta oferta.',
   trade_limit_exceeded: 'Llegaste al límite de cambios por este período.',
   trades_disabled: 'Los cambios están desactivados en este álbum.',
+  trade_complete_disabled: 'Ese jugador completó el álbum y no está cambiando. Puede activarlo desde Cambios.',
+  already_owned: 'Esa figurita ya la tenés. Activá "aceptar repetidas" en Cambios para recibirla.',
   self_trade_not_allowed: 'No podés intercambiar con vos mismo.',
   to_user_not_member: 'Esa persona no es miembro del álbum.',
   same_sticker_offered_and_requested: 'No podés pedir la misma figurita que ofrecés.',

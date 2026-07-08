@@ -13,6 +13,7 @@ import { Avatar } from '@/components/avatar';
 import { QrTabModal } from '@/components/qr-tab-modal';
 import { useSession } from '@/lib/auth';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
+import { useMyOffers } from '@/lib/queries/trades';
 import { useMyProfile } from '@/lib/queries/profile';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 
@@ -60,6 +61,10 @@ export function DesktopHeader() {
     pending.reduce((acc, r) => acc + r.count, 0) +
     playable.filter((r) => r.daily.canClaim).length;
 
+  // Badge de CAMBIOS: ofertas recibidas pendientes. Misma query key que el tab.
+  const { received } = useMyOffers();
+  const tradesBadge = received.filter((o) => o.status === 'pending').length;
+
   const displayName =
     profile?.display_name ??
     (session?.user.user_metadata?.display_name as string | undefined) ??
@@ -99,6 +104,11 @@ export function DesktopHeader() {
                   {t.key === 'packs' && packsBadge > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{packsBadge}</Text>
+                    </View>
+                  )}
+                  {t.key === 'trades' && tradesBadge > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{tradesBadge}</Text>
                     </View>
                   )}
                 </Pressable>

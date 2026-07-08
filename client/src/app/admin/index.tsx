@@ -18,7 +18,7 @@ import { Avatar } from '@/components/avatar';
 import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { setAlbumPublic, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
+import { setAlbumPublic, setAlbumPublicRank, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
@@ -95,6 +95,9 @@ export default function AdminScreen() {
 function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const [optimistic, setOptimistic] = useState<boolean>(row.is_public);
+  // Orden en el carrusel (mayor = aparece antes). Optimista para respuesta ágil.
+  const [rank, setRank] = useState<number>(row.public_rank);
+  const [rankBusy, setRankBusy] = useState(false);
 
   // Solo álbumes published pueden ser públicos (el RPC también lo enforza).
   const canToggle = row.status === 'published';
@@ -112,25 +115,74 @@ function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: 
     onChanged();
   }
 
+  async function changeRank(delta: number) {
+    const next = Math.max(0, rank + delta);
+    if (next === rank) return;
+    const prev = rank;
+    setRank(next);
+    setRankBusy(true);
+    const { error } = await setAlbumPublicRank(row.id, next);
+    setRankBusy(false);
+    if (error) {
+      setRank(prev);
+      // Inline no hace falta acá (admin desktop-first); Alert cubre native.
+      Alert.alert('No se pudo cambiar el orden', errorMessage(error));
+      return;
+    }
+    onChanged();
+  }
+
   return (
-    <View style={styles.row}>
-      <Avatar source={row.name} size={42} />
-      <View style={styles.center2}>
-        <Text style={styles.name} numberOfLines={1}>{row.name}</Text>
-        <View style={styles.badgeRow}>
-          <StatusBadge variant={row.status as any} />
+    <View style={styles.rowCol}>
+      <View style={styles.row}>
+        <Avatar source={row.name} size={42} />
+        <View style={styles.center2}>
+          <Text style={styles.name} numberOfLines={1}>{row.name}</Text>
+          <View style={styles.badgeRow}>
+            <StatusBadge variant={row.status as any} />
+          </View>
+          <Text style={styles.meta}>
+            {row.total_stickers} figus · @{row.owner_name} · {row.member_count} jugando
+          </Text>
         </View>
-        <Text style={styles.meta}>
-          {row.total_stickers} figus · @{row.owner_name} · {row.member_count} jugando
-        </Text>
+        <Switch
+          value={optimistic}
+          onValueChange={onToggle}
+          disabled={busy || !canToggle}
+          trackColor={{ true: Colors.green, false: Colors.paper3 }}
+          thumbColor={optimistic ? Colors.paper : Colors.paper2}
+        />
       </View>
-      <Switch
-        value={optimistic}
-        onValueChange={onToggle}
-        disabled={busy || !canToggle}
-        trackColor={{ true: Colors.green, false: Colors.paper3 }}
-        thumbColor={optimistic ? Colors.paper : Colors.paper2}
-      />
+
+      {/* Orden del carrusel: solo tiene sentido para públicos. Mayor = antes. */}
+      {optimistic && (
+        <View style={styles.rankRow}>
+          <Text style={styles.rankLabel}>ORDEN EN EL CARRUSEL</Text>
+          <View style={styles.rankControl}>
+            <Pressable
+              onPress={() => changeRank(-1)}
+              disabled={rankBusy || rank === 0}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.rankBtn,
+                (rankBusy || rank === 0) && styles.rankBtnDisabled,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Feather name="minus" size={16} color={Colors.ink} />
+            </Pressable>
+            <Text style={styles.rankValue}>{rank}</Text>
+            <Pressable
+              onPress={() => changeRank(1)}
+              disabled={rankBusy}
+              hitSlop={8}
+              style={({ pressed }) => [styles.rankBtn, pressed && { opacity: 0.6 }]}
+            >
+              <Feather name="plus" size={16} color={Colors.ink} />
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -210,16 +262,59 @@ const styles = StyleSheet.create({
     color: Colors.red,
     textAlign: 'center',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+  rowCol: {
     backgroundColor: Colors.paper2,
     borderRadius: Radius.cardLg,
     borderWidth: 1,
     borderColor: Colors.border,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  rankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.sm,
+  },
+  rankLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+  },
+  rankControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  rankBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.paper,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankBtnDisabled: {
+    opacity: 0.35,
+  },
+  rankValue: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+    minWidth: 24,
+    textAlign: 'center',
   },
   center2: { flex: 1, gap: 4 },
   badgeRow: { flexDirection: 'row', marginVertical: 2 },

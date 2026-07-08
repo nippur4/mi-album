@@ -20,7 +20,7 @@ import { PresetBackground } from '@/components/preset-background';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
-import { useAlbumDetail } from '@/lib/queries/albums';
+import { albumNumberStart, useAlbumDetail } from '@/lib/queries/albums';
 import {
   fetchNextUnopenedPack,
   openPack,
@@ -28,6 +28,7 @@ import {
   type OpenedSticker,
 } from '@/lib/queries/packs';
 import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { initSfx, playSfx } from '@/lib/sfx';
 
 type Phase = 'idle' | 'opening' | 'revealed';
 
@@ -45,6 +46,9 @@ export default function OpenPackScreen() {
   const packUrl = r2Url(packKey);
   const packPresetId = packKey && isPreset(packKey) ? presetIdFromKey(packKey) : null;
   const packSize = Number((album?.pack_config as any)?.pack_size ?? 5);
+  // El álbum especial (number_start=0, 1001 figuritas) no muestra número ni
+  // nombre en la reveal: son irrelevantes ahí y tapan la figurita. Sí la rareza.
+  const hideCardLabels = !!album && albumNumberStart(album) === 0;
   const albumName = (album?.name ?? '').toUpperCase();
   // Anton grande solo si el nombre entra; nombres largos bajan de cuerpo.
   const nameSize = albumName.length <= 12 ? 30 : albumName.length <= 26 ? 22 : 17;
@@ -54,6 +58,9 @@ export default function OpenPackScreen() {
   const [stickers, setStickers] = useState<OpenedSticker[]>([]);
   const [pastingAll, setPastingAll] = useState(false);
   const [pasted, setPasted] = useState(false);
+
+  // Precargar los efectos de sonido al entrar (respetan el silencio del sistema).
+  useEffect(() => { initSfx(); }, []);
 
   // Cargar el próximo pack al entrar
   useEffect(() => {
@@ -90,6 +97,10 @@ export default function OpenPackScreen() {
   async function handleOpen() {
     if (!packId || phase !== 'idle') return;
 
+    // El primer sonido va dentro del gesto del tap: en web eso "desbloquea" el
+    // audio del navegador.
+    playSfx('shake', 0.6);
+
     // Sacudida fuerte y luego open
     shake.value = withSequence(
       withTiming(-12, { duration: 80 }),
@@ -105,12 +116,39 @@ export default function OpenPackScreen() {
       setStickers(result);
       // El contador de pendientes cambió (badge de la tab Sobres + listados).
       qc.invalidateQueries({ queryKey: ['packs-tab'] });
-      setTimeout(() => setPhase('revealed'), 500);
+      setTimeout(() => {
+        // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
+        playSfx('open', 0.95);
+        setPhase('revealed');
+      }, 500);
     } catch (err: any) {
       Alert.alert('No se pudo abrir', errorMessage(err));
       setPhase('idle');
     }
   }
+
+  // Sonido escalonado al revelar: un pop por figurita (mismo timing que la
+  // animación de entrada, index * 110ms), un chime para las nuevas rara+, y
+  // una fanfarria única si salió una épica/legendaria nueva.
+  useEffect(() => {
+    if (phase !== 'revealed' || stickers.length === 0) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    stickers.forEach((s, i) => {
+      timers.push(
+        setTimeout(() => {
+          playSfx('card', 0.5);
+          if (s.was_new && s.rarity !== 'common') playSfx('sparkle', 0.55);
+        }, i * 110),
+      );
+    });
+    const hasBig = stickers.some(
+      (s) => s.was_new && (s.rarity === 'epic' || s.rarity === 'legendary'),
+    );
+    if (hasBig) {
+      timers.push(setTimeout(() => playSfx('legendary', 0.9), stickers.length * 110 + 180));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [phase, stickers]);
 
   async function handlePasteAll() {
     setPastingAll(true);
@@ -123,6 +161,7 @@ export default function OpenPackScreen() {
         await pasteSticker(s.sticker_id);
       }
       setPasted(true);
+      playSfx('paste', 0.85);
     } catch (err: any) {
       Alert.alert('Error', errorMessage(err));
     } finally {
@@ -159,7 +198,7 @@ export default function OpenPackScreen() {
 
           <View style={styles.cardsGrid}>
             {stickers.map((s, i) => (
-              <RevealedCard key={`${s.sticker_id}-${i}`} sticker={s} index={i} />
+              <RevealedCard key={`${s.sticker_id}-${i}`} sticker={s} index={i} hideLabels={hideCardLabels} />
             ))}
           </View>
         </ScrollView>
@@ -251,7 +290,7 @@ export default function OpenPackScreen() {
 // Card revelada (con animación de entrada staggered)
 // ---------------------------------------------------------------------------
 
-function RevealedCard({ sticker, index }: { sticker: OpenedSticker; index: number }) {
+function RevealedCard({ sticker, index, hideLabels }: { sticker: OpenedSticker; index: number; hideLabels?: boolean }) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(34);
   const scale = useSharedValue(0.6);
@@ -303,6 +342,9 @@ function RevealedCard({ sticker, index }: { sticker: OpenedSticker; index: numbe
           styles.revealedCard,
           { borderColor },
           sticker.was_new && styles.revealedCardNew,
+          // Sin labels (álbum especial): la imagen llega hasta abajo, sin la
+          // franja de fondo que dejaba el paddingBottom.
+          hideLabels && styles.revealedCardFull,
           haloStyle,
         ]}
       >
@@ -314,10 +356,12 @@ function RevealedCard({ sticker, index }: { sticker: OpenedSticker; index: numbe
         {url && (
           <Image source={{ uri: url }} style={styles.revealedImage} contentFit="cover" />
         )}
-        <View style={styles.revealedFooter}>
-          <Text style={styles.revealedNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
-          <Text style={styles.revealedName} numberOfLines={2}>{sticker.name}</Text>
-        </View>
+        {!hideLabels && (
+          <View style={styles.revealedFooter}>
+            <Text style={styles.revealedNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
+            <Text style={styles.revealedName} numberOfLines={2}>{sticker.name}</Text>
+          </View>
+        )}
         <View style={[styles.ribbon, !sticker.was_new && styles.ribbonRepe]}>
           <Text style={[styles.ribbonText, !sticker.was_new && styles.ribbonTextRepe]}>
             {sticker.was_new ? 'NUEVA' : 'REPE'}
@@ -506,6 +550,10 @@ const styles = StyleSheet.create({
     shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 0 },
     elevation: 16,
+  },
+  // Álbum especial: sin footer de número/nombre, la imagen ocupa toda la card.
+  revealedCardFull: {
+    paddingBottom: 0,
   },
   sparkle: {
     position: 'absolute',

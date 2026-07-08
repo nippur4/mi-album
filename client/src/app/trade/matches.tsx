@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -12,7 +12,7 @@ import { StickerMini } from '@/components/sticker-mini';
 import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
-import { useAlbumMatches } from '@/lib/queries/trades';
+import { setTradePrefs, useAlbumMatches, useTradeLimitStatus, type TradeLimitStatus } from '@/lib/queries/trades';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 
 type Tab = 'repes' | 'matches';
@@ -24,18 +24,39 @@ export default function TradeMatchesScreen() {
   const [tab, setTab] = useState<Tab>('repes');
 
   const { album, stickers } = useAlbumDetail(albumId);
-  const { collection } = usePlayerAlbumSideData(albumId);
+  const {
+    collection,
+    tradeWhenComplete,
+    acceptOwned,
+    refetch: refetchSide,
+  } = usePlayerAlbumSideData(albumId);
   const { matches, isLoading } = useAlbumMatches(albumId);
+  const { status: tradeLimit } = useTradeLimitStatus(albumId);
+  // Default a habilitado mientras carga, para no ocultar acciones de más.
+  const tradeEnabled = tradeLimit?.enabled !== false;
 
-  // Repes intercambiables: figuritas que tengo con stock = quantity - (pasted?1:0) > 0
-  const myRepes = useMemo(() => {
+  // ¿Completé este álbum? (pegadas >= total) — para el hint de las settings.
+  const pastedCount = useMemo(
+    () => [...collection.values()].filter((e) => e.pasted).length,
+    [collection],
+  );
+  const isComplete = !!album && album.total_stickers > 0 && pastedCount >= album.total_stickers;
+
+  // Figuritas que puedo cambiar: stock = quantity - (pasted?1:0) > 0. Incluye
+  // dos casos distintos que NO hay que confundir:
+  //   - Repe real: la tengo pegada y me sobran copias (repeCount = quantity - 1 > 0).
+  //   - Sin pegar: la tengo pero no la pegué (aunque sea una sola). Es cambiable,
+  //     pero NO es "repe" — sólo está sin pegar. Se muestra con estado to_paste.
+  const tradables = useMemo(() => {
     const stickerById = new Map(stickers.map((s) => [s.id, s]));
-    const out: Array<{ sticker: any; extraCount: number }> = [];
+    const out: Array<{ sticker: any; repeCount: number; pasted: boolean }> = [];
     for (const entry of collection.values()) {
       const sticker = stickerById.get(entry.sticker_id);
       if (!sticker) continue;
       const tradable = entry.quantity - (entry.pasted ? 1 : 0);
-      if (tradable > 0) out.push({ sticker, extraCount: tradable });
+      if (tradable > 0) {
+        out.push({ sticker, repeCount: Math.max(0, entry.quantity - 1), pasted: entry.pasted });
+      }
     }
     out.sort((a, b) => a.sticker.number - b.sticker.number);
     return out;
@@ -61,9 +82,10 @@ export default function TradeMatchesScreen() {
 
       <View style={styles.body}>
         <View style={desktopCap}>
+        <TradeRuleBanner status={tradeLimit} />
         <SegmentedControl
           options={[
-            { key: 'repes', label: 'Mis repes', count: myRepes.length },
+            { key: 'repes', label: 'Para cambiar', count: tradables.length },
             { key: 'matches', label: 'Coincidencias', count: matches.length },
           ]}
           value={tab}
@@ -73,18 +95,24 @@ export default function TradeMatchesScreen() {
 
         <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
           {tab === 'repes' ? (
-            myRepes.length === 0 ? (
+            tradables.length === 0 ? (
               <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>Aún no tenés figuritas repetidas.</Text>
+                <Text style={styles.emptyTitle}>Aún no tenés figuritas para cambiar.</Text>
                 <Text style={styles.emptyBody}>
-                  Cuando abras sobres y te salgan repetidas las vas a poder cambiar.
+                  Cuando te sobren repetidas o tengas figuritas sin pegar las vas a poder cambiar.
                 </Text>
               </View>
             ) : (
               <View style={styles.repesGrid}>
-                {myRepes.map(({ sticker, extraCount }) => (
+                {tradables.map(({ sticker, repeCount, pasted }) => (
                   <View key={sticker.id} style={styles.repeCell}>
-                    <StickerCell sticker={sticker} extraCount={extraCount} />
+                    {/* Repe real (pegada + sobran) → badge "REPE ×N". Sin pegar →
+                        estado to_paste (gold), NO se marca como repe. */}
+                    <StickerCell
+                      sticker={sticker}
+                      state={pasted ? 'pasted' : 'to_paste'}
+                      extraCount={repeCount}
+                    />
                   </View>
                 ))}
               </View>
@@ -101,7 +129,12 @@ export default function TradeMatchesScreen() {
               {matches.map((m, i) => (
                 <Pressable
                   key={`${m.other_user_id}-${m.they_give_sticker_id}-${m.i_give_sticker_id}-${i}`}
-                  style={({ pressed }) => [styles.matchCard, pressed && styles.matchPressed]}
+                  disabled={!tradeEnabled}
+                  style={({ pressed }) => [
+                    styles.matchCard,
+                    pressed && styles.matchPressed,
+                    !tradeEnabled && styles.matchDisabled,
+                  ]}
                   onPress={() =>
                     router.push(
                       `/trade/new?albumId=${albumId}&toUser=${m.other_user_id}&offered=${m.i_give_sticker_id}&requested=${m.they_give_sticker_id}`,
@@ -138,14 +171,197 @@ export default function TradeMatchesScreen() {
               ))}
             </View>
           )}
+
+          <TradePrefsSection
+            albumId={albumId!}
+            tradeWhenComplete={tradeWhenComplete}
+            acceptOwned={acceptOwned}
+            isComplete={isComplete}
+            onSaved={refetchSide}
+          />
         </ScrollView>
       </View>
     </SafeAreaView>
   );
 }
 
+// Settings de cambio del jugador para ESTE álbum (por-usuario-por-álbum),
+// default off. El lugar más intuitivo para definirlas es acá, en CAMBIOS.
+function TradePrefsSection({
+  albumId,
+  tradeWhenComplete,
+  acceptOwned,
+  isComplete,
+  onSaved,
+}: {
+  albumId: string;
+  tradeWhenComplete: boolean;
+  acceptOwned: boolean;
+  isComplete: boolean;
+  onSaved: () => void;
+}) {
+  const [twc, setTwc] = useState(tradeWhenComplete);
+  const [ao, setAo] = useState(acceptOwned);
+  const [busy, setBusy] = useState(false);
+
+  // Sincronizar si cambia el server (refetch tras guardar / entrar).
+  useEffect(() => { setTwc(tradeWhenComplete); setAo(acceptOwned); }, [tradeWhenComplete, acceptOwned]);
+
+  async function save(nextTwc: boolean, nextAo: boolean) {
+    const prevTwc = twc, prevAo = ao;
+    setTwc(nextTwc); setAo(nextAo);
+    setBusy(true);
+    const { error } = await setTradePrefs(albumId, nextTwc, nextAo);
+    setBusy(false);
+    if (error) {
+      setTwc(prevTwc); setAo(prevAo);
+      return;
+    }
+    onSaved();
+  }
+
+  return (
+    <View style={styles.prefs}>
+      <Text style={styles.prefsLabel}>MIS PREFERENCIAS DE CAMBIO</Text>
+
+      <View style={styles.prefRow}>
+        <View style={styles.prefText}>
+          <Text style={styles.prefTitle}>Seguir cambiando con álbum completo</Text>
+          <Text style={styles.prefHint}>
+            Al completar no recibís sobres nuevos, pero podés cambiar tus repes para ayudar a un amigo.
+          </Text>
+        </View>
+        <Switch
+          value={twc}
+          onValueChange={(v) => save(v, ao)}
+          disabled={busy}
+          trackColor={{ true: Colors.green, false: Colors.paper3 }}
+          thumbColor={twc ? Colors.paper : Colors.paper2}
+        />
+      </View>
+
+      <View style={styles.prefRow}>
+        <View style={styles.prefText}>
+          <Text style={styles.prefTitle}>Aceptar figuritas que ya tengo</Text>
+          <Text style={styles.prefHint}>
+            Permití recibir en un cambio una figurita repetida (hace falta para ayudar cuando completaste).
+          </Text>
+        </View>
+        <Switch
+          value={ao}
+          onValueChange={(v) => save(twc, v)}
+          disabled={busy}
+          trackColor={{ true: Colors.green, false: Colors.paper3 }}
+          thumbColor={ao ? Colors.paper : Colors.paper2}
+        />
+      </View>
+
+      {isComplete && twc && !ao && (
+        <Text style={styles.prefWarn}>
+          Para ayudar con tus repes necesitás también "Aceptar figuritas que ya tengo".
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// Banner con las reglas de intercambio del álbum, para que el jugador las
+// conozca antes de intentar cambiar (antes solo se enteraba con el error).
+const PERIOD_LABEL: Record<string, string> = { day: 'día', week: 'semana', month: 'mes' };
+
+function TradeRuleBanner({ status }: { status: TradeLimitStatus | null }) {
+  if (!status) return null; // cargando
+
+  let icon: 'slash' | 'repeat' | 'alert-circle' = 'repeat';
+  let text: string;
+  let tone: 'off' | 'ok' | 'warn' = 'ok';
+
+  if (!status.enabled) {
+    icon = 'slash';
+    tone = 'off';
+    text = 'Los cambios están desactivados en este álbum.';
+  } else if (status.unlimited) {
+    text = 'Cambios sin límite en este álbum.';
+  } else {
+    const period = PERIOD_LABEL[status.period ?? 'day'] ?? 'período';
+    const count = status.count ?? 0;
+    const remaining = status.remaining ?? 0;
+    tone = remaining === 0 ? 'warn' : 'ok';
+    icon = remaining === 0 ? 'alert-circle' : 'repeat';
+    text = `Hasta ${count} cambio${count === 1 ? '' : 's'} por ${period}. Te queda${remaining === 1 ? '' : 'n'} ${remaining}.`;
+  }
+
+  const color = tone === 'off' ? Colors.muted : tone === 'warn' ? Colors.amberWarn : Colors.ink;
+  return (
+    <View style={[styles.ruleBanner, tone === 'off' && styles.ruleBannerOff]}>
+      <Feather name={icon} size={14} color={color} />
+      <Text style={[styles.ruleText, { color }]}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
+  ruleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  ruleBannerOff: {
+    borderColor: Colors.muted,
+  },
+  ruleText: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '600',
+  },
+  matchDisabled: {
+    opacity: 0.5,
+  },
+  prefs: {
+    marginTop: Spacing.xl,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: Spacing.md,
+  },
+  prefsLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+  },
+  prefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  prefText: { flex: 1, gap: 2 },
+  prefTitle: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  prefHint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    lineHeight: 16,
+  },
+  prefWarn: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.amberWarn,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   subhead: {
     paddingHorizontal: Spacing.screenX,

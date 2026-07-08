@@ -23,6 +23,9 @@ interface Bundle {
   daily: DailyPackStatus;
   // El jugador silenció los sobres diarios de este álbum (toggle propio).
   dailyMuted: boolean;
+  // Settings de intercambio del jugador en este álbum (default off).
+  tradeWhenComplete: boolean;
+  acceptOwned: boolean;
 }
 
 const EMPTY_BUNDLE: Bundle = {
@@ -30,6 +33,8 @@ const EMPTY_BUNDLE: Bundle = {
   packsAvailable: 0,
   daily: parseDailyStatus(null),
   dailyMuted: false,
+  tradeWhenComplete: false,
+  acceptOwned: false,
 };
 
 export function usePlayerAlbumSideData(albumId: string | undefined) {
@@ -64,6 +69,8 @@ export function usePlayerAlbumSideData(albumId: string | undefined) {
         packsAvailable,
         daily: parseDailyStatus(payload.daily),
         dailyMuted: !!payload.daily_muted,
+        tradeWhenComplete: !!payload.trade_when_complete,
+        acceptOwned: !!payload.accept_owned,
       };
     },
   });

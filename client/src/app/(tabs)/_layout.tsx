@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QrTabModal } from '@/components/qr-tab-modal';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
+import { useMyOffers } from '@/lib/queries/trades';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
 
@@ -22,6 +23,11 @@ export default function TabsLayout() {
   const packsBadge =
     pending.reduce((acc, r) => acc + r.count, 0) +
     playable.filter((r) => r.daily.canClaim).length;
+
+  // Badge de la tab Cambios: ofertas recibidas pendientes de responder.
+  // Comparte cache con la pantalla del tab (misma query key en useMyOffers).
+  const { received } = useMyOffers();
+  const tradesBadge = received.filter((o) => o.status === 'pending').length;
 
   return (
     <>
@@ -98,6 +104,14 @@ export default function TabsLayout() {
           options={{
             title: 'CAMBIOS',
             tabBarIcon: ({ color }) => <Feather name="repeat" size={22} color={color} />,
+            tabBarBadge: tradesBadge > 0 ? tradesBadge : undefined,
+            tabBarBadgeStyle: {
+              backgroundColor: Colors.red,
+              color: Colors.paper,
+              fontFamily: FontFamily.mono,
+              fontSize: 10,
+              fontWeight: '700',
+            },
           }}
         />
         {/* Profile sigue accesible via /profile (HeaderAvatar lo abre) pero

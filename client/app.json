@@ -57,7 +57,8 @@
           "color": "#D23A2E",
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

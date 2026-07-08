@@ -251,7 +251,6 @@ export function UserAlbumView({ album, stickers }: Props) {
                   <StickerCell
                     sticker={s}
                     style={cellStyle}
-                    extraCount={Math.max(0, entry.quantity - 1)}
                     onPress={() => router.push(`/sticker/${s.id}`)}
                   />
                 );
