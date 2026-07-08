@@ -34,8 +34,10 @@ import { StickerCell, StickerCellEmpty } from '@/components/sticker-cell';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import {
   albumNumberStart,
+  albumPlayerCount,
   archiveAlbumByOwner,
   joinAlbumByCode,
+  PROTECTED_ALBUM_IDS,
   publishAlbum,
   unarchiveAlbumByOwner,
   updateAlbumContent,
@@ -82,6 +84,9 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [coverBusy, setCoverBusy] = useState(false);
   const [packBusy, setPackBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  // Error de publicar inline: Alert.alert es no-op en web, así que el fallo se
+  // tragaba y "no pasaba nada". Ahora se muestra debajo del botón.
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [enablingQr, setEnablingQr] = useState(false);
   const [presetFor, setPresetFor] = useState<'cover' | 'pack' | null>(null);
@@ -102,6 +107,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [joiningToPlay, setJoiningToPlay] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deletingAlbum, setDeletingAlbum] = useState(false);
+  // Otros jugadores del álbum: define el copy del modal (retirar vs borrar).
+  // Se refresca al abrir el modal de eliminar.
+  const [playerCount, setPlayerCount] = useState(0);
+  const isProtected = PROTECTED_ALBUM_IDS.has(album.id);
 
   // Chequeamos membership: null = cargando; true/false = respuesta del backend.
   useEffect(() => {
@@ -245,14 +254,20 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   }
 
   async function onPublish() {
+    setPublishError(null);
     setPublishing(true);
-    const { error: publishErr } = await publishAlbum(album.id);
-    setPublishing(false);
-    if (publishErr) {
-      Alert.alert('No se pudo publicar', errorMessage(publishErr));
-      return;
+    try {
+      const { error: publishErr } = await publishAlbum(album.id);
+      if (publishErr) {
+        setPublishError(errorMessage(publishErr));
+        return;
+      }
+      await refetch();
+    } catch (err: any) {
+      setPublishError(errorMessage(err));
+    } finally {
+      setPublishing(false);
     }
-    await refetch();
   }
 
   const isArchived = (album as any).owner_hidden === true;
@@ -588,9 +603,17 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
               {/* Contenido centrado por encima */}
               <View style={styles.emptyCenter}>
-                <View style={styles.emptyIconBubble}>
+                {/* La burbuja es el CTA principal: antes era decorativa y el
+                    "+" grande parecía tappable pero no hacía nada (confuso).
+                    Ahora carga la primera figurita, igual que el botón de abajo. */}
+                <Pressable
+                  onPress={() => router.push(`/sticker/new?albumId=${album.id}`)}
+                  style={({ pressed }) => [styles.emptyIconBubble, pressed && { opacity: 0.85 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cargar la primera figurita"
+                >
                   <Feather name="plus" size={44} color={Colors.paper} />
-                </View>
+                </Pressable>
                 <Text style={styles.emptyHeroTitle}>AÚN NO HAY{'\n'}FIGURITAS</Text>
                 <Text style={styles.emptyHeroBody}>
                   Subí las imágenes y ponele número y nombre a cada una.
@@ -702,6 +725,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         visible={deletingAlbum}
         albumId={album.id}
         albumName={album.name}
+        playerCount={playerCount}
         sessionEmail={session?.user.email ?? ''}
         onClose={() => setDeletingAlbum(false)}
         onDeleted={() => {
@@ -777,16 +801,27 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 : 'Archivar álbum'}
           </Text>
         </Pressable>
-        <Pressable
-          onPress={() => setDeletingAlbum(true)}
-          hitSlop={8}
-          style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
-        >
-          <Feather name="trash-2" size={13} color={Colors.red} />
-          <Text style={[styles.archiveBtnText, { color: Colors.red }]}>
-            Eliminar álbum
-          </Text>
-        </Pressable>
+        {/* Los álbumes especiales curados no se pueden eliminar (el server igual
+            lo bloquea con P0201). */}
+        {!isProtected && (
+          <Pressable
+            onPress={() => {
+              // Refrescamos el conteo de jugadores para que el modal muestre el
+              // copy correcto (retirar vs borrar).
+              albumPlayerCount(album.id).then(({ data }) =>
+                setPlayerCount(typeof data === 'number' ? data : 0),
+              );
+              setDeletingAlbum(true);
+            }}
+            hitSlop={8}
+            style={({ pressed }) => [styles.archiveBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name="trash-2" size={13} color={Colors.red} />
+            <Text style={[styles.archiveBtnText, { color: Colors.red }]}>
+              Eliminar álbum
+            </Text>
+          </Pressable>
+        )}
         {isDraft && (
           <>
             {!allReady && (
@@ -800,6 +835,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               disabled={!allReady || publishing}
               loading={publishing}
             />
+            {publishError && <Text style={styles.publishError}>{publishError}</Text>}
           </>
         )}
         {album.status === 'published' && (
@@ -1232,6 +1268,13 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     textAlign: 'center',
     marginBottom: Spacing.xs,
+  },
+  publishError: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.red,
+    textAlign: 'center',
+    marginTop: Spacing.xs,
   },
   pausedHint: {
     fontFamily: FontFamily.body,

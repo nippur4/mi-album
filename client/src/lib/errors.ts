@@ -25,6 +25,8 @@ export type AppErrorKey =
   | 'album_economy_locked'
   | 'album_cover_required'
   | 'album_pack_image_required'
+  | 'album_protected'
+  | 'email_confirmation_mismatch'
   | 'album_not_available'         // sufijo de status en .message
   | 'stickers_count_mismatch'
   | 'sticker_number_missing'
@@ -136,6 +138,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0160: 'invalid_color',
   P0161: 'invalid_overrides',
   P0162: 'invalid_texture',
+  P0200: 'email_confirmation_mismatch',
+  P0201: 'album_protected',
 };
 
 export interface AppError {
@@ -178,6 +182,8 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   album_economy_locked: 'Las opciones del álbum están bloqueadas.',
   album_cover_required: 'Cargá una carátula antes de publicar.',
   album_pack_image_required: 'Cargá una imagen para el sobre antes de publicar.',
+  album_protected: 'Este álbum no se puede eliminar.',
+  email_confirmation_mismatch: 'El email no coincide con el de tu cuenta.',
   album_not_available: 'Este álbum no está disponible ahora.',
   stickers_count_mismatch: 'Faltan figuritas por cargar.',
   sticker_number_missing: 'Hay números de figurita sin cargar.',

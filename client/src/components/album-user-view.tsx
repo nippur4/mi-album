@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather';
 
 import { AlbumPager } from '@/components/album-pager';
+import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { Countdown } from '@/components/countdown';
 import { FloatingPack } from '@/components/floating-pack';
@@ -121,29 +122,24 @@ export function UserAlbumView({ album, stickers }: Props) {
   // con el efecto snap sin acoplar el AlbumPager a la timeline.
   const [justPastedId, setJustPastedId] = useState<string | null>(null);
   const [hiding, setHiding] = useState(false);
+  // Confirm de "salir del álbum" in-app (Alert.alert es no-op en web). Reusa
+  // fn_hide_album_by_player: sale de las listas pero conserva el progreso y se
+  // retoma al volver.
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
-  function onHidePress() {
-    Alert.alert(
-      'Ocultar álbum',
-      'Se va a esconder de tu Inicio y del tab Sobres. Tu progreso, figuritas y repes se conservan. Podés volver a mostrarlo desde el Inicio.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Ocultar',
-          style: 'destructive',
-          onPress: async () => {
-            setHiding(true);
-            const { error } = await hideAlbumByPlayer(album.id);
-            setHiding(false);
-            if (error) {
-              Alert.alert('No se pudo ocultar', errorMessage(error));
-              return;
-            }
-            router.back();
-          },
-        },
-      ],
-    );
+  async function doLeave() {
+    if (hiding) return;
+    setLeaveError(null);
+    setHiding(true);
+    const { error } = await hideAlbumByPlayer(album.id);
+    setHiding(false);
+    if (error) {
+      setLeaveError(errorMessage(error));
+      return;
+    }
+    setConfirmingLeave(false);
+    router.back();
   }
 
   async function onPaste(stickerId: string) {
@@ -338,18 +334,48 @@ export function UserAlbumView({ album, stickers }: Props) {
             no-miembros tampoco lo ven (no hay membership que ocultar). */}
         {!isOwnerViewing && isMember && (
           <Pressable
-            onPress={onHidePress}
+            onPress={() => {
+              setLeaveError(null);
+              setConfirmingLeave(true);
+            }}
             disabled={hiding}
             hitSlop={8}
             style={({ pressed }) => [styles.hideBtn, pressed && { opacity: 0.6 }]}
           >
-            <Feather name="eye-off" size={13} color={Colors.muted} />
+            <Feather name="log-out" size={13} color={Colors.muted} />
             <Text style={styles.hideBtnText}>
-              {hiding ? '...' : 'Ocultar de mi álbum'}
+              {hiding ? '...' : 'Salir del álbum'}
             </Text>
           </Pressable>
         )}
       </ScrollView>
+
+      <BottomSheet
+        visible={confirmingLeave}
+        onClose={() => setConfirmingLeave(false)}
+        dismissable={!hiding}
+        title="Salir del álbum"
+      >
+        <Text style={sheetStyles.hint}>
+          Se saca de tu Inicio y del tab Sobres. Tu progreso, figuritas y repes se
+          conservan: si volvés a entrar, retomás donde estabas.
+        </Text>
+        {leaveError && <Text style={sheetStyles.error}>{leaveError}</Text>}
+        <View style={sheetStyles.actions}>
+          <Button
+            label="Cancelar"
+            variant="outline"
+            onPress={() => setConfirmingLeave(false)}
+            disabled={hiding}
+          />
+          <Button
+            label={hiding ? 'Saliendo...' : 'Salir del álbum'}
+            onPress={doLeave}
+            loading={hiding}
+            disabled={hiding}
+          />
+        </View>
+      </BottomSheet>
 
       {/* CTA inferior: unirse (no-miembro) / sobres listos / daily / countdown */}
       {showJoinCta ? (

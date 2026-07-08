@@ -60,6 +60,7 @@ export type Database = {
           page_texture: string
           published_at: string | null
           qr_secret: string | null
+          retired_at: string | null
           share_code: string
           status: Database["public"]["Enums"]["album_status"]
           total_stickers: number
@@ -85,6 +86,7 @@ export type Database = {
           page_texture?: string
           published_at?: string | null
           qr_secret?: string | null
+          retired_at?: string | null
           share_code: string
           status?: Database["public"]["Enums"]["album_status"]
           total_stickers: number
@@ -110,6 +112,7 @@ export type Database = {
           page_texture?: string
           published_at?: string | null
           qr_secret?: string | null
+          retired_at?: string | null
           share_code?: string
           status?: Database["public"]["Enums"]["album_status"]
           total_stickers?: number
@@ -696,6 +699,7 @@ export type Database = {
           they_give_sticker_thumb_key: string
         }[]
       }
+      fn_album_player_count: { Args: { p_album_id: string }; Returns: number }
       fn_album_progress: {
         Args: { p_album_ids: string[] }
         Returns: {
@@ -740,6 +744,7 @@ export type Database = {
           page_texture: string
           published_at: string | null
           qr_secret: string | null
+          retired_at: string | null
           share_code: string
           status: Database["public"]["Enums"]["album_status"]
           total_stickers: number
@@ -776,7 +781,7 @@ export type Database = {
       }
       fn_delete_album: {
         Args: { p_album_id: string; p_confirm_email: string }
-        Returns: undefined
+        Returns: string
       }
       fn_delete_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
       fn_enforce_expired_subscriptions: { Args: never; Returns: number }

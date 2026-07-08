@@ -47,6 +47,10 @@ export function EditStickerView({ sticker, packConfig }: Props) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Confirm de borrado inline (dos toques). Antes era Alert.alert, que es
+  // no-op en react-native-web → en web el botón no hacía nada.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(sticker.name);
@@ -90,23 +94,14 @@ export function EditStickerView({ sticker, packConfig }: Props) {
     router.back();
   }
 
-  function onConfirmDelete() {
-    Alert.alert(
-      'Eliminar figurita',
-      `¿Borrar la #${sticker.number}? Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: onDelete },
-      ],
-    );
-  }
-
   async function onDelete() {
+    setDeleteError(null);
     setDeleting(true);
     const { error } = await deleteSticker(sticker.id);
     setDeleting(false);
     if (error) {
-      Alert.alert('No se pudo eliminar', errorMessage(error));
+      setConfirmingDelete(false);
+      setDeleteError(errorMessage(error));
       return;
     }
     router.back();
@@ -171,12 +166,42 @@ export function EditStickerView({ sticker, packConfig }: Props) {
           disabled={!canSave}
           loading={saving}
         />
-        <Button
-          label={deleting ? 'Eliminando...' : 'Eliminar figurita'}
-          variant="outline"
-          onPress={onConfirmDelete}
-          disabled={uploading || saving || deleting}
-        />
+        {confirmingDelete ? (
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmText}>
+              ¿Borrar la #{sticker.number}? Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.confirmRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  label="Cancelar"
+                  variant="outline"
+                  onPress={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button
+                  label={deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                  onPress={onDelete}
+                  loading={deleting}
+                  disabled={deleting}
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <Button
+            label="Eliminar figurita"
+            variant="outline"
+            onPress={() => {
+              setDeleteError(null);
+              setConfirmingDelete(true);
+            }}
+            disabled={uploading || saving}
+          />
+        )}
+        {deleteError && <Text style={styles.deleteError}>{deleteError}</Text>}
       </View>
     </SafeAreaView>
   );
@@ -229,5 +254,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     paddingBottom: Spacing.xl,
     gap: Spacing.sm,
+  },
+  confirmBox: {
+    gap: Spacing.sm,
+    backgroundColor: Colors.paper2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.red,
+    padding: Spacing.md,
+  },
+  confirmText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.ink,
+    lineHeight: 19,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  deleteError: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.red,
+    textAlign: 'center',
   },
 });

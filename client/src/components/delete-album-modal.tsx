@@ -13,26 +13,32 @@ interface Props {
   visible: boolean;
   albumId: string;
   albumName: string;
-  // Email de la sesión — el paso 2 exige tipearlo idéntico. El server lo
-  // revalida contra el JWT (fn_delete_album), esto es solo la UX.
+  // Otros jugadores del álbum. > 0 → el álbum NO se borra, se RETIRA (queda
+  // read_only + archivado, reversible) y el modal muestra un solo paso sin
+  // email. 0 → borrado definitivo en dos pasos con email.
+  playerCount: number;
+  // Email de la sesión — el paso 2 (solo borrado) exige tipearlo idéntico. El
+  // server lo revalida contra el JWT (fn_delete_album), esto es solo la UX.
   sessionEmail: string;
   onClose: () => void;
-  // El álbum ya no existe: el caller navega afuera e invalida caches.
+  // El álbum se eliminó o retiró: el caller navega afuera e invalida caches.
   onDeleted: () => void;
 }
 
-// Eliminación definitiva de un álbum en dos pasos:
-//   1. Advertencia de consecuencias (jugadores pierden su colección).
-//   2. Confirmación tipeando el email de la cuenta.
-// Todo in-modal (Alert es no-op en web).
+// Eliminar/retirar un álbum, in-modal (Alert es no-op en web):
+//   - Con jugadores (playerCount > 0): un paso "Cerrar álbum" → el server lo
+//     retira (read_only + owner_hidden). Los jugadores conservan todo.
+//   - Sin jugadores: dos pasos (advertencia + tipear el email) → hard delete.
 export function DeleteAlbumModal({
   visible,
   albumId,
   albumName,
+  playerCount,
   sessionEmail,
   onClose,
   onDeleted,
 }: Props) {
+  const retire = playerCount > 0;
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -50,10 +56,12 @@ export function DeleteAlbumModal({
     email.trim().toLowerCase() === sessionEmail.trim().toLowerCase() && sessionEmail !== '';
 
   async function handleDelete() {
-    if (!emailMatches || deleting) return;
+    if (deleting) return;
+    // En el branch de borrado exigimos el email; en el de retirar no aplica.
+    if (!retire && !emailMatches) return;
     setError(null);
     setDeleting(true);
-    const { error: rpcErr } = await deleteAlbum(albumId, email.trim());
+    const { error: rpcErr } = await deleteAlbum(albumId, retire ? '' : email.trim());
     setDeleting(false);
     if (rpcErr) {
       setError(errorMessage(rpcErr));
@@ -67,10 +75,34 @@ export function DeleteAlbumModal({
       visible={visible}
       onClose={deleting ? () => {} : onClose}
       dismissable={!deleting}
-      title="Eliminar álbum"
+      title={retire ? 'Cerrar álbum' : 'Eliminar álbum'}
       avoidKeyboard="both"
     >
-      {step === 1 ? (
+      {retire ? (
+        <>
+          <View style={styles.warnBox}>
+            <Feather name="archive" size={18} color={Colors.red} />
+            <Text style={styles.warnText}>
+              <Text style={styles.warnBold}>{albumName}</Text> lo están jugando{' '}
+              {playerCount} {playerCount === 1 ? 'persona' : 'personas'}. Al
+              eliminarlo se cierra: no se emiten más sobres y sale de tus listas,
+              pero los jugadores conservan sus figuritas. Podés reactivarlo
+              desarchivándolo.
+            </Text>
+          </View>
+          {error && <Text style={sheetStyles.error}>{error}</Text>}
+
+          <View style={sheetStyles.actions}>
+            <Button label="Cancelar" variant="outline" onPress={onClose} disabled={deleting} />
+            <Button
+              label={deleting ? 'Cerrando...' : 'Cerrar álbum'}
+              onPress={handleDelete}
+              loading={deleting}
+              disabled={deleting}
+            />
+          </View>
+        </>
+      ) : step === 1 ? (
         <>
           <View style={styles.warnBox}>
             <Feather name="alert-triangle" size={18} color={Colors.red} />

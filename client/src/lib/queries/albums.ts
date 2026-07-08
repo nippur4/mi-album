@@ -193,14 +193,28 @@ export async function unarchiveAlbumByOwner(albumId: string) {
   return supabase.rpc('fn_unarchive_album_by_owner', { p_album_id: albumId });
 }
 
-// Eliminar el álbum DEFINITIVAMENTE (cascade a stickers, colecciones,
-// memberships, sobres y ofertas). El server exige que confirmEmail coincida
-// con el email del JWT — doble defensa además del confirm de la UI.
+// Álbumes que NUNCA se pueden eliminar (curados por admin). El botón se oculta
+// en el cliente y el server igual rechaza con P0201. Ver migración 0046.
+export const PROTECTED_ALBUM_IDS = new Set<string>([
+  '55fce726-d398-491f-9a92-06ee2e6c8d96',
+  '29a1fa90-85b3-48fc-b452-2b7f64bd327b',
+]);
+
+// Eliminar/retirar el álbum (RPC fn_delete_album). El server decide:
+//   - Sin otros jugadores → hard delete (exige confirmEmail == JWT). data='deleted'.
+//   - Con jugadores → RETIRA (read_only + owner_hidden, reversible), conservando
+//     todo lo de los jugadores. Ignora el email. data='retired'.
 export async function deleteAlbum(albumId: string, confirmEmail: string) {
   return supabase.rpc('fn_delete_album', {
     p_album_id: albumId,
     p_confirm_email: confirmEmail,
   });
+}
+
+// Conteo de OTROS jugadores del álbum (owner-only). Lo usa el modal de eliminar
+// para mostrar el copy correcto (retirar vs borrar) antes de actuar.
+export async function albumPlayerCount(albumId: string) {
+  return supabase.rpc('fn_album_player_count', { p_album_id: albumId });
 }
 
 // Ocultar/des-ocultar como jugador (setea user_album_membership.hidden).
