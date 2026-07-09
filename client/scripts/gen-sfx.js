@@ -100,19 +100,54 @@ function packShake() {
 }
 
 function packOpen() {
-  const s = buf(0.7), n = buf(0.7);
-  addNoise(n, 0, 0.5, 0.9, 0.5);
-  lowpass(n, 3500); highpass(n, 300);
+  // Más épico: build-up (swell de ruido ascendente) → impacto (boom + acorde
+  // mayor triunfal + whoosh) → cola de shimmer.
+  const HIT = 0.30;
+  const s = buf(1.15);
+
+  // Build-up: ruido agudo que sube hacia el impacto (reverse-cymbal-ish).
+  const up = buf(1.15);
+  addNoise(up, 0, HIT + 0.02, 0.9, 3.0); // decay lento = sostiene el swell
+  highpass(up, 2500);
   for (let i = 0; i < s.length; i++) {
     const t = i / SR;
-    const env = Math.min(1, t / 0.05) * Math.exp(-t / 0.28);
-    s[i] += n[i] * env * 0.8;
+    if (t < HIT) s[i] += up[i] * Math.pow(t / HIT, 2) * 0.55;
   }
-  addSweep(s, 0, 250, 950, 0.28, 0.35, 0.12);
-  addBell(s, 0.14, 1568, 0.5, 0.18);
-  addBell(s, 0.18, 2093, 0.45, 0.15);
-  addBell(s, 0.22, 2637, 0.4, 0.12);
-  return fadeEdges(normalize(s, 0.92));
+  // Sweep ascendente que entra al golpe.
+  addSweep(s, 0.06, 200, 1100, HIT - 0.02, 0.28, 0.16);
+
+  // Impacto grave (boom) en el golpe: da peso.
+  let ph = 0;
+  for (let i = 0; i < Math.floor(0.5 * SR); i++) {
+    const idx = Math.floor(HIT * SR) + i; if (idx >= s.length) break;
+    const t = i / SR, f = 80 - 20 * Math.min(1, t / 0.2);
+    ph += (2 * Math.PI * f) / SR;
+    s[idx] += 0.4 * Math.exp(-t / 0.18) * Math.sin(ph);
+  }
+  // Whoosh de aire en el golpe.
+  const wh = buf(1.15); addNoise(wh, HIT, 0.45, 0.9, 0.45);
+  lowpass(wh, 3500); highpass(wh, 250);
+  for (let i = 0; i < s.length; i++) {
+    const t = Math.max(0, i / SR - HIT);
+    if (i / SR >= HIT) s[i] += wh[i] * Math.exp(-t / 0.3) * 0.7;
+  }
+
+  // Acorde mayor triunfal (C5-E5-G5-C6) + octava grave, campanas con cuerpo.
+  const chord = [261.63, 523.25, 659.25, 783.99, 1046.5];
+  const partials = [[1, 1], [2, 0.5], [3, 0.28], [4.1, 0.14], [5.4, 0.07]];
+  chord.forEach((f, k) => addBell(s, HIT + k * 0.015, f, 0.85, 0.2, partials));
+
+  // Cola de shimmer brillante que decae.
+  addBell(s, HIT + 0.12, 1568, 0.6, 0.14);
+  addBell(s, HIT + 0.16, 2093, 0.55, 0.12);
+  addBell(s, HIT + 0.20, 2637, 0.5, 0.10);
+  const sh = buf(1.15); addNoise(sh, HIT + 0.05, 0.7, 0.3, 0.5); highpass(sh, 5000);
+  for (let i = 0; i < s.length; i++) {
+    const t = Math.max(0, i / SR - (HIT + 0.05));
+    s[i] += sh[i] * Math.exp(-t / 0.3) * 0.18;
+  }
+
+  return fadeEdges(normalize(s, 0.95));
 }
 
 function cardPop() {

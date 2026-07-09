@@ -138,7 +138,9 @@ export function DesktopHeader() {
   );
 }
 
-const HEADER_MAX_WIDTH = 1080;
+// Más ancho que el contenido (1080) a propósito: en escritorio el header
+// aprovecha la pantalla — brand+nav bien a la izquierda, avatar a la derecha.
+const HEADER_MAX_WIDTH = 1440;
 
 const styles = StyleSheet.create({
   header: {

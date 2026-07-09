@@ -52,6 +52,7 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const entry = collection.get(sticker.id);
   const pasted = !!entry?.pasted;
   const quantity = entry?.quantity ?? 0;
+  const owned = quantity > 0;
   const repesCount = Math.max(0, quantity - 1);
 
   const isLegendary = sticker.rarity === 'legendary';
@@ -143,12 +144,18 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
             </View>
 
             <View style={styles.imageBox}>
-              {url && (
+              {/* Anti-spoiler: si no la tenés, no se ve la figurita — slot vacío. */}
+              {owned && url ? (
                 <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="contain" />
+              ) : (
+                <View style={styles.lockedBox}>
+                  <Feather name="lock" size={CARD_W * 0.16} color={Colors.muted} />
+                  <Text style={styles.lockedText}>TE FALTA</Text>
+                </View>
               )}
             </View>
 
-            <Text style={styles.name} numberOfLines={2}>{sticker.name.toUpperCase()}</Text>
+            <Text style={styles.name} numberOfLines={2}>{owned ? sticker.name.toUpperCase() : '???'}</Text>
             <Text style={styles.albumName} numberOfLines={1}>{albumName}</Text>
           </View>
 
@@ -239,7 +246,7 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   );
 }
 
-const CARD_W = 240;
+const CARD_W = 378;
 const CARD_H = CARD_W / 0.7;
 
 const styles = StyleSheet.create({
@@ -309,6 +316,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.paper2,
     borderRadius: Radius.card,
     overflow: 'hidden',
+  },
+  lockedBox: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  lockedText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabel,
+    color: Colors.muted,
+    letterSpacing: 2,
+    fontWeight: '700',
   },
   name: {
     fontFamily: FontFamily.display,
