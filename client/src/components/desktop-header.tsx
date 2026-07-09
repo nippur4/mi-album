@@ -75,6 +75,8 @@ export function DesktopHeader() {
     <>
       <View style={styles.header}>
         <View style={styles.inner}>
+          {/* Brand + navegación agrupados a la izquierda; avatar a la derecha. */}
+          <View style={styles.leftGroup}>
           <Text style={styles.brand}>MI ÁLBUM</Text>
           <View style={styles.tabs}>
             {tabs.map((t) => {
@@ -115,6 +117,7 @@ export function DesktopHeader() {
               );
             })}
           </View>
+          </View>
           <Pressable
             onPress={() => router.push('/profile')}
             hitSlop={8}
@@ -123,7 +126,7 @@ export function DesktopHeader() {
           >
             <Avatar
               source={displayName}
-              size={40}
+              size={48}
               imageKey={profile?.avatar_thumb_key ?? null}
             />
           </Pressable>
@@ -155,6 +158,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.lg,
   },
+  // Brand + navegación juntos a la izquierda.
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xl,
+    flex: 1,
+  },
   brand: {
     fontFamily: FontFamily.display,
     fontSize: 22,
@@ -164,8 +174,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     gap: Spacing.md,
-    flex: 1,
-    justifyContent: 'center',
+    alignItems: 'center',
   },
   tab: {
     flexDirection: 'row',
