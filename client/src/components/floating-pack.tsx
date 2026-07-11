@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fallbackIcon: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

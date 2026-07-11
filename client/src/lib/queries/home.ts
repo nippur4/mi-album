@@ -9,12 +9,21 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { toAppError } from '@/lib/errors';
-import type { Album } from '@/lib/queries/albums';
+
+// Proyección mínima que devuelve fn_home_bundle (migración 0053): solo lo
+// que usan las cards del Home. El detalle completo se baja al navegar.
+export interface HomeAlbum {
+  id: string;
+  name: string;
+  total_stickers: number;
+  cover_thumb_key: string | null;
+  cover_large_key: string | null;
+}
 
 interface Bundle {
-  owned: Album[];
-  joined: (Album & { __hidden?: boolean })[];
-  publics: Album[];
+  owned: HomeAlbum[];
+  joined: (HomeAlbum & { __hidden?: boolean })[];
+  publics: HomeAlbum[];
 }
 
 const EMPTY: Bundle = { owned: [], joined: [], publics: [] };
@@ -33,9 +42,9 @@ export function useHomeBundle() {
       if (!data) return EMPTY;
       const payload = data as any;
       return {
-        owned: (payload.owned ?? []) as Album[],
-        joined: (payload.joined ?? []) as (Album & { __hidden?: boolean })[],
-        publics: (payload.public ?? []) as Album[],
+        owned: (payload.owned ?? []) as HomeAlbum[],
+        joined: (payload.joined ?? []) as (HomeAlbum & { __hidden?: boolean })[],
+        publics: (payload.public ?? []) as HomeAlbum[],
       };
     },
   });

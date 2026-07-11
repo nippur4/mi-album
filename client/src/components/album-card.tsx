@@ -3,10 +3,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaThumb } from '@/components/media-thumb';
 import { ProgressBar } from '@/components/progress-bar';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import type { Album } from '@/lib/queries/albums';
+
+// Solo los campos que la card renderiza — así sirve tanto el Album completo
+// (Gestionar) como la proyección mínima del bundle del Home (HomeAlbum).
+interface CardAlbum {
+  name: string;
+  cover_thumb_key: string | null;
+}
 
 interface Props {
-  album: Album;
+  album: CardAlbum;
   // 0..1 — progreso (pegadas o cargadas según role)
   progress?: number;
   // Contador "X / N"

@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { claimDailyPack, setDailyMuted } from '@/lib/queries/daily';
 import { pasteSticker } from '@/lib/queries/packs';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 
 interface Props {
@@ -100,10 +101,11 @@ export function UserAlbumView({ album, stickers }: Props) {
     await Promise.all([refetchMember(), refetchSideData()]);
   }
 
-  // FIX: cuando volvemos de /pack/open o /trade/*, el hook no se re-dispara
-  // solo (Expo Router conserva el componente en el stack). Refetchamos al
-  // recuperar foco para reflejar las figuritas nuevas.
-  useFocusEffect(useCallback(() => { refetchSideData(); }, [refetchSideData]));
+  // Cuando volvemos de /pack/open o /trade/*, el hook no se re-dispara solo
+  // (Expo Router conserva el componente en el stack). Refetch al recuperar
+  // foco SOLO si está stale — abrir sobre / pegar / aceptar trade ya
+  // invalidan el sidedata, así que esto es red de seguridad, no el mecanismo.
+  useFocusRefetchStale(['player-album', 'sidedata', album.id]);
 
   async function onClaimDaily() {
     setClaiming(true);
@@ -152,6 +154,10 @@ export function UserAlbumView({ album, stickers }: Props) {
       return;
     }
     await refetchSideData();
+    // Pegar cambia el progreso del Home y puede desbloquear un avatar
+    // (mismas invalidaciones que usePasteSticker).
+    qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+    qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
     setJustPastedId(stickerId);
   }
 

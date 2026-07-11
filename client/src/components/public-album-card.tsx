@@ -6,11 +6,18 @@ import { PresetBackground } from '@/components/preset-background';
 import { ProgressBar } from '@/components/progress-bar';
 import { Colors, FontFamily, Radius, Shadow, Spacing } from '@/constants/theme';
 import { getPreset } from '@/lib/presets';
-import type { Album } from '@/lib/queries/albums';
 import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
+// Solo los campos que la card renderiza — compatible con el Album completo
+// y con la proyección mínima del bundle del Home (HomeAlbum).
+interface PublicCardAlbum {
+  name: string;
+  total_stickers: number;
+  cover_large_key: string | null;
+}
+
 interface Props {
-  album: Album;
+  album: PublicCardAlbum;
   // Progreso del caller en este álbum (0..1). Si el caller no se unió, 0.
   progress?: number;
   // Contador "X/N · P%"

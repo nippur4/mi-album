@@ -795,6 +795,7 @@ export type Database = {
         Returns: string
       }
       fn_delete_sticker: { Args: { p_sticker_id: string }; Returns: undefined }
+      fn_enable_album_qr: { Args: { p_album_id: string }; Returns: undefined }
       fn_enforce_expired_subscriptions: { Args: never; Returns: number }
       fn_enforce_subscription_gates: {
         Args: { p_owner_id: string }

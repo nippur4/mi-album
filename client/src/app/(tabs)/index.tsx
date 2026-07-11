@@ -1,5 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { unhideAlbumByPlayer, useAlbumsProgress } from '@/lib/queries/albums';
 import { useHomeBundle } from '@/lib/queries/home';
 import { useMyProfile } from '@/lib/queries/profile';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 
 export default function HomeTab() {
@@ -53,20 +54,21 @@ export default function HomeTab() {
   const joined = showHidden ? joinedAll : joinedAll.filter((a) => !a.__hidden);
   const hiddenJoinedCount = joinedAll.filter((a) => a.__hidden).length;
 
-  // Progreso de TODOS los ids visibles. Se cachea aparte por react-query
-  // (key = ids ordenados), invalidación distinta al bundle.
-  const allIds = useMemo(
-    () => Array.from(new Set([...owned.map((a) => a.id), ...joined.map((a) => a.id), ...publics.map((a) => a.id)])),
-    [owned, joined, publics],
-  );
+  // Progreso SOLO de las memberships (incluidas las ocultas, así el toggle no
+  // cambia la query key). Los públicos que el user juega ya son membership;
+  // para los que NO juega el conteo daba siempre 0 — se resuelve client-side
+  // con un fallback 0/total, sin pagar 2 count(*) por álbum público.
+  const allIds = useMemo(() => joinedAll.map((a) => a.id), [joinedAll]);
   const { progress: progressMap, refetch: refetchProgress } = useAlbumsProgress(allIds);
 
+  // Para el pull-to-refresh: fuerza red sin mirar staleness.
   const refreshAll = useCallback(() => {
     refetchHome();
     refetchProgress();
   }, [refetchHome, refetchProgress]);
 
-  useFocusEffect(useCallback(() => { refreshAll(); }, [refreshAll]));
+  // Al recuperar foco solo refetchea si el data está stale.
+  useFocusRefetchStale(['home-bundle'], ['albums', 'progress']);
 
   // "Donde jugás" incluye TODO álbum donde el caller tiene membership —
   // también los propios que se joineó como jugador (Fase 10). En esos casos
@@ -118,12 +120,18 @@ export default function HomeTab() {
               showsHorizontalScrollIndicator={false}
               keyExtractor={(a) => a.id}
               renderItem={({ item }) => {
+                // Con membership el progreso viene del map; sin membership
+                // siempre fue 0 — fallback local, ya no se consulta al server.
                 const p = progressMap[item.id];
                 return (
                   <PublicAlbumCard
                     album={item}
                     progress={p ? p.my_pasted_count / Math.max(1, p.total_stickers) : 0}
-                    counter={p ? { current: p.my_pasted_count, total: p.total_stickers } : undefined}
+                    counter={
+                      p
+                        ? { current: p.my_pasted_count, total: p.total_stickers }
+                        : { current: 0, total: item.total_stickers }
+                    }
                     onPress={() => router.push(`/album/${item.id}`)}
                   />
                 );
@@ -153,7 +161,11 @@ export default function HomeTab() {
             const progress = p && total > 0 ? p.my_pasted_count / total : 0;
             const isHidden = (album as any).__hidden === true;
             const isOwn = ownedIds.has(album.id);
-            const href = isOwn ? `/album/${album.id}?as=player` : `/album/${album.id}`;
+            // Href explícito: typed routes no acepta el template string con
+            // query (`?as=player`) — el shape objeto sí tipa.
+            const href: Href = isOwn
+              ? { pathname: '/album/[id]', params: { id: album.id, as: 'player' } }
+              : { pathname: '/album/[id]', params: { id: album.id } };
             const tag = isHidden ? 'OCULTO' : isOwn ? 'TUYO' : undefined;
             return (
               <View key={album.id} style={[{ gap: 4 }, isDesktop && styles.gridItem]}>

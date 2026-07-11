@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { setAlbumPublic, setAlbumPublicRank, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
 import { useDesktopCap } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 
 export default function AdminScreen() {
@@ -27,7 +28,7 @@ export default function AdminScreen() {
   const desktopCap = useDesktopCap(960);
   const { albums, isLoading, isRefetching, error, refetch } = useAdminAlbums();
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusRefetchStale(['admin', 'albums']);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

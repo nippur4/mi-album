@@ -11,6 +11,16 @@ import type { Sticker } from '@/lib/queries/albums';
 
 export type TradeStatus = Database['public']['Enums']['trade_status'];
 
+// Proyección mínima del sticker embebido en una oferta: lo que renderiza
+// TradeOfferCard (StickerMini). El sticker completo se baja aparte si hace falta.
+export interface TradeSticker {
+  id: string;
+  number: number;
+  name: string;
+  rarity: Sticker['rarity'];
+  thumb_key: string;
+}
+
 export interface TradeOffer {
   id: string;
   album_id: string;
@@ -22,9 +32,9 @@ export interface TradeOffer {
   to_user_name: string;
   to_user_avatar_url: string | null;
   offered_sticker_id: string;
-  offered_sticker: Sticker | null;
+  offered_sticker: TradeSticker | null;
   requested_sticker_id: string;
-  requested_sticker: Sticker | null;
+  requested_sticker: TradeSticker | null;
   status: TradeStatus;
   created_at: string;
   resolved_at: string | null;
@@ -50,6 +60,8 @@ export interface AlbumMatch {
 // queries extra (profiles + stickers + albums); ahora PostgREST embebe las
 // relaciones con hints de FK en un solo round trip. RLS aplica igual en las
 // tablas embebidas (misma visibilidad que las queries separadas).
+// Columnas explícitas (no `*`): las cards usan un puñado de campos y los
+// stickers completos traían traits/keys/timestamps que eran egress puro.
 export function useMyOffers() {
   const { session } = useSession();
   const uid = session?.user.id;
@@ -62,11 +74,12 @@ export function useMyOffers() {
       const { data: rows, error } = await supabase
         .from('trade_offers')
         .select(`
-          *,
+          id, album_id, from_user, to_user, offered_sticker_id, requested_sticker_id,
+          status, created_at, resolved_at,
           from_profile:profiles!trade_offers_from_user_fkey(display_name, avatar_url),
           to_profile:profiles!trade_offers_to_user_fkey(display_name, avatar_url),
-          offered:stickers!trade_offers_offered_sticker_id_fkey(*),
-          requested:stickers!trade_offers_requested_sticker_id_fkey(*),
+          offered:stickers!trade_offers_offered_sticker_id_fkey(id, number, name, rarity, thumb_key),
+          requested:stickers!trade_offers_requested_sticker_id_fkey(id, number, name, rarity, thumb_key),
           album:albums!trade_offers_album_id_fkey(name)
         `)
         .or(`from_user.eq.${uid},to_user.eq.${uid}`)
@@ -84,9 +97,9 @@ export function useMyOffers() {
         to_user_name: o.to_profile?.display_name ?? '',
         to_user_avatar_url: o.to_profile?.avatar_url ?? null,
         offered_sticker_id: o.offered_sticker_id,
-        offered_sticker: (o.offered as Sticker | null) ?? null,
+        offered_sticker: (o.offered as TradeSticker | null) ?? null,
         requested_sticker_id: o.requested_sticker_id,
-        requested_sticker: (o.requested as Sticker | null) ?? null,
+        requested_sticker: (o.requested as TradeSticker | null) ?? null,
         status: o.status,
         created_at: o.created_at,
         resolved_at: o.resolved_at,

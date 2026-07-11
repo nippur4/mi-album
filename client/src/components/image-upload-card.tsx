@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(42,30,22,0.5)',
     alignItems: 'center',
     justifyContent: 'center',

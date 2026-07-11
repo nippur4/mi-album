@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { HeaderAvatar } from '@/components/header-avatar';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useAlbumsProgress, useMyOwnedAlbums } from '@/lib/queries/albums';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
 export default function ManageTab() {
   const router = useRouter();
@@ -21,12 +22,9 @@ export default function ManageTab() {
   const { albums: all, refetch, isRefetching } = useMyOwnedAlbums({ includeHidden: true });
   const archivedCount = all.filter((a) => (a as any).owner_hidden === true).length;
   const owned = showArchived ? all : all.filter((a) => (a as any).owner_hidden !== true);
-  const { progress, refetch: refetchProgress } = useAlbumsProgress(owned.map((a) => a.id));
+  const { progress } = useAlbumsProgress(owned.map((a) => a.id));
 
-  useFocusEffect(useCallback(() => {
-    refetch();
-    refetchProgress();
-  }, [refetch, refetchProgress]));
+  useFocusRefetchStale(['albums', 'owned'], ['albums', 'progress']);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

@@ -169,14 +169,17 @@ export interface UpdateAlbumContentPatch {
 }
 
 export async function updateAlbumContent(albumId: string, patch: UpdateAlbumContentPatch) {
+  // undefined omite el param en el POST → el default null del RPC aplica
+  // ("no tocar"). Mismo comportamiento que pasar null, sin pelear con los
+  // tipos generados (que marcan los params con default como opcionales).
   return supabase.rpc('fn_update_album_content', {
     p_album_id: albumId,
-    p_name: patch.name ?? null,
-    p_total_stickers: patch.total_stickers ?? null,
-    p_cover_thumb_key: patch.cover_thumb_key ?? null,
-    p_cover_large_key: patch.cover_large_key ?? null,
-    p_pack_thumb_key: patch.pack_thumb_key ?? null,
-    p_pack_large_key: patch.pack_large_key ?? null,
+    p_name: patch.name ?? undefined,
+    p_total_stickers: patch.total_stickers ?? undefined,
+    p_cover_thumb_key: patch.cover_thumb_key ?? undefined,
+    p_cover_large_key: patch.cover_large_key ?? undefined,
+    p_pack_thumb_key: patch.pack_thumb_key ?? undefined,
+    p_pack_large_key: patch.pack_large_key ?? undefined,
   });
 }
 

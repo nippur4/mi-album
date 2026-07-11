@@ -118,11 +118,13 @@ export async function updateAdminPreset(args: {
   sort_order?: number;
   active?: boolean;
 }) {
+  // undefined omite el param → aplica el default null del RPC ("no tocar",
+  // migración 0056).
   return supabase.rpc('fn_admin_update_preset', {
     p_id: args.id,
-    p_name: args.name ?? null,
-    p_sort_order: args.sort_order ?? null,
-    p_active: args.active ?? null,
+    p_name: args.name ?? undefined,
+    p_sort_order: args.sort_order ?? undefined,
+    p_active: args.active ?? undefined,
   });
 }
 

@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   topBar: {
     flexDirection: 'row',

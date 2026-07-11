@@ -1,5 +1,4 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +8,7 @@ import { TradeOfferCard } from '@/components/trade-offer-card';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useMyOffers } from '@/lib/queries/trades';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
 type Tab = 'received' | 'sent';
 
@@ -18,7 +18,7 @@ export default function TradesTab() {
   const [tab, setTab] = useState<Tab>('received');
   const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusRefetchStale(['trades', 'offers']);
 
   const list = tab === 'received' ? received : sent;
   const receivedPending = received.filter((o) => o.status === 'pending').length;

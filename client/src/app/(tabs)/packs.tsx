@@ -1,6 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +10,7 @@ import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
 export default function PacksTab() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function PacksTab() {
   // apagados, pero su wrapper dejaba huecos en el grid desktop.
   const dailyRows = playable.filter((r) => r.daily.enabled);
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusRefetchStale(['packs-tab']);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

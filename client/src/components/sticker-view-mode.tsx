@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sheenClip: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     borderRadius: Radius.cardLg,
   },

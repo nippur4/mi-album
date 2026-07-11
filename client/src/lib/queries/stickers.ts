@@ -42,13 +42,14 @@ export interface UpdateStickerPayload {
 }
 
 export async function updateSticker(p: UpdateStickerPayload) {
+  // undefined omite el param → aplica el default null del RPC ("no tocar").
   return supabase.rpc('fn_update_sticker', {
     p_sticker_id: p.sticker_id,
-    p_name: p.name ?? null,
-    p_rarity: p.rarity ?? null,
-    p_thumb_key: p.thumb_key ?? null,
-    p_large_key: p.large_key ?? null,
-    p_traits: (p.traits ?? null) as any,
+    p_name: p.name ?? undefined,
+    p_rarity: p.rarity ?? undefined,
+    p_thumb_key: p.thumb_key ?? undefined,
+    p_large_key: p.large_key ?? undefined,
+    p_traits: (p.traits ?? undefined) as any,
   });
 }
 

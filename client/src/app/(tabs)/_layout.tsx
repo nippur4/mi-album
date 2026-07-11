@@ -9,6 +9,15 @@ import { useMyOffers } from '@/lib/queries/trades';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
 
+// Estilo compartido de los badges rojos de las tabs (Sobres y Cambios).
+const tabBadgeStyle = {
+  backgroundColor: Colors.red,
+  color: Colors.paper,
+  fontFamily: FontFamily.mono,
+  fontSize: 10,
+  fontWeight: '700',
+} as const;
+
 // Tabs custom para tener control total del look (iconos lucide-style + labels
 // en Space Mono coherentes con el handoff). La tab "QR" no navega: intercepta
 // tabPress y abre un modal manejado acá arriba para mantener estado en el layout.
@@ -90,13 +99,7 @@ export default function TabsLayout() {
             title: 'SOBRES',
             tabBarIcon: ({ color }) => <Feather name="mail" size={22} color={color} />,
             tabBarBadge: packsBadge > 0 ? packsBadge : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: Colors.red,
-              color: Colors.paper,
-              fontFamily: FontFamily.mono,
-              fontSize: 10,
-              fontWeight: '700',
-            },
+            tabBarBadgeStyle: tabBadgeStyle,
           }}
         />
         <Tabs.Screen
@@ -105,13 +108,7 @@ export default function TabsLayout() {
             title: 'CAMBIOS',
             tabBarIcon: ({ color }) => <Feather name="repeat" size={22} color={color} />,
             tabBarBadge: tradesBadge > 0 ? tradesBadge : undefined,
-            tabBarBadgeStyle: {
-              backgroundColor: Colors.red,
-              color: Colors.paper,
-              fontFamily: FontFamily.mono,
-              fontSize: 10,
-              fontWeight: '700',
-            },
+            tabBarBadgeStyle: tabBadgeStyle,
           }}
         />
         {/* Profile sigue accesible via /profile (HeaderAvatar lo abre) pero

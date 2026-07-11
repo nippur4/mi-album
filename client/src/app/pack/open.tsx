@@ -114,8 +114,10 @@ export default function OpenPackScreen() {
     try {
       const result = await openPack(packId);
       setStickers(result);
-      // El contador de pendientes cambió (badge de la tab Sobres + listados).
+      // El contador de pendientes cambió (badge de la tab Sobres + listados)
+      // y la colección del jugador recibió figuritas nuevas.
       qc.invalidateQueries({ queryKey: ['packs-tab'] });
+      qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
       setTimeout(() => {
         // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
         playSfx('open', 0.95);
@@ -162,6 +164,11 @@ export default function OpenPackScreen() {
       }
       setPasted(true);
       playSfx('paste', 0.85);
+      // Mismas invalidaciones que usePasteSticker: colección, progreso del
+      // Home y avatares desbloqueables.
+      qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
+      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+      qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
     } catch (err: any) {
       Alert.alert('Error', errorMessage(err));
     } finally {

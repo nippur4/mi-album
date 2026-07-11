@@ -68,7 +68,7 @@ export function PastedFlash({ children, onDone, style }: Props) {
 
 const styles = StyleSheet.create({
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Colors.green,
     borderRadius: Radius.cell,
   },

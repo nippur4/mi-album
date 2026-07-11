@@ -1,8 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,6 +31,7 @@ import {
 import { uploadPresetImage } from '@/lib/queries/uploads';
 import { r2Url } from '@/lib/storage';
 import { useDesktopCap } from '@/lib/use-is-desktop';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
 export default function AdminPresetsScreen() {
   const desktopCap = useDesktopCap(960);
@@ -39,7 +39,7 @@ export default function AdminPresetsScreen() {
   const [uploadingFor, setUploadingFor] = useState<PresetKind | null>(null);
   const [renaming, setRenaming] = useState<PresetImage | null>(null);
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  useFocusRefetchStale(['admin', 'presets']);
 
   async function pickAndUpload(kind: PresetKind) {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();

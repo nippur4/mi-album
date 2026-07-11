@@ -1,5 +1,4 @@
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,6 +6,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
 import { useAlbumDetail } from '@/lib/queries/albums';
+import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 
 import { OwnerAlbumView } from '@/components/album-owner-view';
@@ -19,7 +19,9 @@ export default function AlbumDetailScreen() {
   const { session } = useSession();
   const { album, stickers, isLoading, error, refetch } = useAlbumDetail(id);
 
-  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
+  // Solo si está stale: el detail baja el álbum + TODAS sus figuritas (hasta
+  // 1001 filas en el especial) — refetchear en cada "volver" era carísimo.
+  useFocusRefetchStale(['albums', 'detail', id]);
 
   if (isLoading && !album) {
     return (

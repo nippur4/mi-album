@@ -69,9 +69,10 @@ export async function updateDisplayName(newName: string) {
   return supabase.rpc('fn_update_display_name', { p_new_name: newName });
 }
 
-// p_thumb_key=null → vuelve al avatar default (iniciales+color hash).
+// thumbKey=null → vuelve al avatar default (iniciales+color hash): se omite
+// el param y aplica el default null del RPC (migración 0056).
 export async function updateAvatar(thumbKey: string | null) {
-  return supabase.rpc('fn_update_avatar', { p_thumb_key: thumbKey });
+  return supabase.rpc('fn_update_avatar', { p_thumb_key: thumbKey ?? undefined });
 }
 
 export function useUpdateDisplayName() {

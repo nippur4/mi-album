@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     textAlign: 'center',
   },
-  overlay: { ...StyleSheet.absoluteFillObject },
+  overlay: { ...StyleSheet.absoluteFill },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

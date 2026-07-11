@@ -1204,7 +1204,7 @@ const styles = StyleSheet.create({
     minHeight: 420,
   },
   emptyGhostGrid: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.gridGap,
