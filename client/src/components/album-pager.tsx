@@ -183,7 +183,11 @@ export function AlbumPager({
           overflow: 'hidden',
         }}
       >
-        <GestureDetector gesture={pan}>
+        {/* touchAction (solo web): sin esto RNGH pone touch-action:none y el
+            browser no puede iniciar el scroll vertical táctil desde la hoja.
+            pan-y = el browser scrollea vertical, el gesto captura horizontal
+            (espeja el activeOffsetX/failOffsetY de nativo). */}
+        <GestureDetector gesture={pan} touchAction="pan-y">
           <View style={{ width: pageWidth, height: pageHeight }}>
             {pages.map((page, idx) => {
               // Solo renderear páginas a distancia ≤ 1 del current (buffer

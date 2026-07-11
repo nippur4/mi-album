@@ -667,10 +667,10 @@ export type Database = {
       }
       fn_admin_update_preset: {
         Args: {
-          p_active: boolean
+          p_active?: boolean
           p_id: string
-          p_name: string
-          p_sort_order: number
+          p_name?: string
+          p_sort_order?: number
         }
         Returns: {
           active: boolean
@@ -929,7 +929,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      fn_update_avatar: { Args: { p_thumb_key: string }; Returns: undefined }
+      fn_update_avatar: { Args: { p_thumb_key?: string }; Returns: undefined }
       fn_update_display_name: {
         Args: { p_new_name: string }
         Returns: undefined
