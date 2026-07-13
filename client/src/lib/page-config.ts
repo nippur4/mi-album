@@ -27,12 +27,17 @@ export const PAGE_COLORS: PageColor[] = [
   { key: 'teal',     name: 'Turquesa', bg: '#B8E0DA' },
   { key: 'mint',     name: 'Menta',    bg: '#D5EBDC' },
   { key: 'sage',     name: 'Salvia',   bg: '#C8D8B5' },
+  { key: 'fern',     name: 'Helecho',  bg: '#B2D4A4' },
+  { key: 'olive',    name: 'Oliva',    bg: '#C9C98F' },
+  { key: 'moss',     name: 'Musgo',    bg: '#9FB784' },
   { key: 'slate',    name: 'Pizarra',  bg: '#DDE2E6' },
   { key: 'stone',    name: 'Piedra',   bg: '#C9C2BC' },
   // Tonos un escalón más oscuros que el resto de la paleta.
   { key: 'clay',     name: 'Arcilla',  bg: '#C49A6C' },
   { key: 'grape',    name: 'Uva',      bg: '#9A87B8' },
   { key: 'pine',     name: 'Pino',     bg: '#8FAF97' },
+  { key: 'jungle',   name: 'Selva',    bg: '#77A06B' },
+  { key: 'swamp',    name: 'Pantano',  bg: '#8E9A6D' },
   { key: 'wine',     name: 'Vino',     bg: '#A86B7E' },
   { key: 'ocean',    name: 'Océano',   bg: '#7D93B5' },
   { key: 'graphite', name: 'Grafito',  bg: '#8A8D94' },
@@ -102,6 +107,11 @@ export const PAGE_TEXTURES: PageTexture[] = [
   { key: 'plus',       name: 'Cruces' },
   { key: 'waves',      name: 'Olas' },
   { key: 'zigzag',     name: 'Zigzag' },
+  // Tanda "prehistórica" (pensada para álbumes de dinosaurios).
+  { key: 'paws',       name: 'Huellas' },
+  { key: 'scales',     name: 'Escamas' },
+  { key: 'bones',      name: 'Huesitos' },
+  { key: 'ferns',      name: 'Helechos' },
 ];
 
 export const DEFAULT_PAGE_TEXTURE = 'none';
@@ -146,6 +156,9 @@ export interface PageOverride {
   color?: string;
   layout?: string;
   texture?: string;
+  // Título visible arriba de la hoja. Viaja dentro del jsonb de overrides,
+  // así que no necesitó migración (el server lo guarda pasante).
+  title?: string;
   // Proporción de figurita de esta hoja (key de CELL_ASPECTS).
   cellAspect?: string;
   // Solo aplica si el layout soporta landscape (ver supportsLandscape).
@@ -160,6 +173,7 @@ export interface BuiltPage {
   textureKey: string;
   cellAspectKey: string;
   orientation: PageOrientation;
+  title?: string;          // solo si la hoja tiene título (no hay default)
   numbers: number[];
 }
 
@@ -197,6 +211,7 @@ export function buildPages(
       ov?.orientation === 'landscape' && layout.supportsLandscape
         ? 'landscape'
         : DEFAULT_PAGE_ORIENTATION;
+    const title = ov?.title?.trim();
     pages.push({
       index: pageIdx,
       layout,
@@ -204,6 +219,7 @@ export function buildPages(
       textureKey: ov?.texture ?? defaultTexture,
       cellAspectKey: ov?.cellAspect ?? defaultCellAspect,
       orientation,
+      title: title || undefined,
       numbers: nums,
     });
     pageIdx++;

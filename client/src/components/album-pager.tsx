@@ -232,8 +232,12 @@ function AnimatedPage({
   page,
   renderCell,
 }: AnimatedPageProps) {
-  const { layout, numbers, colorKey, orientation } = page;
+  const { layout, numbers, colorKey, orientation, title } = page;
   const bg = resolveColor(colorKey);
+  // Alto reservado por el título (font 16 + margen). Se descuenta del alto
+  // disponible para que el fit achique las celdas y nada desborde la hoja
+  // (que mantiene tamaño fijo).
+  const titleHeight = title ? 30 : 0;
 
   // Portrait: la proporción configurada de la hoja (clásica 0.82, carta 2:3,
   // cuadrada 1:1). Landscape: invertida. La hoja mantiene su tamaño fijo:
@@ -242,7 +246,7 @@ function AnimatedPage({
   const aspect = orientation === 'landscape' ? 1 / baseAspect : baseAspect;
   const SAFETY_MARGIN = 4;
   const availW = innerWidth - Spacing.gridGap * (layout.cols - 1) - SAFETY_MARGIN;
-  const availH = pageHeight - Spacing.md * 2 - Spacing.gridGap * (layout.rows - 1);
+  const availH = pageHeight - Spacing.md * 2 - Spacing.gridGap * (layout.rows - 1) - titleHeight;
   let cellW = Math.floor(availW / layout.cols);
   const cellHfromW = cellW / aspect;
   if (cellHfromW * layout.rows > availH) {
@@ -302,6 +306,11 @@ function AnimatedPage({
       >
         {/* Textura entre el color de fondo y el grid de figuritas */}
         <PageTexture texture={page.textureKey} />
+        {title && (
+          <Text style={styles.pageTitle} numberOfLines={1}>
+            {title}
+          </Text>
+        )}
         <View
           style={[
             styles.grid,
@@ -364,6 +373,16 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     minWidth: 40,
     textAlign: 'center',
+  },
+  pageTitle: {
+    fontFamily: FontFamily.display,
+    fontSize: 16,
+    lineHeight: 22,
+    color: Colors.ink,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   page: {
     paddingHorizontal: Spacing.screenX,

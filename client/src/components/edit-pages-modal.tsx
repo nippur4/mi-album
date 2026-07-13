@@ -12,6 +12,7 @@ import {
 import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { PageTexture } from '@/components/page-texture';
+import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
 import {
@@ -109,12 +110,16 @@ export function EditPagesModal({
       if (merged.layout) cleaned.layout = merged.layout;
       if (merged.texture) cleaned.texture = merged.texture;
       if (merged.cellAspect) cleaned.cellAspect = merged.cellAspect;
+      // El título se guarda tal cual se tipea (trim recién al guardar, para
+      // no comerse los espacios mientras se escribe); solo-espacios = sin título.
+      if (merged.title && merged.title.trim()) cleaned.title = merged.title;
       // 'portrait' es el default — solo persistimos landscape. (Antes este
       // clean directamente descartaba orientation y el chip no persistía.)
       if (merged.orientation === 'landscape') cleaned.orientation = 'landscape';
       // Si el override solo tiene 'page', lo eliminamos.
       const hasContent =
-        cleaned.color || cleaned.layout || cleaned.texture || cleaned.cellAspect || cleaned.orientation;
+        cleaned.color || cleaned.layout || cleaned.texture || cleaned.cellAspect ||
+        cleaned.orientation || cleaned.title;
       if (!hasContent) {
         return prev.filter((o) => o.page !== page);
       }
@@ -138,11 +143,15 @@ export function EditPagesModal({
   async function onSave() {
     setError(null);
     setSaving(true);
+    // Trim de títulos recién acá (ver setOverride: en vivo se guardan crudos).
+    const cleanOverrides = overrides.map((o) =>
+      o.title ? { ...o, title: o.title.trim() } : o,
+    );
     const { error: rpcErr } = await updateAlbumPages(
       albumId,
       bgColor,
       texture,
-      overrides,
+      cleanOverrides,
       cellAspect,
       layoutKey,
     );
@@ -161,6 +170,7 @@ export function EditPagesModal({
       onClose={onClose}
       title="Hojas del álbum"
       maxHeight="92%"
+      avoidKeyboard="both"
       footer={
         <View style={sheetStyles.actions}>
           <Button label="Cancelar" variant="outline" onPress={onClose} />
@@ -184,7 +194,8 @@ export function EditPagesModal({
               renderItem={({ item: p }) => {
                 const ov = getOverride(p.index);
                 const hasOverride = !!(
-                  ov && (ov.color || ov.layout || ov.texture || ov.orientation || ov.cellAspect)
+                  ov &&
+                  (ov.color || ov.layout || ov.texture || ov.orientation || ov.cellAspect || ov.title)
                 );
                 return (
                   <PageRowItem
@@ -309,6 +320,7 @@ export function EditPagesModal({
                 onSetColor={(color) => setOverride(editingPage, { color })}
                 onSetLayout={(layout) => setOverride(editingPage, { layout })}
                 onSetTexture={(t) => setOverride(editingPage, { texture: t })}
+                onSetTitle={(title) => setOverride(editingPage, { title })}
                 onSetCellAspect={(a) => setOverride(editingPage, { cellAspect: a })}
                 onSetOrientation={(o) => setOverride(editingPage, { orientation: o })}
                 onClear={() => {
@@ -349,7 +361,10 @@ const PageRowItem = memo(function PageRowItem({
         />
       </View>
       <View style={styles.pageText}>
-        <Text style={styles.pageTitle}>Hoja {p.index + 1}</Text>
+        <Text style={styles.pageTitle} numberOfLines={1}>
+          Hoja {p.index + 1}
+          {p.title ? ` · ${p.title}` : ''}
+        </Text>
         <Text style={styles.pageMeta}>
           {p.layout.name}
           {p.orientation === 'landscape' ? ' · horizontal' : ''}
@@ -373,6 +388,7 @@ function PageEditor({
   onSetColor,
   onSetLayout,
   onSetTexture,
+  onSetTitle,
   onSetCellAspect,
   onSetOrientation,
   onClear,
@@ -387,6 +403,7 @@ function PageEditor({
   onSetColor: (color: string | undefined) => void;
   onSetLayout: (layout: string | undefined) => void;
   onSetTexture: (t: string | undefined) => void;
+  onSetTitle: (title: string) => void;
   onSetCellAspect: (a: string | undefined) => void;
   onSetOrientation: (o: PageOrientation | undefined) => void;
   onClear: () => void;
@@ -435,6 +452,21 @@ function PageEditor({
             <Feather name="chevron-right" size={18} color={Colors.ink} />
           </Pressable>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>TÍTULO DE ESTA HOJA</Text>
+        <Text style={styles.hint}>
+          Aparece arriba de la hoja. Dejalo vacío para no mostrar título.
+        </Text>
+        <TextInput
+          value={override?.title ?? ''}
+          onChangeText={onSetTitle}
+          placeholder="Ej: Jurásico"
+          maxLength={40}
+          autoCapitalize="sentences"
+          returnKeyType="done"
+        />
       </View>
 
       <View style={styles.section}>
@@ -562,7 +594,8 @@ function PageEditor({
         override?.layout ||
         override?.texture ||
         override?.orientation ||
-        override?.cellAspect) && (
+        override?.cellAspect ||
+        override?.title) && (
         <Pressable onPress={onClear} style={styles.resetBtn}>
           <Text style={styles.resetText}>Quitar personalización de esta hoja</Text>
         </Pressable>
