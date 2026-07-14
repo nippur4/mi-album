@@ -44,6 +44,9 @@ import {
 } from '@/lib/page-config';
 import { Layout as ThemeLayout } from '@/constants/theme';
 
+// Largo máximo del título de hoja (límite solo de UI; el server no valida).
+const TITLE_MAX_LENGTH = 41;
+
 interface Props {
   visible: boolean;
   albumId: string;
@@ -513,7 +516,12 @@ function PageEditor({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>TÍTULO DE ESTA HOJA</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.sectionLabel}>TÍTULO DE ESTA HOJA</Text>
+          <Text style={styles.charCount}>
+            {(override?.title ?? '').length}/{TITLE_MAX_LENGTH}
+          </Text>
+        </View>
         <Text style={styles.hint}>
           Aparece arriba de la hoja. Dejalo vacío para no mostrar título.
         </Text>
@@ -521,7 +529,7 @@ function PageEditor({
           value={override?.title ?? ''}
           onChangeText={onSetTitle}
           placeholder="Ej: Jurásico"
-          maxLength={41}
+          maxLength={TITLE_MAX_LENGTH}
           autoCapitalize="sentences"
           returnKeyType="done"
         />
@@ -1117,6 +1125,18 @@ const styles = StyleSheet.create({
   titleColorLabel: {
     marginTop: Spacing.sm,
     marginBottom: 0,
+  },
+  // Label + contador de caracteres en la misma línea.
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  charCount: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 0.5,
   },
   textureRow: {
     flexDirection: 'row',
