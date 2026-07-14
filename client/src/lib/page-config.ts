@@ -79,9 +79,20 @@ export const LIGHT_TITLE_COLORS = new Set(['cream', 'white', 'gold']);
 export type PageTitleAlign = 'left' | 'center' | 'right';
 export const DEFAULT_PAGE_TITLE_ALIGN: PageTitleAlign = 'center';
 
-// Posición vertical del título en la hoja (arriba o abajo de la grilla).
-export type PageTitleVAlign = 'top' | 'bottom';
-export const DEFAULT_PAGE_TITLE_VALIGN: PageTitleVAlign = 'top';
+// Posición del título dentro de la hoja. Importa cuando la grilla no llena
+// la hoja (queda espacio libre): 'top'/'bottom' anclan al borde de la hoja,
+// 'above'/'below' quedan pegados a la grilla. Sin espacio libre, las cuatro
+// convergen.
+export type PageTitleVAlign = 'top' | 'above' | 'below' | 'bottom';
+export const DEFAULT_PAGE_TITLE_VALIGN: PageTitleVAlign = 'above';
+
+const TITLE_VALIGNS: PageTitleVAlign[] = ['top', 'above', 'below', 'bottom'];
+
+export function resolveTitleVAlign(v: string | null | undefined): PageTitleVAlign {
+  return TITLE_VALIGNS.includes(v as PageTitleVAlign)
+    ? (v as PageTitleVAlign)
+    : DEFAULT_PAGE_TITLE_VALIGN;
+}
 
 export interface PageTitleSize {
   key: string;
@@ -297,7 +308,7 @@ export function buildPages(
       title: title || undefined,
       titleColorKey: ov?.titleColor ?? DEFAULT_PAGE_TITLE_COLOR,
       titleAlign: ov?.titleAlign ?? DEFAULT_PAGE_TITLE_ALIGN,
-      titleVAlign: ov?.titleVAlign ?? DEFAULT_PAGE_TITLE_VALIGN,
+      titleVAlign: resolveTitleVAlign(ov?.titleVAlign),
       titleSizeKey: ov?.titleSize ?? DEFAULT_PAGE_TITLE_SIZE,
       numbers: nums,
     });

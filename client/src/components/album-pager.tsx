@@ -327,12 +327,15 @@ function AnimatedPage({
             <Feather name="edit-2" size={14} color={Colors.ink} />
           </Pressable>
         )}
+        {/* Columna con espaciadores flexibles: sin título la grilla queda
+            centrada (como antes); el título se ancla al borde de la hoja
+            (top/bottom) o pegado a la grilla (above/below). */}
         {title && page.titleVAlign === 'top' && (
-          <PageTitleText
-            page={page}
-            titleSize={titleSize}
-            onMeasured={setMeasuredTitleH}
-          />
+          <PageTitleText page={page} titleSize={titleSize} onMeasured={setMeasuredTitleH} />
+        )}
+        <View style={styles.spacer} />
+        {title && page.titleVAlign === 'above' && (
+          <PageTitleText page={page} titleSize={titleSize} onMeasured={setMeasuredTitleH} />
         )}
         <View
           style={[
@@ -352,12 +355,12 @@ function AnimatedPage({
             );
           })}
         </View>
+        {title && page.titleVAlign === 'below' && (
+          <PageTitleText page={page} titleSize={titleSize} onMeasured={setMeasuredTitleH} />
+        )}
+        <View style={styles.spacer} />
         {title && page.titleVAlign === 'bottom' && (
-          <PageTitleText
-            page={page}
-            titleSize={titleSize}
-            onMeasured={setMeasuredTitleH}
-          />
+          <PageTitleText page={page} titleSize={titleSize} onMeasured={setMeasuredTitleH} />
         )}
       </View>
     </Animated.View>
@@ -384,7 +387,9 @@ function PageTitleText({
           fontSize: titleSize.fontSize,
           lineHeight: titleSize.lineHeight,
           textAlign: page.titleAlign,
-          ...(page.titleVAlign === 'bottom' ? { marginTop: 6 } : { marginBottom: 6 }),
+          ...(page.titleVAlign === 'below' || page.titleVAlign === 'bottom'
+            ? { marginTop: 6 }
+            : { marginBottom: 6 }),
         },
       ]}
       numberOfLines={2}
@@ -464,7 +469,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.cardLg,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
+    // El centrado vertical lo hacen los spacers (flex) alrededor de la
+    // grilla — permite anclar el título al borde de la hoja.
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -477,4 +483,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.gridGap,
   },
+  spacer: { flex: 1 },
 });

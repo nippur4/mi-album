@@ -582,12 +582,17 @@ function PageEditor({
               })}
             </View>
 
-            <Text style={[styles.sectionLabel, styles.titleColorLabel]}>ALINEACIÓN VERTICAL</Text>
-            <View style={styles.orientationRow}>
+            <Text style={[styles.sectionLabel, styles.titleColorLabel]}>POSICIÓN DEL TÍTULO</Text>
+            <Text style={styles.hint}>
+              Se nota cuando la grilla no llena la hoja y queda espacio libre.
+            </Text>
+            <View style={styles.vAlignRow}>
               {(
                 [
-                  { key: 'top', label: 'Arriba', icon: 'arrow-up' },
-                  { key: 'bottom', label: 'Abajo', icon: 'arrow-down' },
+                  { key: 'top', label: 'Borde superior', icon: 'chevrons-up' },
+                  { key: 'above', label: 'Sobre las figus', icon: 'arrow-up' },
+                  { key: 'below', label: 'Bajo las figus', icon: 'arrow-down' },
+                  { key: 'bottom', label: 'Borde inferior', icon: 'chevrons-down' },
                 ] as const
               ).map((v) => {
                 const selected = (override?.titleVAlign ?? DEFAULT_PAGE_TITLE_VALIGN) === v.key;
@@ -596,7 +601,7 @@ function PageEditor({
                     key={v.key}
                     onPress={() => onSetTitleVAlign(v.key)}
                     style={({ pressed }) => [
-                      styles.orientationChip,
+                      styles.vAlignChip,
                       selected && styles.orientationChipSelected,
                       pressed && { opacity: 0.85 },
                     ]}
@@ -1380,6 +1385,26 @@ const styles = StyleSheet.create({
     borderColor: Colors.red,
     borderWidth: 2,
     backgroundColor: '#FFFFFF',
+  },
+  // Posición del título: 4 chips en 2 filas.
+  vAlignRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  vAlignChip: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   // Chip cuadrado solo-icono para la alineación del título.
   alignChip: {
