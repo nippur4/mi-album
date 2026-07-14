@@ -51,6 +51,28 @@ export function resolveColor(key: string | null | undefined): string {
   return found?.bg ?? PAGE_COLORS[0].bg;
 }
 
+// Colores para el título de la hoja. Paleta aparte de PAGE_COLORS: acá van
+// tonos saturados/oscuros que lean bien como texto sobre los fondos pastel
+// (+ crema para las hojas oscuras tipo Selva/Grafito).
+export const PAGE_TITLE_COLORS: PageColor[] = [
+  { key: 'ink',    name: 'Tinta',    bg: '#2A1E16' },
+  { key: 'red',    name: 'Rojo',     bg: '#C2372C' },
+  { key: 'forest', name: 'Verde',    bg: '#3E6B3E' },
+  { key: 'teal',   name: 'Petróleo', bg: '#1F6F6B' },
+  { key: 'blue',   name: 'Azul',     bg: '#2F5A8F' },
+  { key: 'plum',   name: 'Ciruela',  bg: '#6E4A8C' },
+  { key: 'gold',   name: 'Dorado',   bg: '#C98F2A' },
+  { key: 'cream',  name: 'Crema',    bg: '#FBF3E2' },
+];
+
+export const DEFAULT_PAGE_TITLE_COLOR = 'ink';
+
+export function resolveTitleColor(key: string | null | undefined): string {
+  if (!key) return PAGE_TITLE_COLORS[0].bg;
+  const found = PAGE_TITLE_COLORS.find((c) => c.key === key);
+  return found?.bg ?? PAGE_TITLE_COLORS[0].bg;
+}
+
 export type PageOrientation = 'portrait' | 'landscape';
 
 export interface PageLayout {
@@ -128,11 +150,13 @@ export interface CellAspect {
 // Proporciones de figurita disponibles. La key se guarda en DB (default a
 // nivel álbum + override por hoja); el ratio se resuelve en cliente.
 // 'tall' existe porque las imágenes generadas tipo carta (2:3) se recortaban
-// en la celda clásica.
+// en la celda clásica. 'sheet' es para fichas informativas casi cuadradas
+// (ej. fichas de dinosaurios ~1181×1333) que la clásica recortaba.
 export const CELL_ASPECTS: CellAspect[] = [
   { key: 'classic', name: 'Clásica',  ratio: 0.82,  crop: [4, 5] },
   { key: 'tall',    name: 'Carta',    ratio: 2 / 3, crop: [2, 3] },
   { key: 'square',  name: 'Cuadrada', ratio: 1,     crop: [1, 1] },
+  { key: 'sheet',   name: 'Ficha',    ratio: 8 / 9, crop: [8, 9] },
 ];
 
 export const DEFAULT_CELL_ASPECT = 'classic';
@@ -159,6 +183,9 @@ export interface PageOverride {
   // Título visible arriba de la hoja. Viaja dentro del jsonb de overrides,
   // así que no necesitó migración (el server lo guarda pasante).
   title?: string;
+  // Color del título (key de PAGE_TITLE_COLORS). Solo se persiste si hay
+  // título y no es el default.
+  titleColor?: string;
   // Proporción de figurita de esta hoja (key de CELL_ASPECTS).
   cellAspect?: string;
   // Solo aplica si el layout soporta landscape (ver supportsLandscape).
@@ -174,6 +201,7 @@ export interface BuiltPage {
   cellAspectKey: string;
   orientation: PageOrientation;
   title?: string;          // solo si la hoja tiene título (no hay default)
+  titleColorKey: string;   // resuelto (default 'ink')
   numbers: number[];
 }
 
@@ -220,6 +248,7 @@ export function buildPages(
       cellAspectKey: ov?.cellAspect ?? defaultCellAspect,
       orientation,
       title: title || undefined,
+      titleColorKey: ov?.titleColor ?? DEFAULT_PAGE_TITLE_COLOR,
       numbers: nums,
     });
     pageIdx++;

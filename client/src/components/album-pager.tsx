@@ -21,6 +21,7 @@ import {
   DEFAULT_PAGE_TEXTURE,
   resolveCellAspect,
   resolveColor,
+  resolveTitleColor,
   type BuiltPage,
   type PageOverride,
 } from '@/lib/page-config';
@@ -234,10 +235,10 @@ function AnimatedPage({
 }: AnimatedPageProps) {
   const { layout, numbers, colorKey, orientation, title } = page;
   const bg = resolveColor(colorKey);
-  // Alto reservado por el título (font 16 + margen). Se descuenta del alto
-  // disponible para que el fit achique las celdas y nada desborde la hoja
-  // (que mantiene tamaño fijo).
-  const titleHeight = title ? 30 : 0;
+  // Alto reservado por el título (lineHeight 28 + margen 6). Se descuenta del
+  // alto disponible para que el fit achique las celdas y nada desborde la
+  // hoja (que mantiene tamaño fijo).
+  const titleHeight = title ? 34 : 0;
 
   // Portrait: la proporción configurada de la hoja (clásica 0.82, carta 2:3,
   // cuadrada 1:1). Landscape: invertida. La hoja mantiene su tamaño fijo:
@@ -307,7 +308,10 @@ function AnimatedPage({
         {/* Textura entre el color de fondo y el grid de figuritas */}
         <PageTexture texture={page.textureKey} />
         {title && (
-          <Text style={styles.pageTitle} numberOfLines={1}>
+          <Text
+            style={[styles.pageTitle, { color: resolveTitleColor(page.titleColorKey) }]}
+            numberOfLines={1}
+          >
             {title}
           </Text>
         )}
@@ -374,15 +378,15 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
+  // El color real lo pone el render (resolveTitleColor); acá va todo lo demás.
   pageTitle: {
     fontFamily: FontFamily.display,
-    fontSize: 16,
-    lineHeight: 22,
-    color: Colors.ink,
-    letterSpacing: 1,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: 2,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   page: {
     paddingHorizontal: Spacing.screenX,

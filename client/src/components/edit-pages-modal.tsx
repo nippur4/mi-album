@@ -23,9 +23,11 @@ import {
   DEFAULT_PAGE_LAYOUT,
   DEFAULT_PAGE_ORIENTATION,
   DEFAULT_PAGE_TEXTURE,
+  DEFAULT_PAGE_TITLE_COLOR,
   PAGE_COLORS,
   PAGE_LAYOUTS,
   PAGE_TEXTURES,
+  PAGE_TITLE_COLORS,
   resolveColor,
   resolveLayout,
   updateAlbumPages,
@@ -113,6 +115,11 @@ export function EditPagesModal({
       // El título se guarda tal cual se tipea (trim recién al guardar, para
       // no comerse los espacios mientras se escribe); solo-espacios = sin título.
       if (merged.title && merged.title.trim()) cleaned.title = merged.title;
+      // El color del título solo tiene sentido con título, y 'ink' es el
+      // default (no se persiste).
+      if (cleaned.title && merged.titleColor && merged.titleColor !== DEFAULT_PAGE_TITLE_COLOR) {
+        cleaned.titleColor = merged.titleColor;
+      }
       // 'portrait' es el default — solo persistimos landscape. (Antes este
       // clean directamente descartaba orientation y el chip no persistía.)
       if (merged.orientation === 'landscape') cleaned.orientation = 'landscape';
@@ -321,6 +328,7 @@ export function EditPagesModal({
                 onSetLayout={(layout) => setOverride(editingPage, { layout })}
                 onSetTexture={(t) => setOverride(editingPage, { texture: t })}
                 onSetTitle={(title) => setOverride(editingPage, { title })}
+                onSetTitleColor={(c) => setOverride(editingPage, { titleColor: c })}
                 onSetCellAspect={(a) => setOverride(editingPage, { cellAspect: a })}
                 onSetOrientation={(o) => setOverride(editingPage, { orientation: o })}
                 onClear={() => {
@@ -389,6 +397,7 @@ function PageEditor({
   onSetLayout,
   onSetTexture,
   onSetTitle,
+  onSetTitleColor,
   onSetCellAspect,
   onSetOrientation,
   onClear,
@@ -404,6 +413,7 @@ function PageEditor({
   onSetLayout: (layout: string | undefined) => void;
   onSetTexture: (t: string | undefined) => void;
   onSetTitle: (title: string) => void;
+  onSetTitleColor: (c: string) => void;
   onSetCellAspect: (a: string | undefined) => void;
   onSetOrientation: (o: PageOrientation | undefined) => void;
   onClear: () => void;
@@ -467,6 +477,21 @@ function PageEditor({
           autoCapitalize="sentences"
           returnKeyType="done"
         />
+        {!!override?.title?.trim() && (
+          <>
+            <Text style={[styles.sectionLabel, styles.titleColorLabel]}>COLOR DEL TÍTULO</Text>
+            <View style={styles.colorRow}>
+              {PAGE_TITLE_COLORS.map((c) => (
+                <TitleColorSwatch
+                  key={c.key}
+                  color={c}
+                  selected={(override?.titleColor ?? DEFAULT_PAGE_TITLE_COLOR) === c.key}
+                  onPress={() => onSetTitleColor(c.key)}
+                />
+              ))}
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -836,6 +861,37 @@ function ColorSwatch({
   );
 }
 
+// Swatch de color de título. Como ColorSwatch pero con el check en color
+// contrastante: la paleta de títulos tiene tonos oscuros (tinta, azul...)
+// donde el check ink del swatch común desaparecería.
+function TitleColorSwatch({
+  color,
+  selected,
+  onPress,
+}: {
+  color: { key: string; name: string; bg: string };
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const lightBg = color.key === 'cream' || color.key === 'gold';
+  return (
+    <Pressable onPress={onPress} style={styles.swatchWrap}>
+      <View
+        style={[
+          styles.swatch,
+          { backgroundColor: color.bg },
+          selected && styles.swatchSelected,
+        ]}
+      >
+        {selected && (
+          <Feather name="check" size={16} color={lightBg ? Colors.ink : Colors.paper} />
+        )}
+      </View>
+      <Text style={styles.swatchLabel}>{color.name}</Text>
+    </Pressable>
+  );
+}
+
 function ColorSwatchDefault({
   selected,
   onPress,
@@ -886,6 +942,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
+  },
+  // El label de color de título va dentro de la misma sección que el input:
+  // necesita aire arriba para separarse de él.
+  titleColorLabel: {
+    marginTop: Spacing.sm,
+    marginBottom: 0,
   },
   textureRow: {
     flexDirection: 'row',
