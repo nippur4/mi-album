@@ -79,6 +79,10 @@ export const LIGHT_TITLE_COLORS = new Set(['cream', 'white', 'gold']);
 export type PageTitleAlign = 'left' | 'center' | 'right';
 export const DEFAULT_PAGE_TITLE_ALIGN: PageTitleAlign = 'center';
 
+// Posición vertical del título en la hoja (arriba o abajo de la grilla).
+export type PageTitleVAlign = 'top' | 'bottom';
+export const DEFAULT_PAGE_TITLE_VALIGN: PageTitleVAlign = 'top';
+
 export interface PageTitleSize {
   key: string;
   name: string;
@@ -224,6 +228,7 @@ export interface PageOverride {
   // no son los defaults.
   titleColor?: string;
   titleAlign?: PageTitleAlign;
+  titleVAlign?: PageTitleVAlign;
   titleSize?: string;
   // Proporción de figurita de esta hoja (key de CELL_ASPECTS).
   cellAspect?: string;
@@ -242,6 +247,7 @@ export interface BuiltPage {
   title?: string;          // solo si la hoja tiene título (no hay default)
   titleColorKey: string;   // resuelto (default 'ink')
   titleAlign: PageTitleAlign;
+  titleVAlign: PageTitleVAlign;
   titleSizeKey: string;    // resuelto (default 'md')
   numbers: number[];
 }
@@ -291,6 +297,7 @@ export function buildPages(
       title: title || undefined,
       titleColorKey: ov?.titleColor ?? DEFAULT_PAGE_TITLE_COLOR,
       titleAlign: ov?.titleAlign ?? DEFAULT_PAGE_TITLE_ALIGN,
+      titleVAlign: ov?.titleVAlign ?? DEFAULT_PAGE_TITLE_VALIGN,
       titleSizeKey: ov?.titleSize ?? DEFAULT_PAGE_TITLE_SIZE,
       numbers: nums,
     });

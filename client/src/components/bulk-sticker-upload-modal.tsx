@@ -88,7 +88,9 @@ export function BulkStickerUploadModal({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: freeCount,
-      quality: 0.9,
+      // 1 = sin recompresión del picker: la única compresión JPEG la hace el
+      // manipulator en uploads.ts (antes se comprimía dos veces).
+      quality: 1,
     });
     if (result.canceled || result.assets.length === 0) return;
 

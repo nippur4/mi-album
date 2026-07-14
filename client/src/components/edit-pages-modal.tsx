@@ -26,6 +26,7 @@ import {
   DEFAULT_PAGE_TITLE_ALIGN,
   DEFAULT_PAGE_TITLE_COLOR,
   DEFAULT_PAGE_TITLE_SIZE,
+  DEFAULT_PAGE_TITLE_VALIGN,
   LIGHT_TITLE_COLORS,
   PAGE_COLORS,
   PAGE_LAYOUTS,
@@ -39,6 +40,7 @@ import {
   type PageOrientation,
   type PageOverride,
   type PageTitleAlign,
+  type PageTitleVAlign,
 } from '@/lib/page-config';
 import { Layout as ThemeLayout } from '@/constants/theme';
 
@@ -135,6 +137,9 @@ export function EditPagesModal({
         }
         if (merged.titleAlign && merged.titleAlign !== DEFAULT_PAGE_TITLE_ALIGN) {
           cleaned.titleAlign = merged.titleAlign;
+        }
+        if (merged.titleVAlign && merged.titleVAlign !== DEFAULT_PAGE_TITLE_VALIGN) {
+          cleaned.titleVAlign = merged.titleVAlign;
         }
         if (merged.titleSize && merged.titleSize !== DEFAULT_PAGE_TITLE_SIZE) {
           cleaned.titleSize = merged.titleSize;
@@ -370,6 +375,7 @@ export function EditPagesModal({
                 onSetTitle={(title) => setOverride(screen, { title })}
                 onSetTitleColor={(c) => setOverride(screen, { titleColor: c })}
                 onSetTitleAlign={(a) => setOverride(screen, { titleAlign: a })}
+                onSetTitleVAlign={(v) => setOverride(screen, { titleVAlign: v })}
                 onSetTitleSize={(s) => setOverride(screen, { titleSize: s })}
                 onSetCellAspect={(a) => setOverride(screen, { cellAspect: a })}
                 onSetOrientation={(o) => setOverride(screen, { orientation: o })}
@@ -435,6 +441,7 @@ function PageEditor({
   onSetTitle,
   onSetTitleColor,
   onSetTitleAlign,
+  onSetTitleVAlign,
   onSetTitleSize,
   onSetCellAspect,
   onSetOrientation,
@@ -453,6 +460,7 @@ function PageEditor({
   onSetTitle: (title: string) => void;
   onSetTitleColor: (c: string) => void;
   onSetTitleAlign: (a: PageTitleAlign) => void;
+  onSetTitleVAlign: (v: PageTitleVAlign) => void;
   onSetTitleSize: (s: string) => void;
   onSetCellAspect: (a: string | undefined) => void;
   onSetOrientation: (o: PageOrientation | undefined) => void;
@@ -569,6 +577,40 @@ function PageEditor({
                       size={18}
                       color={selected ? Colors.ink : Colors.inkSoft}
                     />
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.sectionLabel, styles.titleColorLabel]}>ALINEACIÓN VERTICAL</Text>
+            <View style={styles.orientationRow}>
+              {(
+                [
+                  { key: 'top', label: 'Arriba', icon: 'arrow-up' },
+                  { key: 'bottom', label: 'Abajo', icon: 'arrow-down' },
+                ] as const
+              ).map((v) => {
+                const selected = (override?.titleVAlign ?? DEFAULT_PAGE_TITLE_VALIGN) === v.key;
+                return (
+                  <Pressable
+                    key={v.key}
+                    onPress={() => onSetTitleVAlign(v.key)}
+                    style={({ pressed }) => [
+                      styles.orientationChip,
+                      selected && styles.orientationChipSelected,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Feather
+                      name={v.icon}
+                      size={16}
+                      color={selected ? Colors.ink : Colors.inkSoft}
+                    />
+                    <Text
+                      style={[styles.orientationLabel, selected && styles.orientationLabelSelected]}
+                    >
+                      {v.label}
+                    </Text>
                   </Pressable>
                 );
               })}

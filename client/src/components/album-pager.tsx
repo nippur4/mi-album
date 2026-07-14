@@ -25,6 +25,7 @@ import {
   resolveTitleSize,
   type BuiltPage,
   type PageOverride,
+  type PageTitleSize,
 } from '@/lib/page-config';
 import { PageTexture } from '@/components/page-texture';
 
@@ -243,11 +244,12 @@ function AnimatedPage({
 }: AnimatedPageProps) {
   const { layout, numbers, colorKey, orientation, title } = page;
   const bg = resolveColor(colorKey);
-  // Alto reservado por el título (lineHeight del tamaño elegido + margen 6).
-  // Se descuenta del alto disponible para que el fit achique las celdas y
-  // nada desborde la hoja (que mantiene tamaño fijo).
+  // El título puede envolver hasta 2 renglones, así que el alto reservado se
+  // MIDE (onLayout) en vez de asumir un renglón. Primer frame: estimación de
+  // 1 línea; si envuelve, el fit recalcula y achica las celdas al toque.
   const titleSize = resolveTitleSize(page.titleSizeKey);
-  const titleHeight = title ? titleSize.lineHeight + 6 : 0;
+  const [measuredTitleH, setMeasuredTitleH] = useState<number | null>(null);
+  const titleHeight = title ? (measuredTitleH ?? titleSize.lineHeight) + 6 : 0;
 
   // Portrait: la proporción configurada de la hoja (clásica 0.82, carta 2:3,
   // cuadrada 1:1). Landscape: invertida. La hoja mantiene su tamaño fijo:
@@ -325,21 +327,12 @@ function AnimatedPage({
             <Feather name="edit-2" size={14} color={Colors.ink} />
           </Pressable>
         )}
-        {title && (
-          <Text
-            style={[
-              styles.pageTitle,
-              {
-                color: resolveTitleColor(page.titleColorKey),
-                fontSize: titleSize.fontSize,
-                lineHeight: titleSize.lineHeight,
-                textAlign: page.titleAlign,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
+        {title && page.titleVAlign === 'top' && (
+          <PageTitleText
+            page={page}
+            titleSize={titleSize}
+            onMeasured={setMeasuredTitleH}
+          />
         )}
         <View
           style={[
@@ -359,8 +352,46 @@ function AnimatedPage({
             );
           })}
         </View>
+        {title && page.titleVAlign === 'bottom' && (
+          <PageTitleText
+            page={page}
+            titleSize={titleSize}
+            onMeasured={setMeasuredTitleH}
+          />
+        )}
       </View>
     </Animated.View>
+  );
+}
+
+// Título de la hoja. Hasta 2 renglones; reporta su altura real (onLayout)
+// para que AnimatedPage reserve el espacio exacto en el fit del grid.
+function PageTitleText({
+  page,
+  titleSize,
+  onMeasured,
+}: {
+  page: BuiltPage;
+  titleSize: PageTitleSize;
+  onMeasured: (h: number) => void;
+}) {
+  return (
+    <Text
+      style={[
+        styles.pageTitle,
+        {
+          color: resolveTitleColor(page.titleColorKey),
+          fontSize: titleSize.fontSize,
+          lineHeight: titleSize.lineHeight,
+          textAlign: page.titleAlign,
+          ...(page.titleVAlign === 'bottom' ? { marginTop: 6 } : { marginBottom: 6 }),
+        },
+      ]}
+      numberOfLines={2}
+      onLayout={(e) => onMeasured(e.nativeEvent.layout.height)}
+    >
+      {page.title}
+    </Text>
   );
 }
 
@@ -420,13 +451,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
   },
-  // Color, tamaño y alineación los pone el render (según el override de la
-  // hoja); acá va lo constante.
+  // Color, tamaño, alineación y márgenes los pone PageTitleText (según el
+  // override de la hoja); acá va lo constante.
   pageTitle: {
     fontFamily: FontFamily.display,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    marginBottom: 6,
   },
   page: {
     paddingHorizontal: Spacing.screenX,

@@ -47,7 +47,8 @@ export function ImageUploadCard({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect,
-        quality: 0.9,
+        // 1 = sin recompresión del picker (la compresión la hace uploads.ts).
+        quality: 1,
       });
       if (result.canceled) return;
       await onPicked(result.assets[0]);
