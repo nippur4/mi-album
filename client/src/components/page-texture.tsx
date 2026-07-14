@@ -220,6 +220,64 @@ function patternDefs(texture: string, color: string, id: string) {
           <Path d="M9 2 L5 11 L8 11 L6 18 L12 8 L9 8 L11 2 Z" fill={color} />
         </Pattern>
       );
+    case 'sparkles':
+      // Destello de 4 puntas + puntito acompañante.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="20" height="20">
+          <Path
+            d="M10 3 C10.8 7.5 12.5 9.2 17 10 C12.5 10.8 10.8 12.5 10 17 C9.2 12.5 7.5 10.8 3 10 C7.5 9.2 9.2 7.5 10 3 Z"
+            fill={color}
+          />
+          <Circle cx="16.5" cy="4" r="1.2" fill={color} />
+        </Pattern>
+      );
+    case 'moons':
+      // Luna creciente: círculo grande menos círculo desplazado.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="20" height="20">
+          <Path
+            d="M12 3 A7 7 0 1 0 12 17 A5.5 5.5 0 1 1 12 3 Z"
+            fill={color}
+          />
+        </Pattern>
+      );
+    case 'suns':
+      // Sol: disco central + 8 rayos.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="22" height="22">
+          <Circle cx="11" cy="11" r="3" fill={color} />
+          <Line x1="11" y1="3.5" x2="11" y2="6" stroke={color} strokeWidth="1.4" />
+          <Line x1="11" y1="16" x2="11" y2="18.5" stroke={color} strokeWidth="1.4" />
+          <Line x1="3.5" y1="11" x2="6" y2="11" stroke={color} strokeWidth="1.4" />
+          <Line x1="16" y1="11" x2="18.5" y2="11" stroke={color} strokeWidth="1.4" />
+          <Line x1="5.7" y1="5.7" x2="7.5" y2="7.5" stroke={color} strokeWidth="1.4" />
+          <Line x1="14.5" y1="14.5" x2="16.3" y2="16.3" stroke={color} strokeWidth="1.4" />
+          <Line x1="16.3" y1="5.7" x2="14.5" y2="7.5" stroke={color} strokeWidth="1.4" />
+          <Line x1="7.5" y1="14.5" x2="5.7" y2="16.3" stroke={color} strokeWidth="1.4" />
+        </Pattern>
+      );
+    case 'drops':
+      // Gota de lluvia rellena.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="18" height="20">
+          <Path
+            d="M9 3 C9 3 4.5 9 4.5 12 A4.5 4.5 0 0 0 13.5 12 C13.5 9 9 3 9 3 Z"
+            fill={color}
+          />
+        </Pattern>
+      );
+    case 'mountains':
+      // Cordillera: picos de distintas alturas en línea continua.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="22" height="18">
+          <Path
+            d="M0 16 L5 8 L8 12 L12 5 L16 12 L18 9 L22 16"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.5"
+          />
+        </Pattern>
+      );
     case 'paws':
       // Huella de dino de 3 dedos: almohadilla + dedos arriba. Dos pisadas
       // por tile en diagonal, como caminando.
