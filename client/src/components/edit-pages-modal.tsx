@@ -521,7 +521,7 @@ function PageEditor({
           value={override?.title ?? ''}
           onChangeText={onSetTitle}
           placeholder="Ej: Jurásico"
-          maxLength={40}
+          maxLength={41}
           autoCapitalize="sentences"
           returnKeyType="done"
         />
