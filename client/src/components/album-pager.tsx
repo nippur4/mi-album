@@ -22,6 +22,7 @@ import {
   resolveCellAspect,
   resolveColor,
   resolveTitleColor,
+  resolveTitleSize,
   type BuiltPage,
   type PageOverride,
 } from '@/lib/page-config';
@@ -42,6 +43,9 @@ interface Props {
   // Composición por defecto del álbum (key de PAGE_LAYOUTS).
   pageLayout?: string;
   pageOverrides?: PageOverride[];
+  // Si está, cada hoja muestra un botón de editar arriba a la derecha que
+  // llama con el índice de esa hoja (solo lo pasa la vista del owner).
+  onEditPage?: (pageIndex: number) => void;
 }
 
 const FLIP_DURATION = 380;
@@ -65,6 +69,7 @@ export function AlbumPager({
   pageCellAspect = DEFAULT_CELL_ASPECT,
   pageLayout = DEFAULT_PAGE_LAYOUT,
   pageOverrides = [],
+  onEditPage,
 }: Props) {
   const { width: screenWidth } = useWindowDimensions();
   const [currentPage, setCurrentPage] = useState(0);
@@ -204,6 +209,7 @@ export function AlbumPager({
                   innerWidth={innerWidth}
                   page={page}
                   renderCell={renderCell}
+                  onEditPage={onEditPage}
                 />
               );
             })}
@@ -222,6 +228,7 @@ interface AnimatedPageProps {
   innerWidth: number;
   page: BuiltPage;
   renderCell: (number: number, cellStyle: ViewStyle) => ReactNode;
+  onEditPage?: (pageIndex: number) => void;
 }
 
 function AnimatedPage({
@@ -232,13 +239,15 @@ function AnimatedPage({
   innerWidth,
   page,
   renderCell,
+  onEditPage,
 }: AnimatedPageProps) {
   const { layout, numbers, colorKey, orientation, title } = page;
   const bg = resolveColor(colorKey);
-  // Alto reservado por el título (lineHeight 28 + margen 6). Se descuenta del
-  // alto disponible para que el fit achique las celdas y nada desborde la
-  // hoja (que mantiene tamaño fijo).
-  const titleHeight = title ? 34 : 0;
+  // Alto reservado por el título (lineHeight del tamaño elegido + margen 6).
+  // Se descuenta del alto disponible para que el fit achique las celdas y
+  // nada desborde la hoja (que mantiene tamaño fijo).
+  const titleSize = resolveTitleSize(page.titleSizeKey);
+  const titleHeight = title ? titleSize.lineHeight + 6 : 0;
 
   // Portrait: la proporción configurada de la hoja (clásica 0.82, carta 2:3,
   // cuadrada 1:1). Landscape: invertida. La hoja mantiene su tamaño fijo:
@@ -307,9 +316,26 @@ function AnimatedPage({
       >
         {/* Textura entre el color de fondo y el grid de figuritas */}
         <PageTexture texture={page.textureKey} />
+        {onEditPage && (
+          <Pressable
+            onPress={() => onEditPage(idx)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.editPageBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name="edit-2" size={14} color={Colors.ink} />
+          </Pressable>
+        )}
         {title && (
           <Text
-            style={[styles.pageTitle, { color: resolveTitleColor(page.titleColorKey) }]}
+            style={[
+              styles.pageTitle,
+              {
+                color: resolveTitleColor(page.titleColorKey),
+                fontSize: titleSize.fontSize,
+                lineHeight: titleSize.lineHeight,
+                textAlign: page.titleAlign,
+              },
+            ]}
             numberOfLines={1}
           >
             {title}
@@ -378,14 +404,28 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
-  // El color real lo pone el render (resolveTitleColor); acá va todo lo demás.
+  // Botón de editar la hoja (solo owner). Absoluto para no correr el título
+  // centrado ni entrar en la cuenta de alto del grid.
+  editPageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  // Color, tamaño y alineación los pone el render (según el override de la
+  // hoja); acá va lo constante.
   pageTitle: {
     fontFamily: FontFamily.display,
-    fontSize: 22,
-    lineHeight: 28,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    textAlign: 'center',
     marginBottom: 6,
   },
   page: {

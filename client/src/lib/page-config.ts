@@ -55,17 +55,53 @@ export function resolveColor(key: string | null | undefined): string {
 // tonos saturados/oscuros que lean bien como texto sobre los fondos pastel
 // (+ crema para las hojas oscuras tipo Selva/Grafito).
 export const PAGE_TITLE_COLORS: PageColor[] = [
-  { key: 'ink',    name: 'Tinta',    bg: '#2A1E16' },
-  { key: 'red',    name: 'Rojo',     bg: '#C2372C' },
-  { key: 'forest', name: 'Verde',    bg: '#3E6B3E' },
-  { key: 'teal',   name: 'Petróleo', bg: '#1F6F6B' },
-  { key: 'blue',   name: 'Azul',     bg: '#2F5A8F' },
-  { key: 'plum',   name: 'Ciruela',  bg: '#6E4A8C' },
-  { key: 'gold',   name: 'Dorado',   bg: '#C98F2A' },
-  { key: 'cream',  name: 'Crema',    bg: '#FBF3E2' },
+  { key: 'ink',        name: 'Tinta',     bg: '#2A1E16' },
+  { key: 'brown',      name: 'Marrón',    bg: '#6F4E2F' },
+  { key: 'terracotta', name: 'Terracota', bg: '#B4552D' },
+  { key: 'red',        name: 'Rojo',      bg: '#C2372C' },
+  { key: 'pink',       name: 'Rosa',      bg: '#C2557E' },
+  { key: 'forest',     name: 'Verde',     bg: '#3E6B3E' },
+  { key: 'olive',      name: 'Oliva',     bg: '#6B7A3A' },
+  { key: 'teal',       name: 'Petróleo',  bg: '#1F6F6B' },
+  { key: 'blue',       name: 'Azul',      bg: '#2F5A8F' },
+  { key: 'navy',       name: 'Marino',    bg: '#22406B' },
+  { key: 'plum',       name: 'Ciruela',   bg: '#6E4A8C' },
+  { key: 'gold',       name: 'Dorado',    bg: '#C98F2A' },
+  { key: 'cream',      name: 'Crema',     bg: '#FBF3E2' },
+  { key: 'white',      name: 'Blanco',    bg: '#FFFFFF' },
 ];
 
 export const DEFAULT_PAGE_TITLE_COLOR = 'ink';
+
+// Claros: el check de selección y otros contrastes van en tinta, no blanco.
+export const LIGHT_TITLE_COLORS = new Set(['cream', 'white', 'gold']);
+
+export type PageTitleAlign = 'left' | 'center' | 'right';
+export const DEFAULT_PAGE_TITLE_ALIGN: PageTitleAlign = 'center';
+
+export interface PageTitleSize {
+  key: string;
+  name: string;
+  fontSize: number;
+  lineHeight: number;
+}
+
+// Tamaños de letra del título. El pager reserva lineHeight + margen y el fit
+// achica las celdas lo necesario, así que cualquier composición los soporta.
+export const PAGE_TITLE_SIZES: PageTitleSize[] = [
+  { key: 'sm', name: 'Chica',   fontSize: 16, lineHeight: 20 },
+  { key: 'md', name: 'Mediana', fontSize: 22, lineHeight: 28 },
+  { key: 'lg', name: 'Grande',  fontSize: 30, lineHeight: 36 },
+];
+
+export const DEFAULT_PAGE_TITLE_SIZE = 'md';
+
+export function resolveTitleSize(key: string | null | undefined): PageTitleSize {
+  return (
+    PAGE_TITLE_SIZES.find((s) => s.key === (key ?? DEFAULT_PAGE_TITLE_SIZE)) ??
+    PAGE_TITLE_SIZES[1]
+  );
+}
 
 export function resolveTitleColor(key: string | null | undefined): string {
   if (!key) return PAGE_TITLE_COLORS[0].bg;
@@ -183,9 +219,12 @@ export interface PageOverride {
   // Título visible arriba de la hoja. Viaja dentro del jsonb de overrides,
   // así que no necesitó migración (el server lo guarda pasante).
   title?: string;
-  // Color del título (key de PAGE_TITLE_COLORS). Solo se persiste si hay
-  // título y no es el default.
+  // Color / alineación / tamaño del título (keys de PAGE_TITLE_COLORS,
+  // PageTitleAlign y PAGE_TITLE_SIZES). Solo se persisten si hay título y
+  // no son los defaults.
   titleColor?: string;
+  titleAlign?: PageTitleAlign;
+  titleSize?: string;
   // Proporción de figurita de esta hoja (key de CELL_ASPECTS).
   cellAspect?: string;
   // Solo aplica si el layout soporta landscape (ver supportsLandscape).
@@ -202,6 +241,8 @@ export interface BuiltPage {
   orientation: PageOrientation;
   title?: string;          // solo si la hoja tiene título (no hay default)
   titleColorKey: string;   // resuelto (default 'ink')
+  titleAlign: PageTitleAlign;
+  titleSizeKey: string;    // resuelto (default 'md')
   numbers: number[];
 }
 
@@ -249,6 +290,8 @@ export function buildPages(
       orientation,
       title: title || undefined,
       titleColorKey: ov?.titleColor ?? DEFAULT_PAGE_TITLE_COLOR,
+      titleAlign: ov?.titleAlign ?? DEFAULT_PAGE_TITLE_ALIGN,
+      titleSizeKey: ov?.titleSize ?? DEFAULT_PAGE_TITLE_SIZE,
       numbers: nums,
     });
     pageIdx++;

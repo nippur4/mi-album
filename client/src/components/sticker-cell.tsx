@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { PixelRatio, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, FontFamily, FontSize, Layout, RarityFrame, Radius } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
@@ -23,11 +24,23 @@ interface Props {
 //   - state='to_paste': tengo sin pegar (gold, tap para pegar)
 //   - extraCount>0: badge REPE ×N abajo-derecha
 export function StickerCell({ sticker, state = 'pasted', extraCount = 0, onPress, style }: Props) {
-  const url = r2Url(sticker.thumb_key);
+  // En celdas grandes (layouts 2x2/2x3, desktop) el thumb de 512 se estira y
+  // las figuritas con texto (fichas) se hacen ilegibles. Medimos la celda y,
+  // si supera los px físicos del thumb, cambiamos a la versión large. El
+  // primer frame renderiza el thumb (suele estar cacheado) y se mejora solo.
+  const [useLarge, setUseLarge] = useState(false);
+  const key = useLarge && sticker.large_key ? sticker.large_key : sticker.thumb_key;
+  const url = r2Url(key);
   const borderColor = state === 'to_paste' ? Colors.gold : RarityFrame[sticker.rarity];
 
   return (
-    <Pressable onPress={onPress} style={[styles.cell, { borderColor }, state === 'to_paste' && styles.cellToPaste, style]}>
+    <Pressable
+      onPress={onPress}
+      onLayout={(e) => {
+        if (e.nativeEvent.layout.width * PixelRatio.get() > 550) setUseLarge(true);
+      }}
+      style={[styles.cell, { borderColor }, state === 'to_paste' && styles.cellToPaste, style]}
+    >
       {url && (
         <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
       )}

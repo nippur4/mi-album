@@ -28,11 +28,13 @@ export interface UploadAsset {
 // chicos, pickers, listas). Regla aprendida (avatares 160→512, stickers
 // 300→512): en retina 2x/3x y en las celdas grandes del pager desktop, un
 // thumb chico se estira y pixela. 512 cubre celdas de hasta ~250dp @2x.
+// El large de sticker subió 1000→1600 para las figuritas tipo ficha (mucho
+// texto chico): StickerCell lo usa cuando la celda renderiza grande.
 // Las imágenes ya subidas mantienen su tamaño viejo hasta re-subirse.
 const SIZES: Record<ImageKind | 'avatar', { thumb: number; large: number }> = {
   cover:   { thumb: 512, large: 1200 },
   pack:    { thumb: 512, large: 1200 },
-  sticker: { thumb: 512, large: 1000 },
+  sticker: { thumb: 512, large: 1600 },
   avatar:  { thumb: 512, large: 1024 },
 };
 const JPEG_QUALITY = 0.85;

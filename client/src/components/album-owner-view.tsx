@@ -94,6 +94,9 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [editingName, setEditingName] = useState(false);
   const [editingEconomy, setEditingEconomy] = useState(false);
   const [editingPages, setEditingPages] = useState(false);
+  // Hoja con la que abre el modal de hojas: null = lista, número = editor
+  // directo de esa hoja (botón de editar sobre la hoja del pager).
+  const [editPagesInitial, setEditPagesInitial] = useState<number | null>(null);
   const [bulkUpload, setBulkUpload] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   // Modo reordenar: primer tap elige la figurita, segundo tap el destino
@@ -545,7 +548,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               </>
             )}
             <Pressable
-              onPress={() => setEditingPages(true)}
+              onPress={() => {
+                setEditPagesInitial(null);
+                setEditingPages(true);
+              }}
               style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
               hitSlop={6}
             >
@@ -642,6 +648,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 pageCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
                 pageLayout={(album as any).page_layout ?? undefined}
                 pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
+                onEditPage={(i) => {
+                  setEditPagesInitial(i);
+                  setEditingPages(true);
+                }}
                 renderCell={(n, cellStyle) => {
                   const s = stickerByNumber.get(n);
                   const selected = reorderMode && reorderFrom === n;
@@ -767,6 +777,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
 
       <EditPagesModal
         visible={editingPages}
+        initialPage={editPagesInitial}
         albumId={album.id}
         totalStickers={album.total_stickers}
         numberStart={numberStart}
