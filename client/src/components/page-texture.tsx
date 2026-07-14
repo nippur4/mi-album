@@ -140,6 +140,86 @@ function patternDefs(texture: string, color: string, id: string) {
           />
         </Pattern>
       );
+    case 'honeycomb':
+      // Panal: hexágonos punta arriba, lado 5. Los de la columna derecha se
+      // dibujan arriba y abajo del tile; el clipeo + tiling los empalma.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="17.32" height="15">
+          <Path
+            d="M4.33 2.5 L8.66 5 L8.66 10 L4.33 12.5 L0 10 L0 5 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.2"
+          />
+          <Path
+            d="M12.99 -5 L17.32 -2.5 L17.32 2.5 L12.99 5 L8.66 2.5 L8.66 -2.5 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.2"
+          />
+          <Path
+            d="M12.99 10 L17.32 12.5 L17.32 17.5 L12.99 20 L8.66 17.5 L8.66 12.5 Z"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.2"
+          />
+        </Pattern>
+      );
+    case 'checker':
+      // Damero: dos cuadrados llenos en diagonal por tile.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="16" height="16">
+          <Path d="M0 0 H8 V8 H0 Z M8 8 H16 V16 H8 Z" fill={color} />
+        </Pattern>
+      );
+    case 'bubbles':
+      // Burbujas: círculos de distintos tamaños, algunos llenos.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="22" height="22">
+          <Circle cx="6" cy="6" r="3.2" fill="none" stroke={color} strokeWidth="1.4" />
+          <Circle cx="16.5" cy="12" r="2.2" fill="none" stroke={color} strokeWidth="1.2" />
+          <Circle cx="9" cy="17.5" r="1.4" fill={color} />
+        </Pattern>
+      );
+    case 'confetti':
+      // Confeti: mezcla de puntos, rombos y tirillas.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="24" height="24">
+          <Circle cx="4" cy="5" r="1.8" fill={color} />
+          <Path d="M16 2 L18.2 4.2 L16 6.4 L13.8 4.2 Z" fill={color} />
+          <Path d="M6 15 L10 13" stroke={color} strokeWidth="1.8" />
+          <Circle cx="19.5" cy="18.5" r="1.8" fill={color} />
+          <Path d="M9 21.5 L11.5 19" stroke={color} strokeWidth="1.8" />
+        </Pattern>
+      );
+    case 'flowers':
+      // Flor simple: 5 pétalos alrededor de un centro.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="20" height="20">
+          <Circle cx="9" cy="4.8" r="2" fill={color} />
+          <Circle cx="13.2" cy="7.8" r="2" fill={color} />
+          <Circle cx="11.5" cy="12.6" r="2" fill={color} />
+          <Circle cx="6.5" cy="12.6" r="2" fill={color} />
+          <Circle cx="4.8" cy="7.8" r="2" fill={color} />
+          <Circle cx="9" cy="9" r="1.4" fill="none" stroke={color} strokeWidth="1" />
+        </Pattern>
+      );
+    case 'hearts':
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="18" height="16">
+          <Path
+            d="M9 13 C9 13 3 9.5 3 5.8 C3 3.6 4.6 2.5 6.1 2.5 C7.3 2.5 8.4 3.2 9 4.3 C9.6 3.2 10.7 2.5 11.9 2.5 C13.4 2.5 15 3.6 15 5.8 C15 9.5 9 13 9 13 Z"
+            fill={color}
+          />
+        </Pattern>
+      );
+    case 'bolts':
+      // Rayo de tormenta relleno.
+      return (
+        <Pattern id={id} patternUnits="userSpaceOnUse" width="16" height="20">
+          <Path d="M9 2 L5 11 L8 11 L6 18 L12 8 L9 8 L11 2 Z" fill={color} />
+        </Pattern>
+      );
     case 'paws':
       // Huella de dino de 3 dedos: almohadilla + dedos arriba. Dos pisadas
       // por tile en diagonal, como caminando.
