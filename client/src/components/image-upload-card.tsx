@@ -1,7 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 
 import { PresetBackground } from '@/components/preset-background';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';

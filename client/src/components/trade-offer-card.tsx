@@ -1,5 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 import { useState } from 'react';
 
 import { Avatar } from '@/components/avatar';

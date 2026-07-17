@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 
 import { Button } from '@/components/button';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';

@@ -51,6 +51,53 @@ export function useAdminAlbums() {
   };
 }
 
+export interface AdminStatsTotals {
+  total_users: number;
+  new_users_7d: number;
+  total_albums: number;
+  published_albums: number;
+  total_stickers: number;
+  stickers_owned: number;
+  stickers_pasted: number;
+  total_memberships: number;
+  avg_players_per_album: number | null;
+  packs_opened: number;
+  packs_pending: number;
+  trades_accepted: number;
+  trades_pending: number;
+}
+
+export interface AdminStatsDaily {
+  day: string;      // 'YYYY-MM-DD' (hora argentina)
+  signups: number;
+  logins: number;
+  active: number;   // actores distintos con login o token_refreshed (proxy DAU)
+}
+
+export interface AdminStats {
+  totals: AdminStatsTotals;
+  daily: AdminStatsDaily[];
+}
+
+export function useAdminStats() {
+  const q = useQuery({
+    queryKey: qk.admin.stats(),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fn_admin_stats');
+      if (error) throw error;
+      return data as unknown as AdminStats;
+    },
+  });
+  return {
+    stats: q.data ?? null,
+    isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
+    error: q.error ? (q.error as any).message : null,
+    refetch: q.refetch,
+  };
+}
+
 export async function setAlbumPublic(albumId: string, isPublic: boolean) {
   return supabase.rpc('fn_set_album_public', {
     p_album_id: albumId,

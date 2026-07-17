@@ -665,6 +665,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fn_admin_stats: { Args: never; Returns: Json }
       fn_admin_update_preset: {
         Args: {
           p_active?: boolean

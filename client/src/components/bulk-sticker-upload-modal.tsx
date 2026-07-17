@@ -1,7 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 
 import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
@@ -138,12 +139,8 @@ export function BulkStickerUploadModal({
       onClose();
       return;
     }
-    // En web Alert.alert no existe (no-op): detenemos directo. Lo ya subido
-    // se conserva igual, así que no es destructivo.
-    if (Platform.OS === 'web') {
-      shouldStopRef.current = true;
-      return;
-    }
+    // El confirm funciona también en web: Alert de @/lib/alert usa
+    // window.confirm ahí.
     Alert.alert(
       'Cancelar carga',
       'Las figuritas ya subidas se guardan. ¿Detener?',

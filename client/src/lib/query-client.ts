@@ -64,6 +64,7 @@ export const qk = {
   admin: {
     albums: () => ['admin', 'albums'] as const,
     presets: (kind: string) => ['admin', 'presets', kind] as const,
+    stats: () => ['admin', 'stats'] as const,
   },
   presets: {
     byKind: (kind: string) => ['presets', kind] as const,

@@ -148,7 +148,10 @@ export function AvatarPickerModal({ visible, currentName, currentThumbKey, onClo
 const TILE = 92;
 
 const styles = StyleSheet.create({
-  scroll: { maxHeight: '100%' },
+  // flexShrink (no maxHeight '100%'): con maxHeight el ScrollView tomaba el
+  // alto de su CONTENIDO (el % no resolvía contra el sheet) y en web mobile
+  // quedaba clipeado sin poder scrollear. Mismo patrón que los otros modales.
+  scroll: { flexShrink: 1 },
   unlockNote: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,

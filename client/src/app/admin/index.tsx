@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Alert } from '@/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
@@ -61,6 +61,22 @@ export default function AdminScreen() {
             <Text style={styles.menuTitle}>Plantillas de imágenes</Text>
             <Text style={styles.menuSubtitle}>
               Carátulas y sobres por defecto disponibles para todos los owners.
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={Colors.muted} />
+        </Pressable>
+
+        <Pressable
+          // Cast: la ruta recién entra a los tipos generados de expo-router
+          // cuando el dev server la descubre (próximo `expo start`).
+          onPress={() => router.push('/admin/stats' as any)}
+          style={styles.menuItem}
+        >
+          <Feather name="bar-chart-2" size={20} color={Colors.ink} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuTitle}>Estadísticas</Text>
+            <Text style={styles.menuSubtitle}>
+              Usuarios, actividad diaria, álbumes, figuritas, sobres y cambios.
             </Text>
           </View>
           <Feather name="chevron-right" size={20} color={Colors.muted} />

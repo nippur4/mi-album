@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Álbum de Figuritas — Documentación</title>
+<style>
+  :root {
+    --ink: #2A1E16;
+    --ink-soft: #5C4E3C;
+    --muted: #9C8E79;
+    --paper: #FBF3E2;
+    --paper2: #F3E7CF;
+    --paper3: #EDE0C6;
+    --red: #D23A2E;
+    --gold: #C98F2A;
+    --green: #3E6B3E;
+    --border: #E2D5BC;
+    --code-bg: #2A1E16;
+    --code-fg: #F3E7CF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fff;
+    padding: 36px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 3px 8px rgba(0,0,0,.06);
+  }
+  h1 {
+    font-family: 'Arial Black', 'Segoe UI', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+  .subtitle { color: var(--ink-soft); margin-top: 8px; font-size: 1.02rem; }
+  .stack-badges { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: .72rem;
+    letter-spacing: 1px;
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 4px 12px;
+    color: var(--ink-soft);
+  }
+  nav.toc {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+  nav.toc strong {
+    display: block;
+    font-family: Consolas, monospace;
+    font-size: .72rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  nav.toc ol { padding-left: 20px; columns: 2; column-gap: 32px; }
+  nav.toc li { margin: 3px 0; font-size: .95rem; }
+  nav.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+  nav.toc a:hover { color: var(--red); border-bottom-color: var(--red); }
+  section {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-family: 'Arial Black', 'Segoe UI', sans-serif;
+    font-size: 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--red);
+    margin-bottom: 18px;
+  }
+  h3 {
+    font-size: 1.02rem;
+    margin: 22px 0 8px;
+    color: var(--ink);
+  }
+  h3::before { content: "▸ "; color: var(--red); }
+  p { margin: 8px 0; color: var(--ink-soft); }
+  p strong, li strong { color: var(--ink); }
+  ul, ol { padding-left: 22px; margin: 8px 0; }
+  li { margin: 4px 0; color: var(--ink-soft); }
+  code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: .86em;
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: .84rem;
+    line-height: 1.55;
+  }
+  pre code { background: none; border: none; color: inherit; padding: 0; white-space: pre; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .92rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th {
+    font-family: Consolas, monospace;
+    font-size: .7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td { color: var(--ink-soft); }
+  td code { white-space: nowrap; }
+  .callout {
+    border-left: 4px solid var(--gold);
+    background: var(--paper2);
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: .93rem;
+    color: var(--ink-soft);
+  }
+  .callout.rule { border-left-color: var(--red); }
+  .callout.ok { border-left-color: var(--green); }
+  .tag {
+    display: inline-block;
+    font-family: Consolas, monospace;
+    font-size: .66rem;
+    letter-spacing: 1px;
+    background: var(--gold);
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    vertical-align: 2px;
+    margin-left: 6px;
+  }
+  .tag.pro { background: var(--gold); }
+  .tag.srv { background: var(--green); }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 32px; font-family: Consolas, monospace; letter-spacing: 1px; }
+  @media (max-width: 640px) {
+    nav.toc ol { columns: 1; }
+    section, header.hero { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Mi Álbum de Figuritas</h1>
+  <p class="subtitle">App de álbumes de figuritas digitales: los <strong>owners</strong> crean y publican álbumes; los <strong>jugadores</strong> se unen, abren sobres, pegan figuritas y hacen intercambios.</p>
+  <div class="stack-badges">
+    <span class="badge">EXPO SDK 56</span>
+    <span class="badge">EXPO-ROUTER</span>
+    <span class="badge">SUPABASE (POSTGRES + RLS)</span>
+    <span class="badge">CLOUDFLARE R2</span>
+    <span class="badge">EDGE FUNCTIONS (DENO)</span>
+    <span class="badge">REANIMATED 4</span>
+    <span class="badge">REACT QUERY</span>
+    <span class="badge">WEB + iOS/ANDROID</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <strong>CONTENIDO</strong>
+  <ol>
+    <li><a href="#arquitectura">Arquitectura</a></li>
+    <li><a href="#estructura">Estructura del repo</a></li>
+    <li><a href="#flujo-owner">Flujo del owner</a></li>
+    <li><a href="#flujo-jugador">Flujo del jugador</a></li>
+    <li><a href="#economia">Economía de sobres</a></li>
+    <li><a href="#trades">Intercambios</a></li>
+    <li><a href="#hojas">Personalización de hojas</a></li>
+    <li><a href="#imagenes">Pipeline de imágenes</a></li>
+    <li><a href="#avatares">Avatares desbloqueables</a></li>
+    <li><a href="#convenciones">Convenciones y decisiones</a></li>
+    <li><a href="#operativas">Operativas / comandos</a></li>
+    <li><a href="#pendientes">Pendientes</a></li>
+  </ol>
+</nav>
+
+<section id="arquitectura">
+  <h2>1 · Arquitectura</h2>
+  <p>Tres piezas: un cliente Expo universal (nativo + web), un backend Supabase donde vive <strong>toda la lógica sensible</strong>, y R2 para las imágenes.</p>
+
+  <h3>Cliente (<code>client/</code>)</h3>
+  <ul>
+    <li><strong>Expo SDK 56 + expo-router</strong> con grupos de rutas: <code>(auth)</code>, <code>(tabs)</code>, <code>album</code>, <code>sticker</code>, <code>join</code>, <code>pack</code>, <code>trade</code>, <code>admin</code>.</li>
+    <li><strong>React Query</strong> para data fetching; hooks por dominio en <code>src/lib/queries/</code> (albums, stickers, packs, trades, daily, presets, profile, uploads, admin).</li>
+    <li>Design tokens en <code>src/constants/theme.ts</code> (fuentes Anton / Manrope / SpaceMono, paleta papel + tinta).</li>
+    <li>Web: <code>web.output = "single"</code> (AsyncStorage no funciona en SSR). Desktop capea el ancho del contenido, no el ScrollView.</li>
+  </ul>
+
+  <h3>Backend (<code>supabase/</code>)</h3>
+  <ul>
+    <li><strong>~55 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
+    <li><strong>6 Edge Functions</strong> (Deno): <code>open_pack</code>, <code>redeem_qr</code>, <code>revenuecat_webhook</code>, <code>upload_image</code>, <code>generate_qr</code>, <code>upload_preset_image</code>. Helpers compartidos en <code>_shared/http.ts</code> (CORS, auth, respuestas) y <code>_shared/r2.ts</code> (R2 vía <code>aws4fetch</code>).</li>
+    <li><code>pg_cron</code> activo para el sobre diario y limpiezas.</li>
+    <li>Proyecto: <code>baexxbixcrhngbjptlkt</code> (sa-east-1). PostgREST con <code>db_max_rows = 2000</code> (el álbum especial supera las 1000 filas).</li>
+  </ul>
+
+  <h3>Storage (Cloudflare R2)</h3>
+  <ul>
+    <li>Bucket <code>mi-album-figuritas</code> con dominio público r2.dev.</li>
+    <li><strong>La DB guarda keys, nunca URLs</strong>; el cliente arma la URL con <code>r2Url(key)</code>. Cada imagen se sube en dos tamaños (<code>thumb</code> + <code>large</code>).</li>
+  </ul>
+
+  <h3>Auth</h3>
+  <ul>
+    <li>Magic link de Supabase. Deep link <code>mialbum://</code> parseado por <code>useDeepLinkAuth</code> (token en fragment) y <code>useJoinDeepLink</code> para <code>mialbum://join/&lt;CODE&gt;</code>.</li>
+    <li>Las Edge Functions reenvían el JWT del caller para que <code>auth.uid()</code> funcione dentro de las RPCs.</li>
+  </ul>
+</section>
+
+<section id="estructura">
+  <h2>2 · Estructura del repo</h2>
+<pre><code>mi-album/
+├─ client/                  # app Expo
+│  ├─ app/                  # rutas expo-router
+│  │  ├─ (auth)/ (tabs)/ album/ sticker/ join/ pack/ trade/ admin/
+│  ├─ src/
+│  │  ├─ components/        # UI compartida (BottomSheet, AlbumPager, modales…)
+│  │  ├─ constants/theme.ts # design tokens
+│  │  └─ lib/
+│  │     ├─ queries/        # hooks React Query por dominio
+│  │     ├─ page-config.ts  # paletas, layouts, texturas y títulos de hojas
+│  │     ├─ alert.ts        # shim de Alert que funciona en web
+│  │     ├─ edge.ts         # callEdgeFunction()
+│  │     └─ errors.ts       # mapeo de errcodes Pxxxx a copy
+│  ├─ scripts/gen-sfx.js    # generador de efectos de sonido (WAV sintético)
+│  └─ assets/               # fuentes, sonidos
+└─ supabase/
+   ├─ migrations/           # 0001..00NN — schema, RLS, RPCs
+   └─ functions/            # Edge Functions + _shared/
+</code></pre>
+  <p>Pantallas grandes se parten en <strong>thin router + vistas con named export</strong>: <code>app/album/[id].tsx</code> bifurca en runtime a <code>album-owner-view</code> / <code>album-user-view</code> según quién mira; ídem <code>sticker/[id]</code> (edit-mode / view-mode).</p>
+</section>
+
+<section id="flujo-owner">
+  <h2>3 · Flujo del owner</h2>
+  <ol>
+    <li><strong>Crear álbum</strong> (nombre, cantidad de figuritas, carátula y sobre — imagen propia o preset del admin).</li>
+    <li><strong>Cargar figuritas</strong>: individual (con número, nombre y rareza) o <strong>carga masiva</strong> (varias imágenes → números libres en orden, nombre <code>#NN</code>, rareza común). Modo reordenar con swap atómico (<code>fn_swap_sticker_positions</code>).</li>
+    <li><strong>Configurar economía</strong>: sobre diario (diario/semanal) y/o QR <span class="tag pro">PRO</span>, tamaño del sobre (1–10).</li>
+    <li><strong>Editar hojas</strong>: color, textura, composición, títulos (ver §7).</li>
+    <li><strong>Publicar</strong>: valida numeración completa server-side. <strong>Publicado = inmutable e irreversible</strong> (regla del mundo físico). Después de publicar solo se pueden editar las hojas.</li>
+    <li><strong>Compartir</strong>: código de 6 caracteres (tap para copiar), link, o póster QR.</li>
+    <li><strong>Ciclo de vida</strong>: archivar (reversible) · retirar (si hay jugadores: read-only, conservan colección) · eliminar (sin jugadores, confirmación con email). El owner no juega su propio álbum.</li>
+  </ol>
+</section>
+
+<section id="flujo-jugador">
+  <h2>4 · Flujo del jugador</h2>
+  <ol>
+    <li><strong>Unirse</strong> por código, deep link o botón en álbumes públicos.</li>
+    <li><strong>Conseguir figuritas</strong>: sobre periódico, QR del owner, o intercambios.</li>
+    <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo).</li>
+    <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla.</li>
+    <li><strong>Completar</strong>: al pegar todas se corta el sobre diario automáticamente. También se puede silenciar por álbum (<code>daily_muted</code>).</li>
+  </ol>
+</section>
+
+<section id="economia">
+  <h2>5 · Economía de sobres</h2>
+  <table>
+    <tr><th>Mecanismo</th><th>Cómo funciona</th><th>Gate</th></tr>
+    <tr><td><strong>Sobre diario</strong></td><td>Cooldown nominal 24h/168h con margen de −1h efectivo. Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
+    <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret con column-level security). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
+    <tr><td><strong>Bienvenida</strong></td><td>Sobres extra configurables al unirse.</td><td>—</td></tr>
+  </table>
+  <p>El tab <strong>Sobres</strong> es el tablero: badge rojo con reclamables + sobres sin abrir, orden reclamables primero. El sorteo de figuritas ocurre server-side en <code>open_pack</code> según rareza.</p>
+</section>
+
+<section id="trades">
+  <h2>6 · Intercambios</h2>
+  <ul>
+    <li><strong>Matches por álbum</strong>: <code>fn_album_matches</code> cruza tus faltantes con repes de otros (cap de 5 pares por contraparte). "Para cambiar" incluye repes reales (badge REPE) y sin pegar (badge PEGAR).</li>
+    <li><strong>Ofertas 1:1</strong>: elegís qué das y qué recibís; la contraparte acepta o rechaza. Push + badge en el tab Cambios.</li>
+    <li><strong>Reglas del owner</strong>: intercambios on/off y límite por día/semana/mes. El límite se chequea <strong>al aceptar</strong>; <code>fn_trade_limit_status</code> alimenta el banner informativo del jugador.</li>
+  </ul>
+</section>
+
+<section id="hojas">
+  <h2>7 · Personalización de hojas</h2>
+  <p>Todo vive en <code>client/src/lib/page-config.ts</code> (data) + <code>edit-pages-modal.tsx</code> (UI) + <code>album-pager.tsx</code> (render) + <code>page-texture.tsx</code> (SVG). Modelo: <strong>defaults a nivel álbum + overrides por hoja</strong>, persistidos como keys cortas — el cliente resuelve hex/dimensiones, así se pueden retocar sin migración.</p>
+
+  <table>
+    <tr><th>Dimensión</th><th>Opciones</th><th>Default</th></tr>
+    <tr><td>Color de hoja</td><td>42 colores (pasteles + tanda oscura)</td><td><code>white</code></td></tr>
+    <tr><td>Textura</td><td>28 patterns SVG (puntos, olas, panal… + tanda dino: huellas, escamas, huesitos, helechos)</td><td><code>none</code></td></tr>
+    <tr><td>Composición</td><td>3×4 · 2×2 · 2×3 · 3×3 · 2×4 · 4×4</td><td><code>3x4</code></td></tr>
+    <tr><td>Tamaño de figurita</td><td>Clásica 0.82 · Carta 2:3 · Cuadrada 1:1 · Ficha 8:9</td><td><code>classic</code></td></tr>
+    <tr><td>Orientación</td><td>Vertical / horizontal (solo layouts con <code>supportsLandscape</code>)</td><td>vertical</td></tr>
+    <tr><td>Título por hoja</td><td>Texto ≤41 chars · 20 colores · 4 tamaños (16–38px) · alineación h (izq/centro/der) · posición v (borde sup. / sobre grilla / bajo grilla / borde inf.) · hasta 2 renglones</td><td>sin título</td></tr>
+  </table>
+
+  <div class="callout ok">
+    <strong>Sin migraciones para extender:</strong> <code>fn_update_album_pages</code> guarda <code>page_overrides</code> como jsonb pasante (solo valida que sea array). Campos nuevos del override (título, colores, alineaciones) viajan adentro sin tocar el backend.
+  </div>
+
+  <h3>Cómo se dibuja una hoja</h3>
+  <ul>
+    <li>La hoja tiene <strong>tamaño fijo</strong> (calculado del layout 3×4). El fit achica las celdas si la composición/título no entra — nada desborda nunca.</li>
+    <li>El alto del título se <strong>mide</strong> (onLayout) porque puede envolver a 2 renglones; la grilla se recalcula.</li>
+    <li>Columna con espaciadores <code>flex:1</code>: la grilla queda centrada y el título se ancla al borde o pegado a la grilla.</li>
+    <li>Texturas: <code>&lt;Pattern&gt;</code> SVG con tile chico + rect que llena el viewport. En web necesitan px exactos (medidos con onLayout) e ids únicos por textura.</li>
+    <li>El owner tiene un <strong>botón de lápiz</strong> en cada hoja del pager que abre el modal directo en el editor de esa hoja.</li>
+  </ul>
+
+  <h3>El modal de hojas (3 pantallas)</h3>
+  <ol>
+    <li><strong>Ajustes</strong>: defaults del álbum + card "Personalizar hojas".</li>
+    <li><strong>Grilla de hojas</strong>: previews en 3 columnas (FlatList virtualizada), punto dorado = personalizada.</li>
+    <li><strong>Editor de hoja</strong>: overrides individuales, navegación entre hojas con flechas.</li>
+  </ol>
+</section>
+
+<section id="imagenes">
+  <h2>8 · Pipeline de imágenes</h2>
+  <p>El procesamiento es <strong>100% client-side</strong> (expo-image-manipulator); la Edge Function <code>upload_image</code> es un proxy trivial a R2. Razón: sharp en Deno Edge tiraba <code>WORKER_RESOURCE_LIMIT</code>.</p>
+  <table>
+    <tr><th>Kind</th><th>Thumb</th><th>Large</th><th>Calidad JPEG</th></tr>
+    <tr><td>sticker</td><td>512px</td><td>1600px</td><td rowspan="4">thumb 0.85 · large 0.92</td></tr>
+    <tr><td>cover</td><td>512px</td><td>1200px</td></tr>
+    <tr><td>pack</td><td>512px</td><td>1200px</td></tr>
+    <tr><td>avatar</td><td>512px</td><td>1024px</td></tr>
+  </table>
+  <ul>
+    <li><strong>Sin doble compresión</strong>: el ImagePicker usa <code>quality: 1</code>; la única compresión JPEG la hace el manipulator.</li>
+    <li><strong>Sin upscaling</strong>: si el original es más chico que el target, se re-encodea sin resize.</li>
+    <li><strong>Celdas adaptativas</strong>: <code>StickerCell</code> se mide y cambia de thumb a large cuando supera los px físicos del thumb (~550, contando <code>PixelRatio</code>) — clave para fichas con texto en layouts grandes.</li>
+    <li>Las imágenes ya subidas conservan su versión vieja hasta re-subirse.</li>
+    <li>R2 nunca borra: las keys huérfanas (por reemplazo o delete) se acumulan a costo despreciable — decisión consciente, hay plan de GC si algún día molesta.</li>
+  </ul>
+</section>
+
+<section id="avatares">
+  <h2>9 · Avatares desbloqueables</h2>
+  <ul>
+    <li>Los users <strong>no suben fotos</strong> (moderación): eligen de la galería curada por admin (presets kind <code>avatar</code>).</li>
+    <li>Gimmick: existe un álbum público de avatares; <strong><code>preset_images.sort_order</code> = número de figurita</strong>. Pegás la figurita N → desbloqueás el avatar N. Libres para todos: {1, 4, 20, 22}.</li>
+    <li>Gate real server-side en <code>fn_update_avatar</code>; estado para la UI en <code>fn_my_avatar_unlocks</code>. El picker muestra los bloqueados sin spoiler (candado + número).</li>
+  </ul>
+</section>
+
+<section id="convenciones">
+  <h2>10 · Convenciones y decisiones técnicas</h2>
+
+  <h3>Backend</h3>
+  <ul>
+    <li>Mutaciones solo vía RPC <code>SECURITY DEFINER</code> con checks explícitos (owner, admin, estado). Errores de negocio con errcode <code>Pxxxx</code> → copy en <code>lib/errors.ts</code>.</li>
+    <li><strong>RPC batch para evitar N+1</strong>: listas que necesitan data por item reciben <code>uuid[]</code> y devuelven todo junto (<code>fn_album_progress</code>, <code>fn_my_daily_status</code>, bundles <code>fn_home_bundle</code>…).</li>
+    <li>Side-effects no esenciales (push) van con <code>exception when others then null</code> — nunca voltean la transacción del caller.</li>
+    <li>plpgsql <strong>no valida SQL al crear</strong>, solo al ejecutar: probar cada RPC nueva en runtime.</li>
+    <li>Si un campo altera un invariante (ej. <code>number_start</code>), grepear <strong>todas</strong> las RPCs que lo asumen.</li>
+    <li>Listados sin <code>.range()</code> quedan capados por <code>max_rows</code> (hoy 2000) — paginar si algo pudiera superarlo.</li>
+    <li>pgcrypto vive en schema <code>extensions</code>: funciones que lo usan llevan <code>set search_path = public, extensions</code>.</li>
+  </ul>
+
+  <h3>Cliente / Web</h3>
+  <div class="callout rule">
+    <strong>Regla de oro web:</strong> <code>Alert.alert</code> de react-native es <strong>no-op en react-native-web</strong>. Importar siempre <code>{ Alert }</code> de <code>@/lib/alert</code> (shim: en web usa <code>window.alert</code>/<code>window.confirm</code>). Para confirms ricos, BottomSheet in-app.
+  </div>
+  <ul>
+    <li><strong>Modales nuevos</strong>: sobre <code>BottomSheet</code> (base común con backdrop, footer sticky, avoidKeyboard). ScrollView interno con <code>flexShrink: 1</code> — nunca <code>maxHeight: '100%'</code> (rompe el scroll en web).</li>
+    <li><strong>Edge Functions desde el cliente</strong>: siempre vía <code>callEdgeFunction()</code> (token, headers, timeout, parseo de errores).</li>
+    <li><strong>Gestos + scroll en web</strong>: todo <code>GestureDetector</code> que conviva con scroll vertical lleva <code>touchAction="pan-y"</code> (RNGH pone <code>touch-action: none</code> y mata el scroll táctil).</li>
+    <li><strong>Medir contenedores con onLayout</strong>, no <code>useWindowDimensions</code>, cuando hay caps de ancho (desktop). SVG en web necesita width/height en px explícitos.</li>
+    <li><strong>Cap desktop sobre el contenido</strong>: <code>contentContainerStyle=[base, useDesktopCap(n)]</code>; envolver el ScrollView deja la barra de scroll flotando.</li>
+    <li><strong>Queries</strong>: toda lectura hace <code>if (error) throw toAppError(error)</code>; pull-to-refresh usa <code>isRefetching</code>.</li>
+    <li>State global compartido vía Context (<code>ProfileProvider</code>); <code>useNow()</code> singleton para countdowns.</li>
+    <li>Keys cortas en DB (colores, layouts, presets) — el cliente resuelve valores; cambiar un hex no requiere migración.</li>
+  </ul>
+</section>
+
+<section id="operativas">
+  <h2>11 · Operativas / comandos</h2>
+<pre><code># Typecheck del cliente
+cd client && npx tsc --noEmit
+
+# Aplicar migraciones al proyecto linkeado
+supabase db push
+
+# Deploy de una Edge Function (tras cualquier cambio)
+supabase functions deploy &lt;name&gt;
+
+# Regenerar tipos tras migraciones (OJO: Out-File utf8, NO '>' que mete BOM UTF-16)
+supabase gen types typescript --linked | Out-File -Encoding utf8 client/src/lib/database.types.ts
+
+# Regenerar efectos de sonido
+node client/scripts/gen-sfx.js
+</code></pre>
+  <ul>
+    <li>Si una migración cambia la firma de una RPC granteada: <code>drop function</code> + <code>create</code> + <strong>re-grant</strong>.</li>
+    <li>Módulos nativos nuevos (expo-camera, expo-clipboard, expo-audio…) requieren <strong>rebuild del dev build de EAS</strong>; en web funcionan sin rebuild.</li>
+    <li>Para probar trades/joins hacen falta 2 cuentas (cerrar sesión y registrarse con otro mail).</li>
+    <li>Álbumes especiales protegidos contra borrado: el de avatares y el de 1001 figuritas (0..1000, único con <code>number_start = 0</code>).</li>
+  </ul>
+</section>
+
+<section id="pendientes">
+  <h2>12 · Pendientes</h2>
+  <ul>
+    <li><strong>Paywall + RevenueCat real</strong> (pantallas 12/13): SDK, productos sandbox, secret real del webhook, test E2E compra → <code>useIsPro()</code>.</li>
+    <li><strong>Setup admin del álbum de avatares</strong> (data, no código): numerar los 30 presets, cargar las 30 figuritas, publicar + marcar público.</li>
+    <li>Limpieza técnica opcional: GC de imágenes huérfanas en R2, warnings de <code>runOnJS</code> (Reanimated 4).</li>
+  </ul>
+</section>
+
+<footer>MI ÁLBUM DE FIGURITAS · DOCUMENTACIÓN TÉCNICA · 2026-07</footer>
+
+</div>
+</body>
+</html>

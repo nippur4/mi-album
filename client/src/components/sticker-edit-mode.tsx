@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Keyboard,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Alert } from '@/lib/alert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';

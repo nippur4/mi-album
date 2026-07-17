@@ -1,4 +1,5 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 
 import { Countdown } from '@/components/countdown';
 import { MediaThumb } from '@/components/media-thumb';

@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -12,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Alert } from '@/lib/alert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlbumPager } from '@/components/album-pager';
