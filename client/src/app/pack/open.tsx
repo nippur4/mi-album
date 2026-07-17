@@ -29,7 +29,7 @@ import {
   type OpenedSticker,
 } from '@/lib/queries/packs';
 import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
-import { initSfx, playSfx } from '@/lib/sfx';
+import { albumSfxTheme, initSfx, playSfx } from '@/lib/sfx';
 
 type Phase = 'idle' | 'opening' | 'revealed';
 
@@ -53,6 +53,9 @@ export default function OpenPackScreen() {
   const albumName = (album?.name ?? '').toUpperCase();
   // Anton grande solo si el nombre entra; nombres largos bajan de cuerpo.
   const nameSize = albumName.length <= 12 ? 30 : albumName.length <= 26 ? 22 : 17;
+
+  // Sonidos temáticos por álbum (ej. rugidos en el álbum de dinosaurios).
+  const sfxTheme = albumSfxTheme(albumId);
 
   const [packId, setPackId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -121,7 +124,9 @@ export default function OpenPackScreen() {
       qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
       setTimeout(() => {
         // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
-        playSfx('open', 0.95);
+        // En el álbum de dinos, un rugido encima le pone el tema.
+        playSfx('open', sfxTheme === 'dino' ? 0.7 : 0.95);
+        if (sfxTheme === 'dino') playSfx('dinoRoar', 0.95);
         setPhase('revealed');
       }, 500);
     } catch (err: any) {
@@ -148,10 +153,16 @@ export default function OpenPackScreen() {
       (s) => s.was_new && (s.rarity === 'epic' || s.rarity === 'legendary'),
     );
     if (hasBig) {
-      timers.push(setTimeout(() => playSfx('legendary', 0.9), stickers.length * 110 + 180));
+      // En el álbum de dinos la fanfarria es un chillido de pterosaurio.
+      timers.push(
+        setTimeout(
+          () => playSfx(sfxTheme === 'dino' ? 'dinoScreech' : 'legendary', 0.9),
+          stickers.length * 110 + 180,
+        ),
+      );
     }
     return () => timers.forEach(clearTimeout);
-  }, [phase, stickers]);
+  }, [phase, stickers, sfxTheme]);
 
   async function handlePasteAll() {
     setPastingAll(true);
@@ -206,7 +217,15 @@ export default function OpenPackScreen() {
 
           <View style={styles.cardsGrid}>
             {stickers.map((s, i) => (
-              <RevealedCard key={`${s.sticker_id}-${i}`} sticker={s} index={i} hideLabels={hideCardLabels} />
+              <RevealedCard
+                key={`${s.sticker_id}-${i}`}
+                sticker={s}
+                index={i}
+                hideLabels={hideCardLabels}
+                // Vista grande de la figurita (misma que el álbum). push, no
+                // replace: al volver la reveal sigue montada con su estado.
+                onPress={() => router.push(`/sticker/${s.sticker_id}`)}
+              />
             ))}
           </View>
         </ScrollView>
@@ -298,7 +317,17 @@ export default function OpenPackScreen() {
 // Card revelada (con animación de entrada staggered)
 // ---------------------------------------------------------------------------
 
-function RevealedCard({ sticker, index, hideLabels }: { sticker: OpenedSticker; index: number; hideLabels?: boolean }) {
+function RevealedCard({
+  sticker,
+  index,
+  hideLabels,
+  onPress,
+}: {
+  sticker: OpenedSticker;
+  index: number;
+  hideLabels?: boolean;
+  onPress?: () => void;
+}) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(34);
   const scale = useSharedValue(0.6);
@@ -345,6 +374,10 @@ function RevealedCard({ sticker, index, hideLabels }: { sticker: OpenedSticker; 
   return (
     <Animated.View style={[styles.revealedCardWrap, animStyle]}>
       {sticker.was_new && <NewCardSparkles />}
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => pressed && { opacity: 0.85 }}
+      >
       <Animated.View
         style={[
           styles.revealedCard,
@@ -376,6 +409,7 @@ function RevealedCard({ sticker, index, hideLabels }: { sticker: OpenedSticker; 
           </Text>
         </View>
       </Animated.View>
+      </Pressable>
     </Animated.View>
   );
 }

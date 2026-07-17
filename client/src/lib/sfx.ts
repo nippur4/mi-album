@@ -17,9 +17,21 @@ const SOURCES = {
   sparkle: require('../../assets/sounds/sparkle.wav'),
   legendary: require('../../assets/sounds/legendary.wav'),
   paste: require('../../assets/sounds/paste.wav'),
+  dinoRoar: require('../../assets/sounds/dino-roar.wav'),
+  dinoScreech: require('../../assets/sounds/dino-screech.wav'),
 } as const;
 
 export type SfxName = keyof typeof SOURCES;
+
+// Álbumes con set de sonidos temático en la apertura de sobres. Por ahora solo
+// el de dinosaurios: rugido al abrir + chillido en épica/legendaria.
+const DINO_ALBUM_IDS = new Set(['d1227449-f10c-41e6-8483-5bef42b9fb0a']);
+
+export type SfxTheme = 'dino' | null;
+
+export function albumSfxTheme(albumId: string | null | undefined): SfxTheme {
+  return albumId && DINO_ALBUM_IDS.has(albumId) ? 'dino' : null;
+}
 
 // 'card' suena una vez por figurita (escalonado) → pool para que los pops
 // solapados no se corten entre sí.

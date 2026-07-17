@@ -11,6 +11,8 @@
 //   sparkle     chime brillante para figuritas nuevas (rara+)
 //   legendary   fanfarria ascendente si sale épica/legendaria nueva
 //   paste       "thunk" satisfactorio al pegar
+//   dino-roar     rugido grave (tema dinosaurios: reemplazo del open)
+//   dino-screech  chillido de pterosaurio (tema dinosaurios: épica/legendaria)
 
 const fs = require('fs');
 const path = require('path');
@@ -201,6 +203,59 @@ function paste() {
   return fadeEdges(normalize(s, 0.85));
 }
 
+// Rugido de dinosaurio: fundamental grave descendente (90→50Hz) con stack de
+// armónicos saturados (tanh = "garganta"), growl por AM irregular ~28Hz y una
+// capa de aliento (ruido grave modulado por el mismo growl).
+function dinoRoar() {
+  const dur = 1.5;
+  const s = buf(dur);
+  const harm = [[1, 1], [2, 0.62], [3, 0.42], [4, 0.28], [5, 0.18], [6, 0.11], [7, 0.07]];
+  let ph = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    const f = 90 - 40 * Math.min(1, t / dur) + 4 * Math.sin(2 * Math.PI * 2.3 * t);
+    ph += (2 * Math.PI * f) / SR;
+    const growl = 0.62 + 0.38 * Math.sin(2 * Math.PI * 28 * t + 1.7 * Math.sin(2 * Math.PI * 7.3 * t));
+    const env = Math.min(1, t / 0.09) * Math.exp(-Math.max(0, t - 0.75) / 0.3);
+    let v = 0;
+    for (const [m, a] of harm) v += a * Math.sin(ph * m);
+    s[i] += 0.8 * env * growl * Math.tanh(v * 1.6);
+  }
+  const n = buf(dur);
+  addNoise(n, 0, dur, 0.5, 3.0); lowpass(n, 700); highpass(n, 90);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    const growl = 0.6 + 0.4 * Math.sin(2 * Math.PI * 28 * t);
+    const env = Math.min(1, t / 0.12) * Math.exp(-Math.max(0, t - 0.7) / 0.28);
+    s[i] += n[i] * env * growl * 0.35;
+  }
+  lowpass(s, 1100);
+  return fadeEdges(normalize(s, 0.95));
+}
+
+// Chillido de pterosaurio: sweep agudo descendente con vibrato rápido, aspereza
+// por AM ~95Hz y banda de ruido brillante (aire del grito).
+function dinoScreech() {
+  const dur = 0.95;
+  const s = buf(dur);
+  let ph = 0;
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    const f = 1350 - 700 * Math.pow(t / dur, 0.8) + 60 * Math.sin(2 * Math.PI * 38 * t);
+    ph += (2 * Math.PI * f) / SR;
+    const env = Math.min(1, t / 0.03) * Math.exp(-Math.max(0, t - 0.5) / 0.16);
+    const rasp = 0.7 + 0.3 * Math.sin(2 * Math.PI * 95 * t);
+    s[i] += 0.7 * env * rasp * Math.tanh(1.8 * (Math.sin(ph) + 0.45 * Math.sin(2 * ph)));
+  }
+  const n = buf(dur);
+  addNoise(n, 0, dur, 0.5, 1.5); highpass(n, 1800); lowpass(n, 5200);
+  for (let i = 0; i < s.length; i++) {
+    const t = i / SR;
+    s[i] += n[i] * Math.min(1, t / 0.05) * Math.exp(-Math.max(0, t - 0.45) / 0.15) * 0.3;
+  }
+  return fadeEdges(normalize(s, 0.9));
+}
+
 // --- WAV -------------------------------------------------------------------
 
 function writeWav(name, samples) {
@@ -226,4 +281,6 @@ writeWav('card-pop.wav', cardPop());
 writeWav('sparkle.wav', sparkle());
 writeWav('legendary.wav', legendary());
 writeWav('paste.wav', paste());
+writeWav('dino-roar.wav', dinoRoar());
+writeWav('dino-screech.wav', dinoScreech());
 console.log('Listo.');
