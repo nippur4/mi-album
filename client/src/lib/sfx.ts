@@ -17,7 +17,7 @@ const SOURCES = {
   sparkle: require('../../assets/sounds/sparkle.wav'),
   legendary: require('../../assets/sounds/legendary.wav'),
   paste: require('../../assets/sounds/paste.wav'),
-  dinoRoar: require('../../assets/sounds/dino-roar.wav'),
+  dinoRoar: require('../../assets/sounds/dino-roar.mp3'),
   dinoScreech: require('../../assets/sounds/dino-screech.wav'),
 } as const;
 
