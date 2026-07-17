@@ -37,6 +37,7 @@ import {
   albumPlayerCount,
   archiveAlbumByOwner,
   joinAlbumByCode,
+  joinLinkFor,
   PROTECTED_ALBUM_IDS,
   publishAlbum,
   unarchiveAlbumByOwner,
@@ -182,13 +183,15 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const isDraft = album.status === 'draft';
 
   async function onShare() {
-    const link = `mialbum://join/${album.share_code}`;
+    // Link https (clickeable en WhatsApp etc.); el deep link mialbum:// no se
+    // linkifica en apps de mensajería, así que ya no lo mandamos.
+    const link = joinLinkFor(album.share_code);
     try {
       await Share.share({
         message:
           `Unite a mi álbum "${album.name}" en Mi Álbum de Figuritas:\n\n` +
-          `Código: ${album.share_code}\n` +
-          `Link directo: ${link}`,
+          `${link}\n\n` +
+          `Código: ${album.share_code}`,
       });
     } catch {}
   }

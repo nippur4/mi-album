@@ -197,10 +197,12 @@ export async function unarchiveAlbumByOwner(albumId: string) {
 }
 
 // Álbumes que NUNCA se pueden eliminar (curados por admin). El botón se oculta
-// en el cliente y el server igual rechaza con P0201. Ver migración 0046.
+// en el cliente y el server igual rechaza con P0201. Ver migraciones 0046/0058.
 export const PROTECTED_ALBUM_IDS = new Set<string>([
-  '55fce726-d398-491f-9a92-06ee2e6c8d96',
-  '29a1fa90-85b3-48fc-b452-2b7f64bd327b',
+  '55fce726-d398-491f-9a92-06ee2e6c8d96', // histórico, sin identificar
+  '29a1fa90-85b3-48fc-b452-2b7f64bd327b', // avatares
+  'ecbf4497-e5d7-4732-88a2-75f7b39a2749', // 0..1000 (1001 figuritas)
+  'd1227449-f10c-41e6-8483-5bef42b9fb0a', // dinosaurios
 ]);
 
 // Eliminar/retirar el álbum (RPC fn_delete_album). El server decide:
@@ -234,6 +236,17 @@ export async function joinAlbumByCode(rawInput: string) {
   const code = extractShareCode(rawInput);
   if (!code) return { data: null, error: { code: 'P0080', message: 'share_code_required' } as any };
   return supabase.rpc('fn_join_album', { p_share_code: code });
+}
+
+// Dominio público de la app web (Cloudflare Pages). Si algún día migramos a
+// dominio propio, actualizar acá — es la única fuente del link de invitación.
+export const WEB_APP_URL = 'https://mi-album.pages.dev';
+
+// Link de invitación para compartir. SIEMPRE https: los custom schemes
+// (mialbum://) no se vuelven clickeables en WhatsApp/Telegram/etc. La ruta
+// /join/<code> existe en la app web y extractShareCode también la parsea.
+export function joinLinkFor(code: string): string {
+  return `${WEB_APP_URL}/join/${code}`;
 }
 
 function extractShareCode(input: string): string | null {
