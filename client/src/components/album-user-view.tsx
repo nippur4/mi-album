@@ -229,6 +229,7 @@ export function UserAlbumView({ album, stickers }: Props) {
         <ScreenHeader
           title={album.name}
           back
+          home
           multiline
           right={
             isOwnerViewing ? (

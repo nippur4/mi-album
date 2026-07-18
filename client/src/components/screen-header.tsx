@@ -1,3 +1,4 @@
+import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -6,13 +7,17 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 interface Props {
   title: string;
   back?: boolean;
+  // Botón de casita → Inicio. Para pantallas fuera del grupo (tabs) donde no
+  // hay tab bar y el "volver" puede quedar lejos del Home (ej. dentro de un
+  // álbum). navigate('/') colapsa el stack hasta las tabs.
+  home?: boolean;
   // Si true, deja partir el título en hasta 2 líneas (estilo handoff con Anton)
   multiline?: boolean;
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ScreenHeader({ title, back, multiline, right, style }: Props) {
+export function ScreenHeader({ title, back, home, multiline, right, style }: Props) {
   const router = useRouter();
   return (
     <View style={[styles.row, multiline && styles.rowMultiline, style]}>
@@ -29,7 +34,22 @@ export function ScreenHeader({ title, back, multiline, right, style }: Props) {
       >
         {title.toUpperCase()}
       </Text>
-      <View style={[styles.sideRight, { alignItems: 'flex-end' }]}>{right}</View>
+      <View style={[styles.sideRight, { alignItems: 'flex-end' }]}>
+        {home ? (
+          <View style={styles.rightRow}>
+            <Pressable
+              onPress={() => router.navigate('/')}
+              hitSlop={8}
+              style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.6 }]}
+            >
+              <Feather name="home" size={18} color={Colors.ink} />
+            </Pressable>
+            {right}
+          </View>
+        ) : (
+          right
+        )}
+      </View>
     </View>
   );
 }
@@ -60,6 +80,21 @@ const styles = StyleSheet.create({
   backHit: {
     width: 40,
     height: 40,
+    justifyContent: 'center',
+  },
+  rightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  homeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.paper2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   chevron: {

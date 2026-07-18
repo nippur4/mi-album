@@ -354,6 +354,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         <ScreenHeader
           title={album.name}
           back
+          home
           multiline
           right={<StatusBadge variant={album.status as any} />}
         />

@@ -71,7 +71,12 @@ export function BottomSheet({
             <SafeAreaView edges={['bottom']}>{footer}</SafeAreaView>
           </>
         ) : (
-          <SafeAreaView edges={['bottom']} style={{ width: '100%' }}>
+          // flexShrink 1 (RN defaultea 0): sin esto, con maxHeight en el sheet
+          // este wrapper NO se comprime — desborda clipeado y el ScrollView de
+          // adentro recibe altura ilimitada → no scrollea (bug del avatar
+          // picker en web mobile). minHeight 0 evita el piso min-content que
+          // el flexbox de web impone al comprimir contenedores con scroll.
+          <SafeAreaView edges={['bottom']} style={styles.noFooterBody}>
             {children}
           </SafeAreaView>
         )}
@@ -115,6 +120,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
+  },
+  noFooterBody: {
+    width: '100%',
+    flexShrink: 1,
+    minHeight: 0,
   },
   handle: {
     alignSelf: 'center',

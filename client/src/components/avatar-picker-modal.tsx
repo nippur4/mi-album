@@ -148,10 +148,11 @@ export function AvatarPickerModal({ visible, currentName, currentThumbKey, onClo
 const TILE = 92;
 
 const styles = StyleSheet.create({
-  // flexShrink (no maxHeight '100%'): con maxHeight el ScrollView tomaba el
-  // alto de su CONTENIDO (el % no resolvía contra el sheet) y en web mobile
-  // quedaba clipeado sin poder scrollear. Mismo patrón que los otros modales.
-  scroll: { flexShrink: 1 },
+  // flexShrink + minHeight 0: el ScrollView debe poder comprimirse cuando el
+  // sheet llega a su maxHeight (RN defaultea flexShrink 0 y el flexbox de web
+  // impone un piso min-content). El wrapper del BottomSheet sin footer también
+  // lleva flexShrink — sin AMBOS, en web mobile quedaba clipeado sin scroll.
+  scroll: { flexShrink: 1, minHeight: 0 },
   unlockNote: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,

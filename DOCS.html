@@ -299,6 +299,7 @@
     <li><strong>Estado para la UI</strong>: <code>fn_ad_pack_status</code> → <code>{enabled, used, remaining, limit}</code>; hook <code>useAdPackStatus</code>.</li>
     <li><strong>Cliente</strong>: wrapper por plataforma <code>lib/rewarded-ad.android.ts</code> (real: init lazy, load con timeout 12s, resuelve solo con <code>EARNED_REWARD</code>) y <code>lib/rewarded-ad.ts</code> (stub). Botón en la vista del jugador; agotado el cupo muestra "volvé mañana (2/2)". El sobre entra como <code>pack_source = 'ad'</code> y se abre como cualquier otro.</li>
     <li><strong>Ids actuales</strong>: App ID y ad unit <strong>de TEST</strong> de Google (sirven para desarrollar sin cuenta AdMob; en <code>__DEV__</code> el wrapper fuerza test ads siempre).</li>
+    <li><strong>Versión PINEADA (exacta, sin caret): <code>react-native-google-mobile-ads@16.0.0</code></strong>. Motivo: 16.1+ pinea <code>play-services-ads ≥ 25.0</code>, y la 25.4 viene compilada con Kotlin 2.3 mientras Expo SDK 56 usa 2.1 → Gradle rompe con "Module was compiled with an incompatible version of Kotlin" en <code>:react-native-google-mobile-ads:compileDebugKotlin</code>. La 16.0.0 usa <code>play-services-ads 24.6.0</code> (compatible). Subir la lib recién cuando el SDK de Expo traiga Kotlin ≥ 2.3.</li>
   </ul>
 
   <h3>Paso a paso para pasar a publicidades REALES (producción)</h3>
@@ -309,7 +310,7 @@
     <li>Crear un <strong>bloque de anuncios Rewarded</strong> dentro de esa app. Copiar el <strong>Ad Unit ID</strong> (formato <code>ca-app-pub-XXXX<b>/</b>ZZZZ</code>, con barra). Son dos ids distintos — no confundirlos.</li>
     <li>Reemplazar en el código (los dos puntos están marcados con <code>TODO(admob)</code>):
       <ul>
-        <li><code>client/app.json</code> → clave raíz <code>react-native-google-mobile-ads.android_app_id</code> (el de la tilde).</li>
+        <li><code>client/app.json</code> → props del plugin en <code>expo.plugins</code>: <code>["react-native-google-mobile-ads", { "androidAppId": "…" }]</code> (el de la tilde). OJO: la clave raíz <code>android_app_id</code> es el formato VIEJO (&lt;v14) y la v16 la ignora — sin el prop, Gradle falla.</li>
         <li><code>client/src/lib/rewarded-ad.android.ts</code> → <code>REAL_AD_UNIT</code> (el de la barra).</li>
       </ul>
     </li>
