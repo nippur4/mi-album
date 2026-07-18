@@ -264,7 +264,7 @@
     <li><strong>Configurar economía</strong>: sobre diario (diario/semanal) y/o QR <span class="tag pro">PRO</span>, tamaño del sobre (1–10).</li>
     <li><strong>Editar hojas</strong>: color, textura, composición, títulos (ver §7).</li>
     <li><strong>Publicar</strong>: valida numeración completa server-side. <strong>Publicado = inmutable e irreversible</strong> (regla del mundo físico). Después de publicar solo se pueden editar las hojas.</li>
-    <li><strong>Compartir</strong>: código de 6 caracteres (tap para copiar), link, o póster QR.</li>
+    <li><strong>Compartir</strong>: código de 6 caracteres (tap para copiar), link https clickeable (<code>mi-album.pages.dev/join/CODE</code> — los custom schemes no se linkifican en WhatsApp; helper <code>joinLinkFor()</code>), o póster QR.</li>
     <li><strong>Ciclo de vida</strong>: archivar (reversible) · retirar (si hay jugadores: read-only, conservan colección) · eliminar (sin jugadores, confirmación con email). El owner no juega su propio álbum.</li>
   </ol>
 </section>
@@ -274,7 +274,7 @@
   <ol>
     <li><strong>Unirse</strong> por código, deep link o botón en álbumes públicos.</li>
     <li><strong>Conseguir figuritas</strong>: sobre periódico, QR del owner, o intercambios.</li>
-    <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo).</li>
+    <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo). Tap en una carta revelada → vista grande de la figurita. El álbum de dinos tiene <strong>sonidos temáticos</strong> (rugido al abrir, chillido en épica/legendaria; mapa <code>albumSfxTheme()</code> extensible a otros álbumes).</li>
     <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla.</li>
     <li><strong>Completar</strong>: al pegar todas se corta el sobre diario automáticamente. También se puede silenciar por álbum (<code>daily_muted</code>).</li>
   </ol>
@@ -287,8 +287,38 @@
     <tr><td><strong>Sobre diario</strong></td><td>Cooldown nominal 24h/168h con margen de −1h efectivo. Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
     <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret con column-level security). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
     <tr><td><strong>Bienvenida</strong></td><td>Sobres extra configurables al unirse.</td><td>—</td></tr>
+    <tr><td><strong>Publicidad</strong></td><td>Rewarded ad (AdMob) → 1 sobre. Solo en los 3 álbumes especiales, tope 2/día por usuario, solo Android. Ver abajo.</td><td>Android</td></tr>
   </table>
   <p>El tab <strong>Sobres</strong> es el tablero: badge rojo con reclamables + sobres sin abrir, orden reclamables primero. El sorteo de figuritas ocurre server-side en <code>open_pack</code> según rareza.</p>
+
+  <h3 id="ads">Sobres por publicidad (rewarded ads · AdMob)</h3>
+  <p>Migración <code>0059_ad_packs.sql</code>. El jugador mira un video con recompensa y recibe un sobre extra. <strong>Solo Android</strong>: el SDK de AdMob es nativo (el rewarded web de Google está en beta, limitado a juegos H5) y iOS está descartado. En web/iOS el botón no existe (<code>ADS_SUPPORTED = false</code>).</p>
+  <ul>
+    <li><strong>Elegibilidad</strong>: solo los 3 álbumes especiales (avatares <code>29a1fa90…</code>, 0..1000 <code>ecbf4497…</code>, dinos <code>d1227449…</code>), publicados, siendo miembro.</li>
+    <li><strong>Tope server-side</strong>: 2 sobres/día por usuario, <em>global</em> entre los 3 álbumes, día en hora argentina. <code>fn_claim_ad_pack</code> lo valida SIEMPRE — llamar la RPC sin mirar el ad no otorga más que esos mismos 2 sobres, así que no hay economía que romper. Errores: <code>P0210 ad_limit_reached</code>, <code>P0211 ad_not_available</code>.</li>
+    <li><strong>Estado para la UI</strong>: <code>fn_ad_pack_status</code> → <code>{enabled, used, remaining, limit}</code>; hook <code>useAdPackStatus</code>.</li>
+    <li><strong>Cliente</strong>: wrapper por plataforma <code>lib/rewarded-ad.android.ts</code> (real: init lazy, load con timeout 12s, resuelve solo con <code>EARNED_REWARD</code>) y <code>lib/rewarded-ad.ts</code> (stub). Botón en la vista del jugador; agotado el cupo muestra "volvé mañana (2/2)". El sobre entra como <code>pack_source = 'ad'</code> y se abre como cualquier otro.</li>
+    <li><strong>Ids actuales</strong>: App ID y ad unit <strong>de TEST</strong> de Google (sirven para desarrollar sin cuenta AdMob; en <code>__DEV__</code> el wrapper fuerza test ads siempre).</li>
+  </ul>
+
+  <h3>Paso a paso para pasar a publicidades REALES (producción)</h3>
+  <ol>
+    <li><strong>Publicar la app en Play Store</strong> (aunque sea closed testing → producción): AdMob exige verificar la app contra su ficha de la tienda para servir ads reales.</li>
+    <li><strong>Crear cuenta AdMob</strong> (admob.google.com, con la cuenta Google del negocio) y completar los datos de pago (paga a partir de ~USD 100 acumulados).</li>
+    <li>En AdMob: <strong>Apps → Agregar app</strong> → Android → vincular con el package <code>com.mialbum.figuritas</code> de Play Store. Copiar el <strong>App ID</strong> (formato <code>ca-app-pub-XXXX<b>~</b>YYYY</code>, con tilde).</li>
+    <li>Crear un <strong>bloque de anuncios Rewarded</strong> dentro de esa app. Copiar el <strong>Ad Unit ID</strong> (formato <code>ca-app-pub-XXXX<b>/</b>ZZZZ</code>, con barra). Son dos ids distintos — no confundirlos.</li>
+    <li>Reemplazar en el código (los dos puntos están marcados con <code>TODO(admob)</code>):
+      <ul>
+        <li><code>client/app.json</code> → clave raíz <code>react-native-google-mobile-ads.android_app_id</code> (el de la tilde).</li>
+        <li><code>client/src/lib/rewarded-ad.android.ts</code> → <code>REAL_AD_UNIT</code> (el de la barra).</li>
+      </ul>
+    </li>
+    <li><strong>Rebuild de producción</strong>: <code>eas build -p android --profile production</code> (el App ID va al manifest nativo — un cambio de app.json no llega por OTA).</li>
+    <li><strong>app-ads.txt</strong>: si la ficha de Play declara un sitio web del developer, publicar en ese dominio el archivo <code>app-ads.txt</code> que AdMob te da (Apps → Ver detalles). Sin esto AdMob puede limitar el fill.</li>
+    <li><strong>Consentimiento (si hay usuarios UE)</strong>: hoy pedimos <code>requestNonPersonalizedAdsOnly</code>; para cumplir GDPR formalmente hay que integrar el UMP SDK (viene en el mismo paquete: <code>AdsConsent</code>) y mostrar el formulario de consentimiento de Google antes del primer ad. Para lanzamiento solo-Argentina se puede posponer.</li>
+    <li><strong>NUNCA tocar ads reales en dispositivos propios</strong> durante pruebas (riesgo de ban por invalid traffic). Para probar en release: registrar el dispositivo como test device en AdMob, o seguir usando builds de desarrollo (fuerzan test ads solos).</li>
+    <li>Verificación final: instalar el build de producción en un test device registrado → mirar el ad → confirmar que llega el sobre y que el tope de 2/día corta.</li>
+  </ol>
 </section>
 
 <section id="trades">
@@ -414,7 +444,8 @@ node client/scripts/gen-sfx.js
     <li>Si una migración cambia la firma de una RPC granteada: <code>drop function</code> + <code>create</code> + <strong>re-grant</strong>.</li>
     <li>Módulos nativos nuevos (expo-camera, expo-clipboard, expo-audio…) requieren <strong>rebuild del dev build de EAS</strong>; en web funcionan sin rebuild.</li>
     <li>Para probar trades/joins hacen falta 2 cuentas (cerrar sesión y registrarse con otro mail).</li>
-    <li>Álbumes especiales protegidos contra borrado: el de avatares y el de 1001 figuritas (0..1000, único con <code>number_start = 0</code>).</li>
+    <li>Álbumes especiales protegidos contra borrado (P0201, migración 0058): avatares, 0..1000 (<code>number_start = 0</code>), dinosaurios, más un id histórico sin identificar. Espejo client-side en <code>PROTECTED_ALBUM_IDS</code>.</li>
+    <li><strong>Estadísticas</strong>: Panel admin → Estadísticas (<code>fn_admin_stats</code>, migración 0057): usuarios, activos/día y logins/día (desde <code>auth.audit_log_entries</code>, hora argentina), álbumes, figuritas, sobres, cambios.</li>
   </ul>
 </section>
 
@@ -422,8 +453,10 @@ node client/scripts/gen-sfx.js
   <h2>12 · Pendientes</h2>
   <ul>
     <li><strong>Paywall + RevenueCat real</strong> (pantallas 12/13): SDK, productos sandbox, secret real del webhook, test E2E compra → <code>useIsPro()</code>.</li>
+    <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
     <li><strong>Setup admin del álbum de avatares</strong> (data, no código): numerar los 30 presets, cargar las 30 figuritas, publicar + marcar público.</li>
-    <li>Limpieza técnica opcional: GC de imágenes huérfanas en R2, warnings de <code>runOnJS</code> (Reanimated 4).</li>
+    <li><strong>SMTP custom para el magic link</strong> (pre-launch): el mailer built-in de Supabase free es ~3-4 emails/hora. Brevo (300/día) o Resend (3K/mes) gratis alcanzan — Google OAuth ya cubre el grueso.</li>
+    <li>Limpieza técnica opcional: GC de imágenes huérfanas en R2, warnings de <code>runOnJS</code> (Reanimated 4), identificar el álbum protegido <code>55fce726…</code>.</li>
   </ul>
 </section>
 

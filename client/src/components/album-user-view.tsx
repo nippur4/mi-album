@@ -28,7 +28,8 @@ import {
   type Sticker,
 } from '@/lib/queries/albums';
 import { claimDailyPack, setDailyMuted } from '@/lib/queries/daily';
-import { pasteSticker } from '@/lib/queries/packs';
+import { claimAdPack, pasteSticker, useAdPackStatus } from '@/lib/queries/packs';
+import { ADS_SUPPORTED, showRewardedAd } from '@/lib/rewarded-ad';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
@@ -62,6 +63,33 @@ export function UserAlbumView({ album, stickers }: Props) {
   const [claiming, setClaiming] = useState(false);
   const [muting, setMuting] = useState(false);
   const qc = useQueryClient();
+
+  // Sobre extra por publicidad: solo Android (rewarded ads = SDK nativo) y
+  // solo en los álbumes especiales (el server decide con fn_ad_pack_status;
+  // el tope de 2/día también lo valida el server al reclamar).
+  const { adStatus, refetchAdStatus } = useAdPackStatus(album.id, ADS_SUPPORTED);
+  const [adBusy, setAdBusy] = useState(false);
+
+  async function onWatchAd() {
+    if (adBusy) return;
+    setAdBusy(true);
+    try {
+      const rewarded = await showRewardedAd();
+      // Cerró el ad antes de terminar o no cargó: sin premio, sin error.
+      if (!rewarded) return;
+      const { error } = await claimAdPack(album.id);
+      if (error) {
+        Alert.alert('No se pudo', errorMessage(error));
+        return;
+      }
+      // El sobre nuevo entra al bundle del álbum y al badge del tab Sobres.
+      refetchSideData();
+      refetchAdStatus();
+      qc.invalidateQueries({ queryKey: ['packs-tab'] });
+    } finally {
+      setAdBusy(false);
+    }
+  }
 
   async function onToggleMuted() {
     if (muting) return;
@@ -316,6 +344,30 @@ export function UserAlbumView({ album, stickers }: Props) {
             variant="outline"
             onPress={() => router.push(`/trade/matches?albumId=${album.id}`)}
           />
+        )}
+
+        {/* Sobre extra a cambio de un rewarded ad (solo Android + álbumes
+            especiales; ADS_SUPPORTED es false en web/iOS). Con el cupo agotado
+            mostramos el estado en vez de esconder el botón, para que se sepa
+            que la opción existe y vuelve mañana. */}
+        {isMember && ADS_SUPPORTED && adStatus?.enabled && !isCompleted && (
+          adStatus.remaining > 0 ? (
+            <Button
+              label={
+                adBusy
+                  ? 'Cargando publicidad…'
+                  : `Ver publicidad → sobre extra (${adStatus.remaining} hoy)`
+              }
+              variant="outline"
+              onPress={onWatchAd}
+              loading={adBusy}
+              disabled={adBusy}
+            />
+          ) : (
+            <Text style={styles.adExhausted}>
+              Sobres por publicidad: volvé mañana (2/2 usados hoy).
+            </Text>
+          )
         )}
 
         {/* Silenciar el sobre diario de este álbum. Solo tiene sentido si el
@@ -649,6 +701,13 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: Spacing.xs,
     marginTop: Spacing.md,
+  },
+  // Estado "cupo de ads agotado" (reemplaza al botón hasta el día siguiente).
+  adExhausted: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.muted,
+    textAlign: 'center',
   },
   hideBtnText: {
     fontFamily: FontFamily.mono,

@@ -570,6 +570,8 @@ export type Database = {
     }
     Functions: {
       _cron_notify_daily_available: { Args: never; Returns: undefined }
+      _fn_ad_albums: { Args: never; Returns: string[] }
+      _fn_ad_packs_today: { Args: { p_user_id: string }; Returns: number }
       _fn_album_completed: {
         Args: { p_album_id: string; p_total: number; p_user: string }
         Returns: boolean
@@ -587,6 +589,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_ad_pack_status: { Args: { p_album_id: string }; Returns: Json }
       fn_add_sticker: {
         Args: {
           p_album_id: string
@@ -769,6 +772,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_claim_ad_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_claim_daily_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_count_active_albums: { Args: { p_owner: string }; Returns: number }
       fn_create_album: {
@@ -949,7 +953,7 @@ export type Database = {
     }
     Enums: {
       album_status: "draft" | "published" | "read_only" | "archived"
-      pack_source: "welcome" | "daily" | "qr" | "admin"
+      pack_source: "welcome" | "daily" | "qr" | "admin" | "ad"
       sticker_rarity: "common" | "rare" | "epic" | "legendary"
       subscription_plan: "monthly" | "annual"
       subscription_status: "active" | "in_grace" | "expired" | "cancelled"
@@ -1091,7 +1095,7 @@ export const Constants = {
   public: {
     Enums: {
       album_status: ["draft", "published", "read_only", "archived"],
-      pack_source: ["welcome", "daily", "qr", "admin"],
+      pack_source: ["welcome", "daily", "qr", "admin", "ad"],
       sticker_rarity: ["common", "rare", "epic", "legendary"],
       subscription_plan: ["monthly", "annual"],
       subscription_status: ["active", "in_grace", "expired", "cancelled"],

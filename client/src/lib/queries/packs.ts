@@ -1,6 +1,6 @@
 // Wrapper sobre la Edge Function open_pack + helpers.
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { callEdgeFunction } from '@/lib/edge';
 import { supabase } from '@/lib/supabase';
@@ -32,6 +32,36 @@ export async function openPack(packId: string): Promise<OpenedSticker[]> {
     pack_id: packId,
   });
   return body.stickers ?? [];
+}
+
+// --- Sobres por publicidad (solo álbumes especiales, Android) ---------------
+
+export interface AdPackStatus {
+  enabled: boolean;   // false si el álbum no ofrece ads o no sos miembro
+  used: number;       // ads usados hoy (global entre los álbumes con ads)
+  remaining: number;
+  limit: number;
+}
+
+export function useAdPackStatus(albumId: string | undefined, enabled = true) {
+  const q = useQuery({
+    queryKey: ['ad-packs', 'status', albumId],
+    enabled: !!albumId && enabled,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('fn_ad_pack_status', {
+        p_album_id: albumId!,
+      });
+      if (error) throw error;
+      return data as unknown as AdPackStatus;
+    },
+  });
+  return { adStatus: q.data ?? null, refetchAdStatus: q.refetch };
+}
+
+// El server valida elegibilidad + tope 2/día (fn_claim_ad_pack).
+export async function claimAdPack(albumId: string) {
+  return supabase.rpc('fn_claim_ad_pack', { p_album_id: albumId });
 }
 
 export async function pasteSticker(stickerId: string) {

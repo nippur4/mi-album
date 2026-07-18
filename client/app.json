@@ -1,4 +1,7 @@
 {
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3940256099942544~3347511713"
+  },
   "expo": {
     "name": "Mi Álbum de Figuritas",
     "slug": "mi-album-figuritas",
@@ -58,7 +61,8 @@
           "defaultChannel": "default"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "react-native-google-mobile-ads"
     ],
     "experiments": {
       "typedRoutes": true,

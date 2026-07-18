@@ -26,6 +26,8 @@ export type AppErrorKey =
   | 'album_cover_required'
   | 'album_pack_image_required'
   | 'album_protected'
+  | 'ad_limit_reached'
+  | 'ad_not_available'
   | 'email_confirmation_mismatch'
   | 'album_not_available'         // sufijo de status en .message
   | 'stickers_count_mismatch'
@@ -144,6 +146,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0184: 'already_owned',
   P0200: 'email_confirmation_mismatch',
   P0201: 'album_protected',
+  P0210: 'ad_limit_reached',
+  P0211: 'ad_not_available',
 };
 
 export interface AppError {
@@ -187,6 +191,8 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   album_cover_required: 'Cargá una carátula antes de publicar.',
   album_pack_image_required: 'Cargá una imagen para el sobre antes de publicar.',
   album_protected: 'Este álbum no se puede eliminar.',
+  ad_limit_reached: 'Ya usaste las 2 publicidades de hoy. Volvé mañana.',
+  ad_not_available: 'Este álbum no ofrece sobres por publicidad.',
   email_confirmation_mismatch: 'El email no coincide con el de tu cuenta.',
   album_not_available: 'Este álbum no está disponible ahora.',
   stickers_count_mismatch: 'Faltan figuritas por cargar.',
