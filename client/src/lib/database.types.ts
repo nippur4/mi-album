@@ -834,6 +834,13 @@ export type Database = {
           next_available_at: string
         }[]
       }
+      fn_my_offer_flags: {
+        Args: never
+        Returns: {
+          offer_id: string
+          sender_blocked: boolean
+        }[]
+      }
       fn_my_packs_tab_data: { Args: never; Returns: Json }
       fn_my_pending_packs: {
         Args: never

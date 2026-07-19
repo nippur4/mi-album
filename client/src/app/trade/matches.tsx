@@ -34,6 +34,12 @@ export default function TradeMatchesScreen() {
   const { status: tradeLimit } = useTradeLimitStatus(albumId);
   // Default a habilitado mientras carga, para no ocultar acciones de más.
   const tradeEnabled = tradeLimit?.enabled !== false;
+  // Con el cupo de la ventana agotado tampoco se pueden CREAR ofertas
+  // (gate server-side en fn_create_trade_offer desde 0060); el banner de
+  // arriba ya explica cuántos quedan.
+  const canOffer =
+    tradeEnabled &&
+    (tradeLimit == null || tradeLimit.unlimited || (tradeLimit.remaining ?? 1) > 0);
 
   // ¿Completé este álbum? (pegadas >= total) — para el hint de las settings.
   const pastedCount = useMemo(
@@ -129,11 +135,11 @@ export default function TradeMatchesScreen() {
               {matches.map((m, i) => (
                 <Pressable
                   key={`${m.other_user_id}-${m.they_give_sticker_id}-${m.i_give_sticker_id}-${i}`}
-                  disabled={!tradeEnabled}
+                  disabled={!canOffer}
                   style={({ pressed }) => [
                     styles.matchCard,
                     pressed && styles.matchPressed,
-                    !tradeEnabled && styles.matchDisabled,
+                    !canOffer && styles.matchDisabled,
                   ]}
                   onPress={() =>
                     router.push(

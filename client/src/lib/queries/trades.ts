@@ -38,6 +38,10 @@ export interface TradeOffer {
   status: TradeStatus;
   created_at: string;
   resolved_at: string | null;
+  // true si el EMISOR de la oferta agotó su tope de cambios de la ventana
+  // (fn_my_offer_flags). En Recibidas esas ofertas se filtran (no se pueden
+  // aceptar); en Enviadas se muestran con la nota "el otro no la ve".
+  sender_blocked?: boolean;
 }
 
 export interface AlbumMatch {
@@ -71,20 +75,34 @@ export function useMyOffers() {
     enabled: !!uid,
     staleTime: 15_000,
     queryFn: async () => {
-      const { data: rows, error } = await supabase
-        .from('trade_offers')
-        .select(`
-          id, album_id, from_user, to_user, offered_sticker_id, requested_sticker_id,
-          status, created_at, resolved_at,
-          from_profile:profiles!trade_offers_from_user_fkey(display_name, avatar_url),
-          to_profile:profiles!trade_offers_to_user_fkey(display_name, avatar_url),
-          offered:stickers!trade_offers_offered_sticker_id_fkey(id, number, name, rarity, thumb_key),
-          requested:stickers!trade_offers_requested_sticker_id_fkey(id, number, name, rarity, thumb_key),
-          album:albums!trade_offers_album_id_fkey(name)
-        `)
-        .or(`from_user.eq.${uid},to_user.eq.${uid}`)
-        .order('created_at', { ascending: false });
+      // Flags de visibilidad en paralelo: qué ofertas pending tienen a su
+      // emisor bloqueado por el tope de cambios (solo computable server-side:
+      // el conteo mira trades del emisor, invisibles por RLS para el otro).
+      const [offersRes, flagsRes] = await Promise.all([
+        supabase
+          .from('trade_offers')
+          .select(`
+            id, album_id, from_user, to_user, offered_sticker_id, requested_sticker_id,
+            status, created_at, resolved_at,
+            from_profile:profiles!trade_offers_from_user_fkey(display_name, avatar_url),
+            to_profile:profiles!trade_offers_to_user_fkey(display_name, avatar_url),
+            offered:stickers!trade_offers_offered_sticker_id_fkey(id, number, name, rarity, thumb_key),
+            requested:stickers!trade_offers_requested_sticker_id_fkey(id, number, name, rarity, thumb_key),
+            album:albums!trade_offers_album_id_fkey(name)
+          `)
+          .or(`from_user.eq.${uid},to_user.eq.${uid}`)
+          .order('created_at', { ascending: false }),
+        supabase.rpc('fn_my_offer_flags'),
+      ]);
+      const { data: rows, error } = offersRes;
       if (error) throw toAppError(error);
+      // Best-effort: si los flags fallan, mostramos todo (peor caso: el
+      // receptor choca con el error al aceptar, como antes de 0060).
+      const blockedByOffer = new Map<string, boolean>(
+        ((flagsRes.data ?? []) as { offer_id: string; sender_blocked: boolean }[]).map(
+          (f) => [f.offer_id, f.sender_blocked],
+        ),
+      );
 
       const enriched: TradeOffer[] = ((rows ?? []) as any[]).map((o) => ({
         id: o.id,
@@ -103,10 +121,16 @@ export function useMyOffers() {
         status: o.status,
         created_at: o.created_at,
         resolved_at: o.resolved_at,
+        sender_blocked: blockedByOffer.get(o.id) ?? false,
       }));
 
       return {
-        received: enriched.filter((o) => o.to_user === uid),
+        // Recibidas: ocultamos las pending cuyo emisor agotó su tope (quedaron
+        // de antes de agotarlo; aceptarlas fallaría). Cuando su ventana rueda,
+        // reaparecen solas. El historial resuelto no se toca.
+        received: enriched.filter(
+          (o) => o.to_user === uid && !(o.status === 'pending' && o.sender_blocked),
+        ),
         sent: enriched.filter((o) => o.from_user === uid),
       };
     },

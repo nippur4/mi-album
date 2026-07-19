@@ -206,6 +206,9 @@ export function UserAlbumView({ album, stickers }: Props) {
   const isCompleted = album.total_stickers > 0 && myPastedCount >= album.total_stickers;
   // El daily solo se ofrece si el jugador no lo silenció y no completó.
   const dailyActive = !dailyMuted && !isCompleted;
+  // Sobre extra por publicidad (solo Android + álbumes especiales, con cupo).
+  const showAdCta =
+    isMember && ADS_SUPPORTED && !!adStatus?.enabled && (adStatus?.remaining ?? 0) > 0 && !isCompleted;
 
   const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
 
@@ -347,30 +350,6 @@ export function UserAlbumView({ album, stickers }: Props) {
           />
         )}
 
-        {/* Sobre extra a cambio de un rewarded ad (solo Android + álbumes
-            especiales; ADS_SUPPORTED es false en web/iOS). Con el cupo agotado
-            mostramos el estado en vez de esconder el botón, para que se sepa
-            que la opción existe y vuelve mañana. */}
-        {isMember && ADS_SUPPORTED && adStatus?.enabled && !isCompleted && (
-          adStatus.remaining > 0 ? (
-            <Button
-              label={
-                adBusy
-                  ? 'Cargando publicidad…'
-                  : `Ver publicidad → sobre extra (${adStatus.remaining} hoy)`
-              }
-              variant="outline"
-              onPress={onWatchAd}
-              loading={adBusy}
-              disabled={adBusy}
-            />
-          ) : (
-            <Text style={styles.adExhausted}>
-              Sobres por publicidad: volvé mañana (2/2 usados hoy).
-            </Text>
-          )
-        )}
-
         {/* Silenciar el sobre diario de este álbum. Solo tiene sentido si el
             álbum lo ofrece y el jugador no lo completó (completado ya corta
             solo). El estado real vive en membership.daily_muted. */}
@@ -437,74 +416,102 @@ export function UserAlbumView({ album, stickers }: Props) {
       </BottomSheet>
 
       {/* CTA inferior: unirse (no-miembro) / sobres listos / daily / countdown */}
-      {showJoinCta ? (
-        <Pressable
-          onPress={onJoin}
-          disabled={joining}
-          style={({ pressed }) => [
-            styles.packsCta,
-            isDesktop && styles.floatDesktop,
-            { bottom: Math.max(insets.bottom, Spacing.md) },
-            pressed && styles.packsCtaPressed,
-          ]}
-        >
-          <Text style={styles.packsCtaLabel}>
-            {joinFailed ? 'NO SE PUDO\nUNIRTE' : 'EMPEZÁ TU\nCOLECCIÓN'}
-          </Text>
-          <View style={styles.packsCtaAction}>
-            <Text style={styles.packsCtaActionText}>
-              {joining ? '...' : joinFailed ? 'Reintentar' : 'Unirme'}
-            </Text>
-          </View>
-        </Pressable>
-      ) : packsCount > 0 ? (
-        <Pressable
-          onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
-          style={({ pressed }) => [
-            styles.packsCta,
-            isDesktop && styles.floatDesktop,
-            { bottom: Math.max(insets.bottom, Spacing.md) },
-            pressed && styles.packsCtaPressed,
-          ]}
-        >
-          <Text style={styles.packsCtaLabel}>
-            TENÉS {packsCount}{'\n'}SOBRE{packsCount > 1 ? 'S' : ''}
-          </Text>
-          <View style={styles.packsCtaAction}>
-            <Text style={styles.packsCtaActionText}>Abrir</Text>
-          </View>
-        </Pressable>
-      ) : dailyActive && daily.canClaim ? (
-        <Pressable
-          onPress={onClaimDaily}
-          disabled={claiming}
-          style={({ pressed }) => [
-            styles.packsCta,
-            isDesktop && styles.floatDesktop,
-            { bottom: Math.max(insets.bottom, Spacing.md) },
-            pressed && styles.packsCtaPressed,
-          ]}
-        >
-          <Text style={styles.packsCtaLabel}>SOBRE DIARIO{'\n'}DISPONIBLE</Text>
-          <View style={styles.packsCtaAction}>
-            <Text style={styles.packsCtaActionText}>{claiming ? '...' : 'Reclamar'}</Text>
-          </View>
-        </Pressable>
-      ) : dailyActive && daily.enabled && daily.nextAvailableAt ? (
+      {/* Stack inferior: CTA principal según estado + (si aplica) la opción
+          de sobre extra por publicidad, en la misma sección que el contador
+          del diario. El stack es el que se posiciona absoluto; los CTAs
+          adentro van en flujo (styles.inStack anula su position absolute). */}
+      {(showJoinCta ||
+        packsCount > 0 ||
+        (dailyActive && daily.enabled) ||
+        showAdCta) && (
         <View
           style={[
-            styles.dailyCard,
+            styles.ctaStack,
             isDesktop && styles.floatDesktop,
             { bottom: Math.max(insets.bottom, Spacing.md) },
           ]}
         >
-          <View style={styles.dailyCardLeft}>
-            <Text style={styles.dailyCardKicker}>SOBRE DIARIO GRATIS</Text>
-            <Text style={styles.dailyCardSub}>PRÓXIMO EN</Text>
-          </View>
-          <Countdown target={daily.nextAvailableAt} style={styles.dailyCountdown} />
+          {showJoinCta ? (
+            <Pressable
+              onPress={onJoin}
+              disabled={joining}
+              style={({ pressed }) => [
+                styles.packsCta,
+                styles.inStack,
+                pressed && styles.packsCtaPressed,
+              ]}
+            >
+              <Text style={styles.packsCtaLabel}>
+                {joinFailed ? 'NO SE PUDO\nUNIRTE' : 'EMPEZÁ TU\nCOLECCIÓN'}
+              </Text>
+              <View style={styles.packsCtaAction}>
+                <Text style={styles.packsCtaActionText}>
+                  {joining ? '...' : joinFailed ? 'Reintentar' : 'Unirme'}
+                </Text>
+              </View>
+            </Pressable>
+          ) : packsCount > 0 ? (
+            <Pressable
+              onPress={() => router.push(`/pack/open?albumId=${album.id}`)}
+              style={({ pressed }) => [
+                styles.packsCta,
+                styles.inStack,
+                pressed && styles.packsCtaPressed,
+              ]}
+            >
+              <Text style={styles.packsCtaLabel}>
+                TENÉS {packsCount}{'\n'}SOBRE{packsCount > 1 ? 'S' : ''}
+              </Text>
+              <View style={styles.packsCtaAction}>
+                <Text style={styles.packsCtaActionText}>Abrir</Text>
+              </View>
+            </Pressable>
+          ) : dailyActive && daily.canClaim ? (
+            <Pressable
+              onPress={onClaimDaily}
+              disabled={claiming}
+              style={({ pressed }) => [
+                styles.packsCta,
+                styles.inStack,
+                pressed && styles.packsCtaPressed,
+              ]}
+            >
+              <Text style={styles.packsCtaLabel}>SOBRE DIARIO{'\n'}DISPONIBLE</Text>
+              <View style={styles.packsCtaAction}>
+                <Text style={styles.packsCtaActionText}>{claiming ? '...' : 'Reclamar'}</Text>
+              </View>
+            </Pressable>
+          ) : dailyActive && daily.enabled && daily.nextAvailableAt ? (
+            <View style={[styles.dailyCard, styles.inStack]}>
+              <View style={styles.dailyCardLeft}>
+                <Text style={styles.dailyCardKicker}>SOBRE DIARIO GRATIS</Text>
+                <Text style={styles.dailyCardSub}>PRÓXIMO EN</Text>
+              </View>
+              <Countdown target={daily.nextAvailableAt} style={styles.dailyCountdown} />
+            </View>
+          ) : null}
+
+          {/* Sobre extra por rewarded ad: solo Android + álbumes especiales,
+              con cupo disponible (el server valida el tope de 2/día). */}
+          {showAdCta && !showJoinCta && (
+            <Pressable
+              onPress={onWatchAd}
+              disabled={adBusy}
+              style={({ pressed }) => [styles.adCta, pressed && { opacity: 0.85 }]}
+            >
+              <View style={styles.dailyCardLeft}>
+                <Text style={styles.adCtaKicker}>SOBRE EXTRA</Text>
+                <Text style={styles.dailyCardSub}>
+                  {adBusy
+                    ? 'CARGANDO PUBLICIDAD…'
+                    : `VER PUBLICIDAD · ${adStatus?.remaining ?? 0} HOY`}
+                </Text>
+              </View>
+              <Feather name="play-circle" size={24} color={Colors.gold} />
+            </Pressable>
+          )}
         </View>
-      ) : null}
+      )}
     </SafeAreaView>
   );
 }
@@ -529,7 +536,9 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.md,
-    paddingBottom: 140,
+    // Aire para el stack inferior, que ahora puede apilar CTA + card de
+    // publicidad (dos filas).
+    paddingBottom: 210,
     gap: Spacing.xl,
   },
   section: { gap: Spacing.sm },
@@ -624,6 +633,39 @@ const styles = StyleSheet.create({
     maxWidth: 760 - Spacing.screenX * 2,
     marginHorizontal: 'auto',
   },
+  // Contenedor absoluto del CTA inferior; los hijos van en flujo con gap.
+  ctaStack: {
+    position: 'absolute',
+    left: Spacing.screenX,
+    right: Spacing.screenX,
+    gap: Spacing.sm,
+  },
+  // Anula el position absolute de packsCta/dailyCard cuando viven en el stack.
+  inStack: {
+    position: 'relative',
+    left: 0,
+    right: 0,
+  },
+  // Card de "sobre extra por publicidad": misma familia visual que dailyCard,
+  // con acento gold para diferenciarla del diario gratis.
+  adCta: {
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  adCtaKicker: {
+    fontFamily: FontFamily.mono,
+    fontSize: 11,
+    color: Colors.goldDark,
+    letterSpacing: 2,
+    fontWeight: '800',
+  },
   packsCta: {
     position: 'absolute',
     left: Spacing.screenX,
@@ -702,13 +744,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: Spacing.xs,
     marginTop: Spacing.md,
-  },
-  // Estado "cupo de ads agotado" (reemplaza al botón hasta el día siguiente).
-  adExhausted: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.caption,
-    color: Colors.muted,
-    textAlign: 'center',
   },
   hideBtnText: {
     fontFamily: FontFamily.mono,

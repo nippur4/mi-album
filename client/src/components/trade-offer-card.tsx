@@ -118,15 +118,29 @@ export function TradeOfferCard({ offer, side, onResolved }: Props) {
         </View>
       )}
       {offer.status === 'pending' && side === 'sent' && (
-        <View style={styles.actions}>
-          <Button
-            label={working === 'cancel' ? '...' : 'Cancelar oferta'}
-            variant="outline"
-            onPress={() => act('cancel')}
-            disabled={working !== null}
-            style={{ flex: 1 }}
-          />
-        </View>
+        <>
+          {/* El emisor (yo) agotó su tope de cambios: la contraparte no ve
+              esta oferta hasta que la ventana ruede. Se puede cancelar igual. */}
+          {offer.sender_blocked && (
+            <View style={styles.blockedNote}>
+              <Feather name="clock" size={13} color={Colors.amberWarn} />
+              <Text style={styles.blockedNoteText}>
+                Alcanzaste el máximo de cambios del período en este álbum.{' '}
+                {otherName || 'La otra persona'} no va a ver esta oferta hasta que
+                puedas hacer cambios de nuevo.
+              </Text>
+            </View>
+          )}
+          <View style={styles.actions}>
+            <Button
+              label={working === 'cancel' ? '...' : 'Cancelar oferta'}
+              variant="outline"
+              onPress={() => act('cancel')}
+              disabled={working !== null}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </>
       )}
     </View>
   );
@@ -232,5 +246,20 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: Spacing.sm,
+  },
+  blockedNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.amberWarnBg,
+    borderRadius: Radius.card,
+    padding: Spacing.sm,
+  },
+  blockedNoteText: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    lineHeight: 16,
   },
 });

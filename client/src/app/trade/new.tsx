@@ -11,7 +11,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { StickerMini } from '@/components/sticker-mini';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
-import { createTradeOffer } from '@/lib/queries/trades';
+import { createTradeOffer, useTradeLimitStatus } from '@/lib/queries/trades';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 import type { Sticker } from '@/lib/queries/albums';
@@ -46,6 +46,15 @@ export default function NewTradeOfferScreen() {
   }, [offered, requested, toUser]);
 
   const loading = !offeredSticker || !requestedSticker;
+
+  // Con el cupo de la ventana agotado no se pueden crear ofertas (el server
+  // también lo rechaza con P0113 desde 0060; esto evita el viaje).
+  const { status: tradeLimit } = useTradeLimitStatus(albumId);
+  const limitReached =
+    tradeLimit != null &&
+    tradeLimit.enabled !== false &&
+    !tradeLimit.unlimited &&
+    (tradeLimit.remaining ?? 1) <= 0;
 
   async function onSubmit() {
     if (!albumId || !toUser || !offered || !requested) return;
@@ -132,13 +141,21 @@ export default function NewTradeOfferScreen() {
         ]}
       >
         <Button
-          label={submitting ? 'Enviando...' : 'Enviar oferta'}
+          label={
+            submitting
+              ? 'Enviando...'
+              : limitReached
+                ? 'Límite de cambios alcanzado'
+                : 'Enviar oferta'
+          }
           onPress={onSubmit}
-          disabled={loading || submitting}
+          disabled={loading || submitting || limitReached}
           loading={submitting}
         />
         <Text style={styles.fineprint}>
-          La oferta queda pendiente hasta que la otra persona acepte o rechace.
+          {limitReached
+            ? 'Ya usaste el máximo de cambios del período en este álbum. Vas a poder ofertar de nuevo cuando pase la ventana.'
+            : 'La oferta queda pendiente hasta que la otra persona acepte o rechace.'}
         </Text>
       </View>
     </SafeAreaView>
