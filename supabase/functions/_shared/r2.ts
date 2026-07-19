@@ -39,3 +39,48 @@ export function base64ToBytes(b64: string): Uint8Array {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
+
+// --- Listado y borrado (garbage collector de huérfanas) ----------------------
+
+export interface R2Object {
+  key: string;
+  lastModified: string; // ISO
+}
+
+// Lista TODO el bucket (ListObjectsV2 paginado de a 1000). El XML se parsea
+// con regex — el shape de <Contents> es estable y nos ahorra una dep.
+export async function listAllR2Objects(): Promise<R2Object[]> {
+  const out: R2Object[] = [];
+  let token: string | null = null;
+  do {
+    const params = new URLSearchParams({ 'list-type': '2', 'max-keys': '1000' });
+    if (token) params.set('continuation-token', token);
+    const url = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}?${params}`;
+    const res = await r2.fetch(url);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`r2_list_failed_${res.status}: ${text.slice(0, 200)}`);
+    }
+    const xml = await res.text();
+    for (const m of xml.matchAll(
+      /<Contents>[\s\S]*?<Key>([^<]+)<\/Key>[\s\S]*?<LastModified>([^<]+)<\/LastModified>[\s\S]*?<\/Contents>/g,
+    )) {
+      out.push({ key: m[1], lastModified: m[2] });
+    }
+    const truncated = /<IsTruncated>true<\/IsTruncated>/.test(xml);
+    token = truncated
+      ? (xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/)?.[1] ?? null)
+      : null;
+  } while (token);
+  return out;
+}
+
+export async function deleteFromR2(key: string): Promise<void> {
+  const url = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
+  const res = await r2.fetch(url, { method: 'DELETE' });
+  // 404 = ya no está: para un GC es éxito.
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`r2_delete_failed_${res.status}: ${text.slice(0, 200)}`);
+  }
+}

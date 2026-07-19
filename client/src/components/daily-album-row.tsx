@@ -23,11 +23,17 @@ interface Props {
   // (el caller usa el hook batch y filtra antes de renderizar).
   status: DailyPackStatus;
   onClaimed?: () => void;
+  // Sobre extra por publicidad (álbumes especiales, solo Android): pill gold
+  // al lado del estado del daily. El caller resuelve elegibilidad con el
+  // summary batch y maneja el flujo del rewarded ad.
+  adAvailable?: boolean;
+  adBusy?: boolean;
+  onWatchAd?: () => void;
 }
 
 // Row del tab Sobres: muestra el daily de un álbum (ready / countdown / off).
 // El status se inyecta por prop (batch fetch desde el caller, evita N+1).
-export function DailyAlbumRow({ album, status, onClaimed }: Props) {
+export function DailyAlbumRow({ album, status, onClaimed, adAvailable, adBusy, onWatchAd }: Props) {
   const [claiming, setClaiming] = useState(false);
 
   if (!status.enabled) return null;
@@ -44,13 +50,15 @@ export function DailyAlbumRow({ album, status, onClaimed }: Props) {
   }
 
   const ready = status.canClaim;
-  const Wrapper: any = ready ? Pressable : View;
 
+  // Siempre Pressable (deshabilitado si no hay claim): un View con estilo-
+  // función lo IGNORA y la fila perdía el flexDirection row — la foto, el
+  // nombre y el botón quedaban apilados en columna.
   return (
-    <Wrapper
+    <Pressable
       onPress={ready ? onClaim : undefined}
       disabled={!ready || claiming}
-      style={({ pressed }: any) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && ready && styles.pressed]}
     >
       <MediaThumb
         mediaKey={album.pack_thumb_key}
@@ -72,12 +80,26 @@ export function DailyAlbumRow({ album, status, onClaimed }: Props) {
           <Text style={styles.subDisabled}>—</Text>
         )}
       </View>
-      {ready && (
-        <View style={styles.action}>
-          <Text style={styles.actionLabel}>{claiming ? '...' : 'Reclamar'}</Text>
-        </View>
-      )}
-    </Wrapper>
+      <View style={styles.actionsCol}>
+        {ready && (
+          <View style={styles.action}>
+            <Text style={styles.actionLabel}>{claiming ? '...' : 'Reclamar'}</Text>
+          </View>
+        )}
+        {adAvailable && (
+          // Pressable anidado: captura su propio tap, no dispara el claim
+          // del row cuando el daily está listo.
+          <Pressable
+            onPress={onWatchAd}
+            disabled={adBusy}
+            hitSlop={6}
+            style={({ pressed }) => [styles.adAction, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.adActionLabel}>{adBusy ? '...' : '▶ Publicidad'}</Text>
+          </Pressable>
+        )}
+      </View>
+    </Pressable>
   );
 }
 
@@ -122,11 +144,30 @@ const styles = StyleSheet.create({
   cdValue: {
     fontSize: 14,
   },
+  actionsCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
   action: {
     backgroundColor: Colors.green,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderRadius: Radius.pill,
+  },
+  // Más chica que la de Reclamar: convive con el countdown en la misma fila
+  // y con el tamaño anterior lo tapaba.
+  adAction: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+  },
+  adActionLabel: {
+    fontFamily: FontFamily.body,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.ink,
+    letterSpacing: 0.3,
   },
   actionLabel: {
     fontFamily: FontFamily.body,

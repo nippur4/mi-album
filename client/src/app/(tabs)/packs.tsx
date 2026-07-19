@@ -1,14 +1,20 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/button';
 import { DailyAlbumRow } from '@/components/daily-album-row';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { errorMessage } from '@/lib/errors';
+import { claimAdPack, useAdPackSummary } from '@/lib/queries/packs';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
+import { ADS_SUPPORTED, showRewardedAd } from '@/lib/rewarded-ad';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
@@ -16,12 +22,39 @@ export default function PacksTab() {
   const router = useRouter();
   const isDesktop = useIsDesktop();
   const desktopCap = useDesktopCap(1080);
+  const qc = useQueryClient();
   // Bundle: pending packs + playable albums (con daily status) en 1 sola RPC.
   // Antes eran 4 queries (pending + owned + joined + daily batch).
   const { pending, playable, refetch } = useMyPacksTabData();
   // Solo álbumes con daily habilitado: DailyAlbumRow renderiza null para los
   // apagados, pero su wrapper dejaba huecos en el grid desktop.
   const dailyRows = playable.filter((r) => r.daily.enabled);
+
+  // Sobre extra por publicidad (álbumes especiales, solo Android): resumen
+  // batch con qué álbumes califican + cupo global del día.
+  const { adSummary, refetchAdSummary } = useAdPackSummary(ADS_SUPPORTED);
+  const [adBusyAlbum, setAdBusyAlbum] = useState<string | null>(null);
+
+  async function onWatchAd(albumId: string) {
+    if (adBusyAlbum) return;
+    setAdBusyAlbum(albumId);
+    try {
+      const rewarded = await showRewardedAd();
+      if (!rewarded) return;
+      const { error } = await claimAdPack(albumId);
+      if (error) {
+        Alert.alert('No se pudo', errorMessage(error));
+        return;
+      }
+      // El sobre nuevo entra a "sin abrir" y baja el cupo del día.
+      refetch();
+      refetchAdSummary();
+      qc.invalidateQueries({ queryKey: ['ad-packs'] });
+      qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
+    } finally {
+      setAdBusyAlbum(null);
+    }
+  }
 
   useFocusRefetchStale(['packs-tab']);
 
@@ -105,6 +138,13 @@ export default function PacksTab() {
                     }}
                     status={row.daily}
                     onClaimed={() => refetch()}
+                    adAvailable={
+                      !!adSummary &&
+                      adSummary.albumIds.has(row.album_id) &&
+                      adSummary.remaining > 0
+                    }
+                    adBusy={adBusyAlbum === row.album_id}
+                    onWatchAd={() => onWatchAd(row.album_id)}
                   />
                 </View>
               ))}

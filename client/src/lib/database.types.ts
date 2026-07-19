@@ -590,6 +590,7 @@ export type Database = {
         Returns: undefined
       }
       fn_ad_pack_status: { Args: { p_album_id: string }; Returns: Json }
+      fn_ad_pack_summary: { Args: never; Returns: Json }
       fn_add_sticker: {
         Args: {
           p_album_id: string

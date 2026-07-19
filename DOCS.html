@@ -381,7 +381,7 @@
     <li><strong>Sin upscaling</strong>: si el original es más chico que el target, se re-encodea sin resize.</li>
     <li><strong>Celdas adaptativas</strong>: <code>StickerCell</code> se mide y cambia de thumb a large cuando supera los px físicos del thumb (~550, contando <code>PixelRatio</code>) — clave para fichas con texto en layouts grandes.</li>
     <li>Las imágenes ya subidas conservan su versión vieja hasta re-subirse.</li>
-    <li>R2 nunca borra: las keys huérfanas (por reemplazo o delete) se acumulan a costo despreciable — decisión consciente, hay plan de GC si algún día molesta.</li>
+    <li><strong>GC de huérfanas</strong>: la DB nunca borra de R2 (quedan huérfanas al eliminar álbum/figurita/preset o re-subir). Panel admin → <strong>Limpieza de imágenes</strong> → Edge Function <code>gc_orphan_images</code>: lista el bucket, diffea contra las keys vivas (albums + stickers + presets + avatares) y borra. Dry-run por defecto, nunca toca objetos de &lt;24h (uploads en vuelo), máx 500 por corrida.</li>
   </ul>
 </section>
 
@@ -455,10 +455,27 @@ node client/scripts/gen-sfx.js
   <ul>
     <li><strong>Paywall + RevenueCat real</strong> (pantallas 12/13): SDK, productos sandbox, secret real del webhook, test E2E compra → <code>useIsPro()</code>.</li>
     <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
-    <li><strong>Setup admin del álbum de avatares</strong> (data, no código): numerar los 30 presets, cargar las 30 figuritas, publicar + marcar público.</li>
-    <li><strong>SMTP custom para el magic link</strong> (pre-launch): el mailer built-in de Supabase free es ~3-4 emails/hora. Brevo (300/día) o Resend (3K/mes) gratis alcanzan — Google OAuth ya cubre el grueso.</li>
-    <li>Limpieza técnica opcional: GC de imágenes huérfanas en R2, warnings de <code>runOnJS</code> (Reanimated 4), identificar el álbum protegido <code>55fce726…</code>.</li>
+    <li><strong>SMTP custom (Brevo) para el magic link</strong>: ver runbook abajo. Sin esto el mailer de Supabase free (~3-4 emails/hora) frena a cualquier tester externo.</li>
+    <li><strong>Android App Links</strong> (cuando haya dominio propio): <code>assetlinks.json</code> + intent filter para que el link de invitación abra la app nativa.</li>
+    <li>Limpieza técnica opcional: warnings de <code>runOnJS</code> (Reanimated 4).</li>
   </ul>
+
+  <h3>Runbook: SMTP custom con Brevo (magic link sin rate limit)</h3>
+  <p>Config pura de dashboards, cero código. Mantiene el flujo de magic link tal cual; solo cambia quién manda el email.</p>
+  <ol>
+    <li><strong>Cuenta Brevo</strong>: registrarse en brevo.com (free = 300 emails/día — de sobra: con sesión persistente + Google OAuth, el magic link se usa ~1 vez por dispositivo).</li>
+    <li><strong>Remitente verificado</strong>: Brevo → Senders &amp; IPs → Senders → agregar y verificar el email que va a figurar como remitente (sin dominio propio se puede verificar un Gmail; cuando haya dominio, verificar el dominio entero con SPF/DKIM — mejora mucho el inbox placement).</li>
+    <li><strong>SMTP key</strong>: Brevo → SMTP &amp; API → pestaña SMTP → generar una SMTP key. Anotar: host <code>smtp-relay.brevo.com</code>, puerto <code>587</code>, login (el email de la cuenta Brevo) y la key.</li>
+    <li><strong>Supabase</strong>: Dashboard → Project Settings → <strong>Authentication</strong> → SMTP Settings → Enable custom SMTP:
+      <ul>
+        <li>Host: <code>smtp-relay.brevo.com</code> · Port: <code>587</code></li>
+        <li>Username: el login de Brevo · Password: la SMTP key</li>
+        <li>Sender email: el remitente verificado · Sender name: <code>Mi Álbum de Figuritas</code></li>
+      </ul>
+    </li>
+    <li><strong>Subir el rate limit</strong>: con SMTP custom activo, Supabase deja editarlo — Authentication → Rate Limits → "Emails sent per hour" → p.ej. <code>100</code>.</li>
+    <li><strong>Probar</strong>: cerrar sesión → pedir magic link → el mail debe llegar en segundos (revisar spam la primera vez) y el remitente ser el verificado. Si no llega, Brevo → Logs muestra cada envío.</li>
+  </ol>
 </section>
 
 <footer>MI ÁLBUM DE FIGURITAS · DOCUMENTACIÓN TÉCNICA · 2026-07</footer>

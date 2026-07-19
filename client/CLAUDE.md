@@ -2,7 +2,7 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-07-08.
+Última actualización: 2026-07-19. Migraciones aplicadas hasta la **0061**. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
 
 ### Lo que se completó
 
@@ -25,6 +25,30 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesiones 2026-07-13 → 2026-07-19 — hojas/títulos, calidad de imágenes, web fixes, stats admin, rewarded ads, trades (migraciones 0057–0061)
+
+**Personalización de hojas** (`page-config.ts` + `edit-pages-modal` + `album-pager` + `page-texture`): paleta de hoja a 42 colores, 28 texturas SVG (incl. tanda dino: huellas/escamas/huesitos/helechos), proporción de figurita nueva `sheet` 8:9 (fichas informativas ~1181×1333). **Título por hoja**: texto ≤41 chars con contador, 20 colores, 4 tamaños (16–38px), alineación h (izq/centro/der), posición v (borde sup / sobre grilla / bajo grilla / borde inf — la hoja pasó a columna con spacers flex), hasta 2 renglones (alto MEDIDO con onLayout, el fit re-ajusta las celdas). **Todo viaja dentro de `page_overrides` jsonb — `fn_update_album_pages` lo guarda pasante, cero migración para extender el override.** Modal reestructurado en 3 pantallas (ajustes default / grilla de hojas 3-col virtualizada / editor por hoja) + botón lápiz en cada hoja del pager que abre el editor directo (`initialPage`).
+
+**Calidad de imágenes** (`uploads.ts`): large de sticker 1000→**1600px** con JPEG **0.92** (thumb sigue 512@0.85); picker con `quality: 1` (antes doble compresión picker 0.9 + manipulator 0.85); sin upscaling (target = min(target, ancho original del asset)). `StickerCell` se mide con onLayout y cambia thumb→large cuando supera ~550px físicos (`PixelRatio`) — clave para fichas con texto en layouts 2×2/1-col. Imágenes viejas conservan su versión hasta re-subirse.
+
+**Web fixes**: (a) **`lib/alert.ts` — shim drop-in de `Alert` que FUNCIONA en web** (`window.alert`/`window.confirm`; 2+ botones → confirm con OK=primer no-cancel). Los 17 archivos migrados; **código nuevo importa `{ Alert } de '@/lib/alert'`, nunca de react-native**. (b) Scroll en BottomSheet: la cadena de `flexShrink: 1` debe llegar completa hasta el sheet — el wrapper sin-footer lleva `flexShrink:1, minHeight:0` (RN defaultea flexShrink 0; el avatar picker quedaba clipeado sin scroll en web mobile). (c) Botón `home` en `ScreenHeader` (`router.navigate('/')`) activado en las vistas de álbum. (d) Link de invitación ahora **https clickeable**: `joinLinkFor(code)` = `https://mi-album.pages.dev/join/CODE` (constante `WEB_APP_URL` en albums.ts); el `mialbum://` salió del mensaje (no se linkifica en WhatsApp).
+
+**Sobres**: tap en carta revelada → vista grande (`/sticker/id`, push conserva la reveal). SFX temáticos por álbum: `albumSfxTheme()` en sfx.ts (dinos → `dino-roar.mp3` CURADO al abrir + `dino-screech` sintetizado en épica/legendaria; gen-sfx.js ya no genera el roar para no pisar el mp3).
+
+**Admin — Estadísticas (0057)**: `fn_admin_stats()` batch (totales + serie diaria 14d en hora argentina desde `auth.audit_log_entries`: logins/día y activos/día = actores distintos con login o token_refreshed, proxy DAU con sesiones persistentes). Pantalla `admin/stats.tsx` con 8 tiles + 2 bar charts (hues validados #2D63AB/#B4552D, tap en barra = valor).
+
+**Álbumes especiales (0058)**: los 3 confirmados (avatares `29a1fa90…`, 0..1000 `ecbf4497…`, dinos `d1227449…`) protegidos contra borrado (P0201) + espejo en `PROTECTED_ALBUM_IDS`; el 4to id (`55fce726…`) quedó protegido sin identificar.
+
+**Rewarded ads (0059 + 0061, solo Android)**: sobre extra por publicidad en los 3 especiales, tope **2/día por usuario GLOBAL** en hora argentina, validado SIEMPRE server-side (`fn_claim_ad_pack` P0210/P0211; llamar la RPC sin mirar el ad no rinde más que eso). `fn_ad_pack_status(album)` para la vista del álbum + `fn_ad_pack_summary()` batch para el tab Sobres (álbum ids + cupo global, evita N+1). Enum `pack_source` += 'ad' (gotcha: valor de enum nuevo no se puede referenciar en la misma transacción — funciones SQL comparan `source::text`). Cliente: `react-native-google-mobile-ads` **PINEADA EXACTA @16.0.0** — 16.1+ arrastra play-services-ads ≥25 compilado con Kotlin 2.3 y Expo SDK 56 usa 2.1 → `:compileDebugKotlin` explota ("incompatible version of Kotlin"); subir recién cuando Expo traiga Kotlin ≥2.3. Config: `androidAppId` como **prop del plugin** en expo.plugins (la clave raíz de app.json es formato viejo <v14 e ignorada). Ids de TEST de Google hasta tener cuenta AdMob (2 `TODO(admob)`: app.json + `REAL_AD_UNIT` en `rewarded-ad.android.ts`). Wrapper por plataforma: `rewarded-ad.android.ts` real / `rewarded-ad.ts` stub (`ADS_SUPPORTED=false` en web/iOS). UI: card gold "SOBRE EXTRA" en el stack del CTA inferior del álbum (`ctaStack` — los CTAs perdieron su position absolute vía `inStack`) + pill "▶ Publicidad" en las filas del tab Sobres. Cache raíz compartida `['ad-packs']`, invalidada al abrir sobres y con focus-refetch. **Runbook completo de AdMob productivo en DOCS.html §5.** Leer logs de builds EAS: `eas build:view --json <id>` → `logFiles[0]` (¡brotli!, bajar con Node fetch) → líneas `"msg":"e: "`.
+
+**Trades (0060)**: el límite ahora también gatea **crear** ofertas (P0113 en `fn_create_trade_offer` + UI en matches/new). Ofertas "dormidas" (creadas antes de agotar la ventana): `fn_my_offer_flags()` marca las pending con emisor bloqueado → **Recibidas las oculta** (reaparecen solas al rodar la ventana, no se cancelan) y **Enviadas muestra nota ámbar** al emisor. Tab Cambios: sub-secciones Abiertas/Realizadas/Rechazadas (rechazada=rechazada+cancelada+expirada) con contadores + **paginado client-side de a 10** con pager ‹ N/M ›.
+
+**Fix `DailyAlbumRow`**: el patrón `const Wrapper = ready ? Pressable : View` con estilo-función rompía el layout en estado countdown — **`View` IGNORA los estilos pasados como función** (solo Pressable los soporta); la fila quedaba en columna. Ahora siempre Pressable (disabled si no hay claim).
+
+**GC de imágenes huérfanas (2026-07-19)**: Edge Function `gc_orphan_images` (deployada) — lista el bucket completo (ListObjectsV2 paginado en `_shared/r2.ts`), junta las keys vivas de la DB (albums/stickers/preset_images/profiles, paginado con `.range()` por el cap de max_rows) y borra el diff. Admin-only, `dry_run` default true, **nunca toca objetos de <24h** (el upload ocurre antes del insert en DB), máx 500 por corrida. UI: Panel admin → "Limpieza de imágenes" (`admin/cleanup.tsx`): Analizar → ver números + muestra → Eliminar.
+
+**Cerrados 2026-07-19**: web re-deployada a Pages con toda la tanda ✓ · setup del álbum de avatares completado (presets numerados + figuritas cargadas) ✓ · el álbum protegido `55fce726…` es histórico sin valor — queda protegido y no se investiga más ✓.
 
 #### Sesión 2026-07-08 (parte 5) — FIX publicar álbum especial (migración 0049)
 
@@ -284,15 +308,18 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 - Pantallas 12 (paywall) + 13 (confirmación pro) del handoff.
 - Test end-to-end con sandbox: comprar → webhook → `subscriptions` row → `useIsPro()` true.
 
-**Setup admin del álbum de avatares (data, no código — pendiente):**
-- Numerar los 30 presets de avatar: `sort_order` = número (1-30) desde Admin → Plantillas.
-- Cargar las 30 figuritas (números 1-30) al álbum `29a1fa90-85b3-48fc-b452-2b7f64bd327b`, publicarlo y marcarlo público desde el admin.
-- Sin esto, el gate de desbloqueo funciona pero no hay figuritas que pegar.
+**Setup admin del álbum de avatares:** ✅ COMPLETADO (confirmado 2026-07-19): presets numerados, figuritas cargadas, álbum publicado y público — el picker muestra desbloqueos funcionando.
+
+**Pendientes de lanzamiento (además de pagos):**
+- **AdMob productivo**: cuenta AdMob + App ID/ad unit reales en los 2 `TODO(admob)` + app-ads.txt + consentimiento UMP si hay usuarios UE + publicar en Play Store (AdMob verifica contra la ficha). Runbook paso a paso en DOCS.html §5. NUNCA tocar ads reales en dispositivos propios.
+- **SMTP custom (Brevo) para el magic link** — en curso 2026-07-19, runbook en DOCS.html §12: cuenta Brevo (300/día gratis) → SMTP key → Supabase Dashboard → Auth SMTP → subir rate limit. Sin código.
+- **Android App Links** (cuando haya dominio definitivo): `assetlinks.json` + intent filter para que el link de invitación https abra la app nativa si está instalada.
+- Quitar el cast `as any` de `router.push('/admin/stats')` y `('/admin/cleanup')` cuando expo-router regenere los typed routes (próximo `expo start`).
 
 **Limpieza técnica pendiente:**
-- **Imágenes huérfanas en R2 (decisión consciente, sin proceso de limpieza).** La DB guarda solo keys y NUNCA se borra nada de R2. Quedan huérfanas en 4 flujos: (1) eliminar álbum (0042) — todas sus keys bajo `albums/<albumId>/...`; (2) eliminar figurita (`fn_delete_sticker`) — su thumb+large; (3) re-subir cualquier imagen (cover/pack/sticker/avatar/preset) — la versión anterior queda colgada porque cada upload genera uuid nuevo; (4) borrar preset admin. Costo hoy: despreciable (keys aisladas que nadie referencia, R2 cobra por GB). Si algún día molesta, el fix natural es una Edge Function "garbage collector" con `aws4fetch` (list por prefijo + delete): para álbumes borrados basta borrar el prefijo `albums/<albumId>/` — conviene registrar los ids borrados en una tablita `deleted_albums` al momento del DELETE si se quiere hacer async, o compararlo contra `select id from albums`. Para los reemplazos sueltos haría falta listar R2 completo y diffear contra las keys vivas en DB (albums.cover/pack keys + stickers.thumb/large + preset_images + profiles.avatar_thumb_key).
+- **Imágenes huérfanas en R2**: ✅ RESUELTO 2026-07-19 — Edge Function `gc_orphan_images` (list completo + diff vs keys vivas de DB + delete, dry-run default, margen 24h) + pantalla Panel admin → "Limpieza de imágenes". Correrla cada tanto manualmente; si algún día se quiere automática, cron que la invoque.
 - `runOnJS` de Reanimated 4 emite warnings de deprecation. Funciona, no hay drop-in replacement obvio. Esperar Reanimated 5 o revisar al refactor.
-- Baseline de 22 errores de typecheck preexistentes (mayoría `absoluteFillObject`→`absoluteFill` y nulls en params de RPC). No los introdujo ningún refactor reciente; limpieza opcional.
+- Typecheck: baseline limpio (0 errores) desde 2026-07-13.
 
 ### Operativas
 

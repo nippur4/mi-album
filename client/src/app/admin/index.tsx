@@ -82,6 +82,20 @@ export default function AdminScreen() {
           <Feather name="chevron-right" size={20} color={Colors.muted} />
         </Pressable>
 
+        <Pressable
+          onPress={() => router.push('/admin/cleanup' as any)}
+          style={styles.menuItem}
+        >
+          <Feather name="trash-2" size={20} color={Colors.ink} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuTitle}>Limpieza de imágenes</Text>
+            <Text style={styles.menuSubtitle}>
+              Detecta y borra imágenes huérfanas de R2 (análisis primero, sin riesgo).
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={Colors.muted} />
+        </Pressable>
+
         <Text style={styles.sectionLabel}>ÁLBUMES</Text>
 
         {error ? (

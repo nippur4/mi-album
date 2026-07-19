@@ -82,9 +82,11 @@ export function UserAlbumView({ album, stickers }: Props) {
         Alert.alert('No se pudo', errorMessage(error));
         return;
       }
-      // El sobre nuevo entra al bundle del álbum y al badge del tab Sobres.
+      // El sobre nuevo entra al bundle del álbum y al badge del tab Sobres;
+      // el cupo del día baja también para el summary del tab.
       refetchSideData();
       refetchAdStatus();
+      qc.invalidateQueries({ queryKey: ['ad-packs'] });
       qc.invalidateQueries({ queryKey: ['packs-tab'] });
     } finally {
       setAdBusy(false);
@@ -135,6 +137,10 @@ export function UserAlbumView({ album, stickers }: Props) {
   // foco SOLO si está stale — abrir sobre / pegar / aceptar trade ya
   // invalidan el sidedata, así que esto es red de seguridad, no el mecanismo.
   useFocusRefetchStale(['player-album', 'sidedata', album.id]);
+  // Ídem para el estado de sobres-por-ad: al volver de /pack/open (ej. tras
+  // abrir el último sobre del día) la card de publicidad debe estar fresca
+  // sin salir y volver a entrar.
+  useFocusRefetchStale(['ad-packs']);
 
   async function onClaimDaily() {
     setClaiming(true);

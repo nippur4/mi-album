@@ -64,6 +64,40 @@ export async function claimAdPack(albumId: string) {
   return supabase.rpc('fn_claim_ad_pack', { p_album_id: albumId });
 }
 
+// Resumen batch para el tab Sobres: qué álbumes del caller ofrecen ads +
+// el cupo global restante de hoy, en 1 solo round trip (evita N+1 por fila).
+export interface AdPackSummary {
+  albumIds: Set<string>;
+  used: number;
+  remaining: number;
+  limit: number;
+}
+
+export function useAdPackSummary(enabled = true) {
+  const q = useQuery({
+    queryKey: ['ad-packs', 'summary'],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async (): Promise<AdPackSummary> => {
+      const { data, error } = await supabase.rpc('fn_ad_pack_summary');
+      if (error) throw error;
+      const raw = data as unknown as {
+        album_ids: string[];
+        used: number;
+        remaining: number;
+        limit: number;
+      };
+      return {
+        albumIds: new Set(raw.album_ids ?? []),
+        used: raw.used,
+        remaining: raw.remaining,
+        limit: raw.limit,
+      };
+    },
+  });
+  return { adSummary: q.data ?? null, refetchAdSummary: q.refetch };
+}
+
 export async function pasteSticker(stickerId: string) {
   return supabase.rpc('fn_paste_sticker', { p_sticker_id: stickerId });
 }

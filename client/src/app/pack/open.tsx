@@ -119,9 +119,12 @@ export default function OpenPackScreen() {
       const result = await openPack(packId);
       setStickers(result);
       // El contador de pendientes cambió (badge de la tab Sobres + listados)
-      // y la colección del jugador recibió figuritas nuevas.
+      // y la colección del jugador recibió figuritas nuevas. También el
+      // estado de sobres-por-ad, para que la card aparezca fresca al volver
+      // al álbum (ej. tras abrir el último sobre del día).
       qc.invalidateQueries({ queryKey: ['packs-tab'] });
       qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
+      qc.invalidateQueries({ queryKey: ['ad-packs'] });
       setTimeout(() => {
         // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
         // En el álbum de dinos, un rugido encima le pone el tema.
