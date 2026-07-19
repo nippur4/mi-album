@@ -312,7 +312,7 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 
 **Pendientes de lanzamiento (además de pagos):**
 - **AdMob productivo**: cuenta AdMob + App ID/ad unit reales en los 2 `TODO(admob)` + app-ads.txt + consentimiento UMP si hay usuarios UE + publicar en Play Store (AdMob verifica contra la ficha). Runbook paso a paso en DOCS.html §5. NUNCA tocar ads reales en dispositivos propios.
-- **SMTP custom (Brevo) para el magic link** — en curso 2026-07-19, runbook en DOCS.html §12: cuenta Brevo (300/día gratis) → SMTP key → Supabase Dashboard → Auth SMTP → subir rate limit. Sin código.
+- **SMTP custom (Brevo)**: ✅ CONFIGURADO Y FUNCIONANDO (2026-07-19). Rate limit de emails en 100/h. GOTCHA: el username SMTP NO es el email de la cuenta — Brevo genera un login tipo `xxxx@smtp-brevo.com` (visible en SMTP y API → "Iniciar sesión"); usar el email de cuenta da 500 "Error sending magic link email". Runbook completo en DOCS.html §12.
 - **Android App Links** (cuando haya dominio definitivo): `assetlinks.json` + intent filter para que el link de invitación https abra la app nativa si está instalada.
 - Quitar el cast `as any` de `router.push('/admin/stats')` y `('/admin/cleanup')` cuando expo-router regenere los typed routes (próximo `expo start`).
 

@@ -455,7 +455,7 @@ node client/scripts/gen-sfx.js
   <ul>
     <li><strong>Paywall + RevenueCat real</strong> (pantallas 12/13): SDK, productos sandbox, secret real del webhook, test E2E compra → <code>useIsPro()</code>.</li>
     <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
-    <li><strong>SMTP custom (Brevo) para el magic link</strong>: ver runbook abajo. Sin esto el mailer de Supabase free (~3-4 emails/hora) frena a cualquier tester externo.</li>
+    <li><strong>SMTP custom (Brevo)</strong>: ✅ configurado y funcionando (2026-07-19). El runbook de abajo queda como referencia (p.ej. para migrar el remitente al dominio propio).</li>
     <li><strong>Android App Links</strong> (cuando haya dominio propio): <code>assetlinks.json</code> + intent filter para que el link de invitación abra la app nativa.</li>
     <li>Limpieza técnica opcional: warnings de <code>runOnJS</code> (Reanimated 4).</li>
   </ul>
@@ -465,7 +465,7 @@ node client/scripts/gen-sfx.js
   <ol>
     <li><strong>Cuenta Brevo</strong>: registrarse en brevo.com (free = 300 emails/día — de sobra: con sesión persistente + Google OAuth, el magic link se usa ~1 vez por dispositivo).</li>
     <li><strong>Remitente verificado</strong>: Brevo → Senders &amp; IPs → Senders → agregar y verificar el email que va a figurar como remitente (sin dominio propio se puede verificar un Gmail; cuando haya dominio, verificar el dominio entero con SPF/DKIM — mejora mucho el inbox placement).</li>
-    <li><strong>SMTP key</strong>: Brevo → SMTP &amp; API → pestaña SMTP → generar una SMTP key. Anotar: host <code>smtp-relay.brevo.com</code>, puerto <code>587</code>, login (el email de la cuenta Brevo) y la key.</li>
+    <li><strong>SMTP key</strong>: Brevo → SMTP &amp; API → pestaña SMTP → generar una SMTP key. Anotar: host <code>smtp-relay.brevo.com</code>, puerto <code>587</code>, el <strong>Login</strong> y la key. <strong>OJO: el Login NO es el email de la cuenta</strong> — Brevo genera un usuario tipo <code>ad4153001@smtp-brevo.com</code> (figura como "Iniciar sesión" en esa pantalla). Usar el email de cuenta como username da 500 "Error sending magic link email" en Supabase.</li>
     <li><strong>Supabase</strong>: Dashboard → Project Settings → <strong>Authentication</strong> → SMTP Settings → Enable custom SMTP:
       <ul>
         <li>Host: <code>smtp-relay.brevo.com</code> · Port: <code>587</code></li>
