@@ -234,6 +234,10 @@ export default function OpenPackScreen() {
         </ScrollView>
 
         <View
+          // box-none: la caja del footer es transparente y en web se estira por
+          // encima de las cartas de abajo; sin esto tragaba sus taps y no se
+          // podía abrir la vista grande. Solo los botones capturan.
+          pointerEvents="box-none"
           style={[
             styles.footer,
             // Arriba de la barra del sistema (gesture pill o 3 botones Android).
@@ -376,11 +380,14 @@ function RevealedCard({
 
   return (
     <Animated.View style={[styles.revealedCardWrap, animStyle]}>
-      {sticker.was_new && <NewCardSparkles />}
       <Pressable
         onPress={onPress}
         style={({ pressed }) => pressed && { opacity: 0.85 }}
       >
+      {/* Sparkles DENTRO del Pressable: en web son hermanos absolutos con
+          pointerEvents que no siempre aplica; adentro, cualquier tap encima
+          burbujea al onPress igual. */}
+      {sticker.was_new && <NewCardSparkles />}
       <Animated.View
         style={[
           styles.revealedCard,

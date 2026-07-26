@@ -17,9 +17,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
+import { Alert } from '@/lib/alert';
+import { errorMessage } from '@/lib/errors';
 import type { Sticker } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
+import { usePasteSticker } from '@/lib/queries/packs';
 import { useTradeLimitStatus } from '@/lib/queries/trades';
+import { playSfx } from '@/lib/sfx';
 import { r2Url } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { useDesktopCap } from '@/lib/use-is-desktop';
@@ -54,6 +58,19 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const quantity = entry?.quantity ?? 0;
   const owned = quantity > 0;
   const repesCount = Math.max(0, quantity - 1);
+
+  // Pegar directo desde la vista grande cuando la tenés sin pegar. El hook
+  // invalida el side data del álbum → al refetchar, `pasted` pasa a true y el
+  // botón se reemplaza por el badge "✓ Pegada".
+  const paste = usePasteSticker(sticker.album_id);
+  async function handlePaste() {
+    const { error } = await paste.mutateAsync(sticker.id);
+    if (error) {
+      Alert.alert('No se pudo pegar', errorMessage(error));
+      return;
+    }
+    playSfx('paste', 0.85);
+  }
 
   const isLegendary = sticker.rarity === 'legendary';
   const borderColor = RarityFrame[sticker.rarity];
@@ -231,6 +248,14 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
           </View>
         )}
 
+        {owned && !pasted && (
+          <Button
+            label="Pegar figurita"
+            variant="gold"
+            onPress={handlePaste}
+            loading={paste.isPending}
+          />
+        )}
         <Button
           label={tradesDisabled ? 'Cambios desactivados' : 'Proponer cambio'}
           onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}`)}
