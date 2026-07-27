@@ -1,12 +1,12 @@
 import Feather from '@expo/vector-icons/Feather';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QrTabModal } from '@/components/qr-tab-modal';
 import { useMyPacksTabData } from '@/lib/queries/packs-tab';
 import { useMyOffers } from '@/lib/queries/trades';
-import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors, FontFamily } from '@/constants/theme';
 
 // Estilo compartido de los badges rojos de las tabs (Sobres y Cambios).
@@ -23,7 +23,9 @@ const tabBadgeStyle = {
 // tabPress y abre un modal manejado acá arriba para mantener estado en el layout.
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const isDesktop = useIsDesktop();
+  // En web la nav vive arriba (DesktopHeader) en cualquier ancho — acá
+  // escondemos la tab bar de abajo. En nativo se mantiene abajo.
+  const isWeb = Platform.OS === 'web';
   const [qrModalVisible, setQrModalVisible] = useState(false);
 
   // Badge de la tab Sobres: sobres sin abrir + dailies reclamables ahora.
@@ -45,9 +47,9 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: Colors.red,
           tabBarInactiveTintColor: Colors.muted,
-          // En desktop web la nav vive arriba en el DesktopHeader del root
-          // layout — acá escondemos la tab bar mobile.
-          tabBarStyle: isDesktop
+          // En web la nav vive arriba en el DesktopHeader del root layout —
+          // acá escondemos la tab bar de abajo (solo se usa en nativo).
+          tabBarStyle: isWeb
             ? { display: 'none' }
             : {
                 backgroundColor: Colors.paper,

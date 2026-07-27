@@ -1,13 +1,16 @@
-// Header horizontal para el layout desktop (web ≥ 768px).
-// Reemplaza a la tab bar inferior mobile: branding a la izquierda, tabs al
-// centro, avatar a la derecha.
+// Header horizontal de navegación para TODO web (cualquier ancho).
+// Reemplaza a la tab bar inferior — en la app nativa la nav sigue abajo.
+//   - Ancho (≥768px): branding a la izquierda, tabs con label al lado, avatar.
+//   - Angosto (web mobile): sin brand, tabs compactas ícono-sobre-label como
+//     una tab bar clásica pero arriba, avatar chico a la derecha.
 //
 // La tab QR sigue interceptada — no navega, abre el QrTabModal.
 
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { QrTabModal } from '@/components/qr-tab-modal';
@@ -51,6 +54,10 @@ export function DesktopHeader() {
   const pathname = usePathname();
   const { session } = useSession();
   const { profile } = useMyProfile();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  // Web angosto (mobile en el navegador): versión compacta ícono-sobre-label.
+  const compact = width < 768;
   const [qrOpen, setQrOpen] = useState(false);
   const tabs = buildTabs(() => setQrOpen(true));
 
@@ -73,14 +80,24 @@ export function DesktopHeader() {
 
   return (
     <>
-      <View style={styles.header}>
-        <View style={styles.inner}>
-          {/* Brand + navegación agrupados a la izquierda; avatar a la derecha. */}
-          <View style={styles.leftGroup}>
-          <Text style={styles.brand}>MI ÁLBUM</Text>
-          <View style={styles.tabs}>
+      <View
+        style={[
+          styles.header,
+          compact && styles.headerCompact,
+          // PWA standalone (iOS) mete el status bar arriba; en navegador da 0.
+          compact && { paddingTop: insets.top + Spacing.xs },
+        ]}
+      >
+        <View style={[styles.inner, compact && styles.innerCompact]}>
+          {/* Brand + navegación agrupados a la izquierda; avatar a la derecha.
+              En compacto se oculta el brand para que entren las 5 tabs. */}
+          <View style={[styles.leftGroup, compact && styles.leftGroupCompact]}>
+          {!compact && <Text style={styles.brand}>MI ÁLBUM</Text>}
+          <View style={[styles.tabs, compact && styles.tabsCompact]}>
             {tabs.map((t) => {
               const active = isActiveTab(pathname, t);
+              const badgeCount =
+                t.key === 'packs' ? packsBadge : t.key === 'trades' ? tradesBadge : 0;
               return (
                 <Pressable
                   key={t.key}
@@ -90,27 +107,38 @@ export function DesktopHeader() {
                   }}
                   style={({ pressed }) => [
                     styles.tab,
+                    compact && styles.tabCompact,
                     active && styles.tabActive,
                     pressed && styles.tabPressed,
                   ]}
                   hitSlop={4}
                 >
-                  <Feather
-                    name={t.icon}
-                    size={18}
-                    color={active ? Colors.red : Colors.muted}
-                  />
-                  <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                  <View style={styles.iconWrap}>
+                    <Feather
+                      name={t.icon}
+                      size={compact ? 20 : 18}
+                      color={active ? Colors.red : Colors.muted}
+                    />
+                    {/* En compacto el badge flota sobre el ícono (no hay lugar
+                        al lado del label en columna). */}
+                    {compact && badgeCount > 0 && (
+                      <View style={[styles.badge, styles.badgeFloat]}>
+                        <Text style={styles.badgeText}>{badgeCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      compact && styles.tabLabelCompact,
+                      active && styles.tabLabelActive,
+                    ]}
+                  >
                     {t.label}
                   </Text>
-                  {t.key === 'packs' && packsBadge > 0 && (
+                  {!compact && badgeCount > 0 && (
                     <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{packsBadge}</Text>
-                    </View>
-                  )}
-                  {t.key === 'trades' && tradesBadge > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{tradesBadge}</Text>
+                      <Text style={styles.badgeText}>{badgeCount}</Text>
                     </View>
                   )}
                 </Pressable>
@@ -126,7 +154,7 @@ export function DesktopHeader() {
           >
             <Avatar
               source={displayName}
-              size={48}
+              size={compact ? 36 : 48}
               imageKey={profile?.avatar_thumb_key ?? null}
             />
           </Pressable>
@@ -151,6 +179,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
+  headerCompact: {
+    paddingHorizontal: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
   inner: {
     width: '100%',
     maxWidth: HEADER_MAX_WIDTH,
@@ -160,12 +192,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.lg,
   },
+  innerCompact: {
+    gap: Spacing.sm,
+  },
   // Brand + navegación juntos a la izquierda.
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xl,
     flex: 1,
+  },
+  // Compacto: sin brand, las tabs ocupan todo el ancho disponible.
+  leftGroupCompact: {
+    gap: 0,
   },
   brand: {
     fontFamily: FontFamily.display,
@@ -178,6 +217,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     alignItems: 'center',
   },
+  // Compacto: distribuye las 5 tabs a lo ancho.
+  tabsCompact: {
+    flex: 1,
+    gap: 0,
+    justifyContent: 'space-around',
+  },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,11 +233,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
+  // Compacto: ícono sobre label, sin borde inferior (activo por color).
+  tabCompact: {
+    flexDirection: 'column',
+    gap: 3,
+    paddingHorizontal: 2,
+    borderBottomWidth: 0,
+  },
   tabActive: {
     borderBottomColor: Colors.red,
   },
   tabPressed: {
     opacity: 0.7,
+  },
+  iconWrap: {
+    position: 'relative',
   },
   tabLabel: {
     fontFamily: FontFamily.mono,
@@ -200,6 +255,10 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     letterSpacing: 1.5,
     fontWeight: '700',
+  },
+  tabLabelCompact: {
+    fontSize: 8,
+    letterSpacing: 0.5,
   },
   badge: {
     minWidth: 18,
@@ -209,6 +268,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.red,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Compacto: el badge flota en la esquina del ícono.
+  badgeFloat: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
   },
   badgeText: {
     fontFamily: FontFamily.mono,

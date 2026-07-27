@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { DesktopHeader } from '@/components/desktop-header';
@@ -13,7 +13,6 @@ import { useNotificationTapResponder, useRegisterPushToken } from '@/lib/notific
 import { ProfileProvider } from '@/lib/queries/profile';
 import { ensurePwaHead } from '@/lib/pwa-head';
 import { queryClient } from '@/lib/query-client';
-import { useIsDesktop } from '@/lib/use-is-desktop';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -31,7 +30,6 @@ export default function RootLayout() {
   const { session, isLoading } = useSession();
   const segments = useSegments();
   const router = useRouter();
-  const isDesktop = useIsDesktop();
 
   const ready = (fontsLoaded || fontError) && !isLoading;
 
@@ -52,16 +50,17 @@ export default function RootLayout() {
   if (!ready) return null;
 
   const inAuthGroup = segments[0] === '(auth)';
-  // El header desktop solo aparece en pantallas autenticadas — en login no
-  // tiene sentido mostrarlo.
-  const showDesktopHeader = isDesktop && !!session && !inAuthGroup;
+  // La nav de arriba aparece en TODO web (mobile incluido) — en la app nativa
+  // la nav va abajo (tab bar). Solo en pantallas autenticadas: en login no
+  // tiene sentido mostrarla.
+  const showTopNav = Platform.OS === 'web' && !!session && !inAuthGroup;
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <StatusBar style="dark" />
-        {showDesktopHeader && <DesktopHeader />}
+        {showTopNav && <DesktopHeader />}
         <View style={styles.body}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.paper } }}>
             <Stack.Screen name="(tabs)" />
