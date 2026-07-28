@@ -722,7 +722,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         // El total mínimo viene del número más alto ya cargado, mapeado a
         // cantidad según numberStart (número N ocupa el slot N - start + 1).
         minTotal={stickers.reduce((m, s) => Math.max(m, s.number - numberStart + 1), 1)}
-        maxTotal={numberStart === 0 ? 1001 : isPro ? 1000 : 75}
+        maxTotal={numberStart === 0 ? 1001 : isPro ? 1000 : 30}
         onClose={() => setEditingTotal(false)}
         onSave={onSaveTotal}
       />

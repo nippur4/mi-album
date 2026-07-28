@@ -14,7 +14,7 @@ import { useIsPro } from '@/lib/queries/subscriptions';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
-const FREE_MAX = 75;
+const FREE_MAX = 30;
 const PRO_MAX = 1000;
 
 export default function NewAlbumScreen() {
@@ -25,7 +25,7 @@ export default function NewAlbumScreen() {
   const maxStickers = isPro ? PRO_MAX : FREE_MAX;
 
   const [name, setName] = useState('');
-  const [total, setTotal] = useState(50);
+  const [total, setTotal] = useState(30);
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 

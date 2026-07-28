@@ -10,7 +10,7 @@ interface Props {
   visible: boolean;
   currentTotal: number;
   minTotal: number;  // no se puede bajar por debajo del max(number) ya cargado
-  maxTotal: number;  // 75 free, 1000 pro
+  maxTotal: number;  // 30 free, 1000 pro
   onClose: () => void;
   onSave: (n: number) => Promise<void>;
 }
