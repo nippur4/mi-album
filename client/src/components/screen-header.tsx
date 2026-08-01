@@ -7,35 +7,56 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 interface Props {
   title: string;
   back?: boolean;
+  // X circular para cerrar/volver, en el slot derecho. Pensado para pantallas
+  // inmersivas de fondo oscuro (abrir sobre, figurita grande) donde el chevron
+  // ‹ queda invisible. Por defecto vuelve atrás (o al Home si no hay stack).
+  close?: boolean;
   // Botón de casita → Inicio. Para pantallas fuera del grupo (tabs) donde no
   // hay tab bar y el "volver" puede quedar lejos del Home (ej. dentro de un
   // álbum). navigate('/') colapsa el stack hasta las tabs.
   home?: boolean;
   // Si true, deja partir el título en hasta 2 líneas (estilo handoff con Anton)
   multiline?: boolean;
+  // 'light' para fondos oscuros: título y controles en color claro (si no, el
+  // ink por defecto queda invisible sobre el fondo). Default 'dark'.
+  tint?: 'light' | 'dark';
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ScreenHeader({ title, back, home, multiline, right, style }: Props) {
+export function ScreenHeader({ title, back, close, home, multiline, tint = 'dark', right, style }: Props) {
   const router = useRouter();
+  const light = tint === 'light';
+  const fg = light ? Colors.paper : Colors.ink;
   return (
     <View style={[styles.row, multiline && styles.rowMultiline, style]}>
       <View style={styles.side}>
         {back && router.canGoBack() && (
           <Pressable onPress={router.back} hitSlop={12} style={styles.backHit}>
-            <Text style={styles.chevron}>{'‹'}</Text>
+            <Text style={[styles.chevron, { color: fg }]}>{'‹'}</Text>
           </Pressable>
         )}
       </View>
       <Text
-        style={multiline ? styles.titleMultiline : styles.title}
+        style={[multiline ? styles.titleMultiline : styles.title, { color: fg }]}
         numberOfLines={multiline ? 2 : 1}
       >
         {title.toUpperCase()}
       </Text>
       <View style={[styles.sideRight, { alignItems: 'flex-end' }]}>
-        {home ? (
+        {close ? (
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.navigate('/'))}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.closeBtn,
+              light ? styles.closeBtnLight : styles.closeBtnDark,
+              pressed && { opacity: 0.6 },
+            ]}
+          >
+            <Feather name="x" size={22} color={fg} />
+          </Pressable>
+        ) : home ? (
           <View style={styles.rightRow}>
             <Pressable
               onPress={() => router.navigate('/')}
@@ -97,11 +118,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnLight: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.24)',
+  },
+  closeBtnDark: {
+    backgroundColor: Colors.paper2,
+    borderColor: Colors.border,
+  },
   chevron: {
     fontFamily: FontFamily.body,
     fontSize: 30,
     fontWeight: '700',
-    color: Colors.ink,
     lineHeight: 30,
   },
   title: {

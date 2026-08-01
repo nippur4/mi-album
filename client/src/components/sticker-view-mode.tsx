@@ -8,8 +8,10 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -69,6 +71,7 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
       Alert.alert('No se pudo pegar', errorMessage(error));
       return;
     }
+    playPasteAnimation();
     playSfx('paste', 0.85);
   }
 
@@ -102,6 +105,33 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const bob = useSharedValue(0);
   const sheen = useSharedValue(-180);
 
+  // Animación de "pegar": la carta hace un thunk (baja y rebota como si la
+  // estamparas), un flash verde la recorre y un sello "¡PEGADA!" aparece y se
+  // desvanece. Se dispara al confirmar el pegado (independiente del refetch).
+  const stampScale = useSharedValue(1);
+  const flash = useSharedValue(0);
+  const sealOpacity = useSharedValue(0);
+  const sealScale = useSharedValue(0.5);
+
+  function playPasteAnimation() {
+    stampScale.value = withSequence(
+      withTiming(0.9, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withSpring(1, { damping: 6, stiffness: 180, mass: 0.7 }),
+    );
+    flash.value = withSequence(
+      withTiming(1, { duration: 90 }),
+      withTiming(0, { duration: 480, easing: Easing.out(Easing.quad) }),
+    );
+    sealScale.value = withSequence(
+      withTiming(1.12, { duration: 180, easing: Easing.out(Easing.back(2)) }),
+      withSpring(1, { damping: 7, stiffness: 150 }),
+    );
+    sealOpacity.value = withSequence(
+      withTiming(1, { duration: 120 }),
+      withDelay(900, withTiming(0, { duration: 350 })),
+    );
+  }
+
   useEffect(() => {
     bob.value = withRepeat(
       withSequence(
@@ -121,10 +151,15 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   }, [isLegendary, bob, sheen]);
 
   const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bob.value }],
+    transform: [{ translateY: bob.value }, { scale: stampScale.value }],
   }));
   const sheenStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: sheen.value }, { rotate: '18deg' }],
+  }));
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value * 0.55 }));
+  const sealStyle = useAnimatedStyle(() => ({
+    opacity: sealOpacity.value,
+    transform: [{ scale: sealScale.value }, { rotate: '-12deg' }],
   }));
 
   return (
@@ -132,7 +167,8 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
       <View style={desktopCap}>
         <ScreenHeader
           title={`FIGURITA ${sticker.number} / ${albumTotal}`}
-          back
+          close
+          tint="light"
         />
       </View>
 
@@ -189,6 +225,18 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
               </Animated.View>
             </View>
           )}
+
+          {/* Flash verde + sello "¡PEGADA!" (animación de pegar) */}
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.pasteFlash, flashStyle]}
+          />
+          <View pointerEvents="none" style={styles.sealWrap}>
+            <Animated.View style={[styles.seal, sealStyle]}>
+              <Feather name="check" size={18} color={Colors.greenTextDark} />
+              <Text style={styles.sealText}>¡PEGADA!</Text>
+            </Animated.View>
+          </View>
         </Animated.View>
 
         {/* Badges debajo */}
@@ -370,6 +418,37 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     letterSpacing: 1.5,
     textAlign: 'center',
+  },
+  pasteFlash: {
+    backgroundColor: Colors.green,
+    borderRadius: Radius.cardLg,
+  },
+  sealWrap: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.green,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Colors.greenTextDark,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  sealText: {
+    fontFamily: FontFamily.display,
+    fontSize: 20,
+    color: Colors.greenTextDark,
+    letterSpacing: 1,
   },
   sheenClip: {
     ...StyleSheet.absoluteFill,

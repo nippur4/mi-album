@@ -209,7 +209,7 @@ export default function OpenPackScreen() {
     const repeCount = stickers.length - newCount;
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ScreenHeader title=" " back />
+        <ScreenHeader title=" " close tint="light" />
         <ScrollView
           contentContainerStyle={[styles.revealScroll, { paddingBottom: 200 + insets.bottom }]}
         >
