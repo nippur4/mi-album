@@ -9,19 +9,36 @@ import { ScreenHeader } from '@/components/screen-header';
 import { SegmentedControl } from '@/components/segmented-control';
 import { StickerCell } from '@/components/sticker-cell';
 import { StickerMini } from '@/components/sticker-mini';
+import { FilterChips, TradeFilterPanel } from '@/components/trade-filter-panel';
 import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { setTradePrefs, useAlbumMatches, useTradeLimitStatus, type TradeLimitStatus } from '@/lib/queries/trades';
+import {
+  cardMatches,
+  EMPTY_SEARCH,
+  PAGE_SIZE,
+  RESULTS_CAP,
+  userMatches,
+  type TradeSearch,
+} from '@/lib/trade-filter';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 
 type Tab = 'repes' | 'matches';
 
 export default function TradeMatchesScreen() {
-  const { albumId } = useLocalSearchParams<{ albumId: string }>();
+  // give=<stickerId>: al entrar desde la vista de una figurita, abrimos
+  // Coincidencias ya filtrando por esa figurita.
+  const { albumId, give } = useLocalSearchParams<{ albumId: string; give?: string }>();
   const router = useRouter();
   const desktopCap = useDesktopCap(720);
-  const [tab, setTab] = useState<Tab>('repes');
+  const [tab, setTab] = useState<Tab>(give ? 'matches' : 'repes');
+  // Coincidencias: elegís QUÉ figurita tuya querés cambiar (giveFilter) para no
+  // ver todas las coincidencias de golpe, + búsqueda por carta/usuario (aplica
+  // al tocar "Buscar") + paginado.
+  const [giveFilter, setGiveFilter] = useState<string | null>(give ?? null);
+  const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
+  const [page, setPage] = useState(0);
 
   const { album, stickers } = useAlbumDetail(albumId);
   const {
@@ -67,6 +84,59 @@ export default function TradeMatchesScreen() {
     out.sort((a, b) => a.sticker.number - b.sticker.number);
     return out;
   }, [collection, stickers]);
+
+  // Opciones del selector "qué figurita querés cambiar": las figuritas mías que
+  // efectivamente tienen coincidencia (i_give), así cada chip da resultados.
+  const giveOptions = useMemo(() => {
+    const m = new Map<string, { number: number; name: string }>();
+    for (const mt of matches) {
+      if (!m.has(mt.i_give_sticker_id))
+        m.set(mt.i_give_sticker_id, { number: mt.i_give_sticker_number, name: mt.i_give_sticker_name });
+    }
+    return [...m]
+      .map(([key, v]) => ({ key, label: `#${v.number} · ${v.name}`, number: v.number }))
+      .sort((a, b) => a.number - b.number);
+  }, [matches]);
+
+  // Coincidencias filtradas: por la figurita elegida + búsqueda de texto.
+  const filteredMatches = useMemo(
+    () =>
+      matches.filter((m) => {
+        if (giveFilter && m.i_give_sticker_id !== giveFilter) return false;
+        if (
+          search.card &&
+          !cardMatches(search.card, [
+            { name: m.i_give_sticker_name, number: m.i_give_sticker_number },
+            { name: m.they_give_sticker_name, number: m.they_give_sticker_number },
+          ])
+        )
+          return false;
+        if (search.user && !userMatches(search.user, [m.other_user_name])) return false;
+        return true;
+      }),
+    [matches, giveFilter, search],
+  );
+
+  const cappedMatches = filteredMatches.slice(0, RESULTS_CAP);
+  const matchesOverflowed = filteredMatches.length > RESULTS_CAP;
+  const matchPageCount = Math.max(1, Math.ceil(cappedMatches.length / PAGE_SIZE));
+  const matchSafePage = Math.min(page, matchPageCount - 1);
+  const pagedMatches = cappedMatches.slice(
+    matchSafePage * PAGE_SIZE,
+    (matchSafePage + 1) * PAGE_SIZE,
+  );
+
+  function goMatchPage(p: number) {
+    setPage(Math.max(0, Math.min(matchPageCount - 1, p)));
+  }
+  function applySearch(s: TradeSearch) {
+    setSearch(s);
+    setPage(0);
+  }
+  function goGive(k: string | null) {
+    setGiveFilter(k);
+    setPage(0);
+  }
 
   if (!album) {
     return (
@@ -132,49 +202,104 @@ export default function TradeMatchesScreen() {
             </View>
           ) : (
             <View style={{ gap: Spacing.md }}>
-              {matches.map((m, i) => (
-                <Pressable
-                  key={`${m.other_user_id}-${m.they_give_sticker_id}-${m.i_give_sticker_id}-${i}`}
-                  disabled={!canOffer}
-                  style={({ pressed }) => [
-                    styles.matchCard,
-                    pressed && styles.matchPressed,
-                    !canOffer && styles.matchDisabled,
-                  ]}
-                  onPress={() =>
-                    router.push(
-                      `/trade/new?albumId=${albumId}&toUser=${m.other_user_id}&offered=${m.i_give_sticker_id}&requested=${m.they_give_sticker_id}`,
-                    )
-                  }
-                >
-                  <Avatar source={m.other_user_name || 'Usuario'} size={40} />
-                  <View style={styles.matchCenter}>
-                    <Text style={styles.matchName}>{m.other_user_name}</Text>
-                    <View style={styles.matchRow}>
-                      <StickerMini
-                        thumbKey={m.i_give_sticker_thumb_key}
-                        number={m.i_give_sticker_number}
-                        name={m.i_give_sticker_name}
-                        rarity={m.i_give_sticker_rarity}
-                        size="sm"
-                      />
-                      <View style={styles.swap}>
-                        <Feather name="repeat" size={14} color={Colors.paper} />
+              {/* Selector "qué figurita querés cambiar" + búsqueda por carta/usuario. */}
+              {giveOptions.length > 1 && (
+                <FilterChips
+                  label="QUÉ FIGURITA QUERÉS CAMBIAR"
+                  options={giveOptions}
+                  value={giveFilter}
+                  onChange={goGive}
+                />
+              )}
+              <TradeFilterPanel
+                search={search}
+                onApply={applySearch}
+                extraActive={giveFilter !== null}
+              />
+
+              {filteredMatches.length === 0 ? (
+                <View style={styles.empty}>
+                  <Text style={styles.emptyTitle}>Nada coincide con el filtro.</Text>
+                </View>
+              ) : (
+                <>
+                  {matchesOverflowed && (
+                    <Text style={styles.overflowNote}>
+                      Mostrando las primeras {RESULTS_CAP}. Elegí una figurita o afiná la búsqueda.
+                    </Text>
+                  )}
+                  {pagedMatches.map((m, i) => (
+                    <Pressable
+                      key={`${m.other_user_id}-${m.they_give_sticker_id}-${m.i_give_sticker_id}-${i}`}
+                      disabled={!canOffer}
+                      style={({ pressed }) => [
+                        styles.matchCard,
+                        pressed && styles.matchPressed,
+                        !canOffer && styles.matchDisabled,
+                      ]}
+                      onPress={() =>
+                        router.push(
+                          `/trade/new?albumId=${albumId}&toUser=${m.other_user_id}&offered=${m.i_give_sticker_id}&requested=${m.they_give_sticker_id}`,
+                        )
+                      }
+                    >
+                      <Avatar source={m.other_user_name || 'Usuario'} size={40} />
+                      <View style={styles.matchCenter}>
+                        <Text style={styles.matchName}>{m.other_user_name}</Text>
+                        <View style={styles.matchRow}>
+                          <StickerMini
+                            thumbKey={m.i_give_sticker_thumb_key}
+                            number={m.i_give_sticker_number}
+                            name={m.i_give_sticker_name}
+                            rarity={m.i_give_sticker_rarity}
+                            size="sm"
+                          />
+                          <View style={styles.swap}>
+                            <Feather name="repeat" size={14} color={Colors.paper} />
+                          </View>
+                          <StickerMini
+                            thumbKey={m.they_give_sticker_thumb_key}
+                            number={m.they_give_sticker_number}
+                            name={m.they_give_sticker_name}
+                            rarity={m.they_give_sticker_rarity}
+                            size="sm"
+                          />
+                        </View>
                       </View>
-                      <StickerMini
-                        thumbKey={m.they_give_sticker_thumb_key}
-                        number={m.they_give_sticker_number}
-                        name={m.they_give_sticker_name}
-                        rarity={m.they_give_sticker_rarity}
-                        size="sm"
-                      />
+                      <View style={styles.cta}>
+                        <Text style={styles.ctaText}>Ofrecer</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+
+                  {matchPageCount > 1 && (
+                    <View style={styles.pager}>
+                      <Pressable
+                        onPress={() => goMatchPage(matchSafePage - 1)}
+                        disabled={matchSafePage === 0}
+                        hitSlop={8}
+                        style={[styles.pagerBtn, matchSafePage === 0 && styles.pagerBtnDisabled]}
+                      >
+                        <Feather name="chevron-left" size={18} color={Colors.ink} />
+                      </Pressable>
+                      <Text style={styles.pagerLabel}>
+                        {matchSafePage + 1} / {matchPageCount}
+                      </Text>
+                      <Pressable
+                        onPress={() => goMatchPage(matchSafePage + 1)}
+                        disabled={matchSafePage >= matchPageCount - 1}
+                        hitSlop={8}
+                        style={[
+                          styles.pagerBtn,
+                          matchSafePage >= matchPageCount - 1 && styles.pagerBtnDisabled,
+                        ]}
+                      >
+                        <Feather name="chevron-right" size={18} color={Colors.ink} />
+                      </Pressable>
                     </View>
-                  </View>
-                  <View style={styles.cta}>
-                    <Text style={styles.ctaText}>Ofrecer</Text>
-                  </View>
-                </Pressable>
-              ))}
+                  )}
+                </>
+              )}
             </View>
           )}
 
@@ -331,6 +456,39 @@ const styles = StyleSheet.create({
   },
   matchDisabled: {
     opacity: 0.5,
+  },
+  overflowNote: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    textAlign: 'center',
+  },
+  pager: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  pagerBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.paper2,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pagerBtnDisabled: { opacity: 0.35 },
+  pagerLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.ink,
+    letterSpacing: 1,
+    minWidth: 44,
+    textAlign: 'center',
   },
   prefs: {
     marginTop: Spacing.xl,

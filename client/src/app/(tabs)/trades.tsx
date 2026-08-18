@@ -1,13 +1,22 @@
 import Feather from '@expo/vector-icons/Feather';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeaderAvatar } from '@/components/header-avatar';
 import { SegmentedControl } from '@/components/segmented-control';
+import { FilterChips, TradeFilterPanel } from '@/components/trade-filter-panel';
 import { TradeOfferCard } from '@/components/trade-offer-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useMyOffers, type TradeOffer } from '@/lib/queries/trades';
+import {
+  cardMatches,
+  EMPTY_SEARCH,
+  PAGE_SIZE,
+  RESULTS_CAP,
+  userMatches,
+  type TradeSearch,
+} from '@/lib/trade-filter';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 
@@ -15,8 +24,6 @@ type Tab = 'received' | 'sent';
 // Sub-sección dentro de cada tab. 'closed' agrupa rechazadas + canceladas +
 // expiradas: a fines prácticos son lo mismo (no pasó nada).
 type Section = 'open' | 'done' | 'closed';
-
-const PAGE_SIZE = 10;
 
 function sectionOf(o: TradeOffer): Section {
   if (o.status === 'pending') return 'open';
@@ -36,6 +43,10 @@ export default function TradesTab() {
   const [tab, setTab] = useState<Tab>('received');
   const [section, setSection] = useState<Section>('open');
   const [page, setPage] = useState(0);
+  // Filtros: álbum (chip, inmediato) + búsqueda de texto (carta/usuario, se
+  // aplica recién al tocar "Buscar" en el panel).
+  const [albumFilter, setAlbumFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
   const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
 
   useFocusRefetchStale(['trades', 'offers']);
@@ -44,22 +55,61 @@ export default function TradesTab() {
   const receivedPending = received.filter((o) => o.status === 'pending').length;
   const sentPending = sent.filter((o) => o.status === 'pending').length;
 
-  // Conteos por sub-sección del tab activo (van en los pills).
-  const counts: Record<Section, number> = { open: 0, done: 0, closed: 0 };
-  for (const o of tabList) counts[sectionOf(o)]++;
+  // Álbumes presentes en el tab activo (para el chip de filtro).
+  const albumOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const o of tabList) if (!m.has(o.album_id)) m.set(o.album_id, o.album_name);
+    return [...m].map(([key, label]) => ({ key, label: label || 'Álbum' }));
+  }, [tabList]);
 
-  const filtered = tabList.filter((o) => sectionOf(o) === section);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  // Clamp defensivo: si la lista se achica (refetch) la página no queda colgada.
+  // El filtro de álbum aplica a los conteos de las sub-secciones (los pills);
+  // el de texto se aplica después, dentro de la sección elegida.
+  const albumScoped = albumFilter ? tabList.filter((o) => o.album_id === albumFilter) : tabList;
+
+  const counts: Record<Section, number> = { open: 0, done: 0, closed: 0 };
+  for (const o of albumScoped) counts[sectionOf(o)]++;
+
+  const sectionList = albumScoped.filter((o) => sectionOf(o) === section);
+  const filtered = useMemo(
+    () =>
+      sectionList.filter((o) => {
+        if (search.card && !cardMatches(search.card, [o.offered_sticker, o.requested_sticker]))
+          return false;
+        // Buscamos por la contraparte: en Recibidas es quien ofrece; en
+        // Enviadas, a quién le ofrecí.
+        const counterpart = tab === 'received' ? o.from_user_name : o.to_user_name;
+        if (search.user && !userMatches(search.user, [counterpart])) return false;
+        return true;
+      }),
+    [sectionList, search, tab],
+  );
+
+  // Tope de resultados para no renderear listas enormes; el resto se avisa.
+  const capped = filtered.slice(0, RESULTS_CAP);
+  const overflowed = filtered.length > RESULTS_CAP;
+  const pageCount = Math.max(1, Math.ceil(capped.length / PAGE_SIZE));
+  // Clamp defensivo: si la lista se achica (refetch/filtro) la página no queda colgada.
   const safePage = Math.min(page, pageCount - 1);
-  const list = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const list = capped.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   function goTab(k: Tab) {
     setTab(k);
     setPage(0);
+    // El álbum elegido puede no existir en el otro tab → reset para no caer en
+    // un estado vacío confuso.
+    setAlbumFilter(null);
+    setSearch(EMPTY_SEARCH);
   }
   function goSection(k: Section) {
     setSection(k);
+    setPage(0);
+  }
+  function goAlbum(k: string | null) {
+    setAlbumFilter(k);
+    setPage(0);
+  }
+  function applySearch(s: TradeSearch) {
+    setSearch(s);
     setPage(0);
   }
 
@@ -96,6 +146,19 @@ export default function TradesTab() {
           onChange={(k) => goSection(k as Section)}
         />
 
+        {tabList.length > 0 && (
+          <TradeFilterPanel search={search} onApply={applySearch} extraActive={albumFilter !== null}>
+            {albumOptions.length > 1 && (
+              <FilterChips
+                label="ÁLBUM"
+                options={albumOptions}
+                value={albumFilter}
+                onChange={goAlbum}
+              />
+            )}
+          </TradeFilterPanel>
+        )}
+
         {isLoading && tabList.length === 0 ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
         ) : tabList.length === 0 ? (
@@ -111,10 +174,19 @@ export default function TradesTab() {
           </View>
         ) : filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{SECTION_EMPTY[section]}</Text>
+            <Text style={styles.emptyTitle}>
+              {albumFilter || search.card || search.user
+                ? 'Nada coincide con el filtro.'
+                : SECTION_EMPTY[section]}
+            </Text>
           </View>
         ) : (
           <>
+            {overflowed && (
+              <Text style={styles.overflowNote}>
+                Mostrando los primeros {RESULTS_CAP}. Afiná el filtro para ver el resto.
+              </Text>
+            )}
             <View style={[styles.cardList, isDesktop && styles.cardGrid]}>
               {list.map((o) => (
                 <View key={o.id} style={isDesktop ? styles.gridItem : undefined}>
@@ -169,6 +241,13 @@ const styles = StyleSheet.create({
   headerText: { gap: Spacing.xs, flex: 1 },
   cardList: {
     gap: Spacing.listGap,
+  },
+  overflowNote: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
   },
   pager: {
     flexDirection: 'row',

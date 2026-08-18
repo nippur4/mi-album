@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ScreenHeader } from '@/components/screen-header';
+import { StickerZoomModal } from '@/components/sticker-zoom-modal';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import { Alert } from '@/lib/alert';
 import { errorMessage } from '@/lib/errors';
@@ -84,6 +85,7 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   // campos) y se cachea a nivel de componente porque la vista se recrea al
   // navegar entre figuritas (el `id` del route cambia y expo-router monta
   // un componente nuevo — ver useEffect abajo).
+  const [zoomOpen, setZoomOpen] = useState(false);
   const [siblings, setSiblings] = useState<Array<{ id: string; number: number }>>([]);
   useEffect(() => {
     supabase
@@ -164,7 +166,10 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={desktopCap}>
+      {/* zIndex + elevation altos: la carta tiene elevation 12 (sombra dorada)
+          y en Android eso la dibuja POR ENCIMA del header, tapando la X. El
+          header tiene que ganar el stacking siempre. */}
+      <View style={[desktopCap, styles.headerWrap]}>
         <ScreenHeader
           title={`FIGURITA ${sticker.number} / ${albumTotal}`}
           close
@@ -199,7 +204,13 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
             <View style={styles.imageBox}>
               {/* Anti-spoiler: si no la tenés, no se ve la figurita — slot vacío. */}
               {owned && url ? (
-                <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="contain" />
+                <Pressable style={StyleSheet.absoluteFill} onPress={() => setZoomOpen(true)}>
+                  <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="contain" />
+                  {/* Pista de zoom */}
+                  <View pointerEvents="none" style={styles.zoomHint}>
+                    <Feather name="zoom-in" size={16} color={Colors.paper} />
+                  </View>
+                </Pressable>
               ) : (
                 <View style={styles.lockedBox}>
                   <Feather name="lock" size={CARD_W * 0.16} color={Colors.muted} />
@@ -306,7 +317,8 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
         )}
         <Button
           label={tradesDisabled ? 'Cambios desactivados' : 'Proponer cambio'}
-          onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}`)}
+          // give=<id>: abre Cambios en Coincidencias filtrando por esta figurita.
+          onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}&give=${sticker.id}`)}
           disabled={tradesDisabled}
         />
         {tradesDisabled && (
@@ -315,6 +327,10 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
           </Text>
         )}
       </View>
+
+      {owned && url && (
+        <StickerZoomModal visible={zoomOpen} url={url} onClose={() => setZoomOpen(false)} />
+      )}
     </SafeAreaView>
   );
 }
@@ -324,6 +340,21 @@ const CARD_H = CARD_W / 0.7;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.ink },
+  headerWrap: {
+    zIndex: 10,
+    elevation: 24,
+  },
+  zoomHint: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tradesOffHint: {
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,
