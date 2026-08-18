@@ -75,6 +75,7 @@ export function useAddSticker(albumId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
       qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+      qc.invalidateQueries({ queryKey: ['stickers', 'index', albumId] });
     },
   });
 }
@@ -97,8 +98,35 @@ export function useDeleteSticker(albumId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
       qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+      qc.invalidateQueries({ queryKey: ['stickers', 'index', albumId] });
     },
   });
+}
+
+// Índice liviano (id + number) de todas las figuritas de un álbum, para el
+// paginador prev/next de la vista grande. Cacheado por álbum: navegar entre
+// figuritas ya no re-consulta la lista (clave para el álbum de 1001 filas).
+export interface StickerIndexEntry {
+  id: string;
+  number: number;
+}
+
+export function useAlbumStickerIndex(albumId: string | undefined) {
+  const q = useQuery({
+    queryKey: ['stickers', 'index', albumId] as const,
+    enabled: !!albumId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stickers')
+        .select('id, number')
+        .eq('album_id', albumId!)
+        .order('number', { ascending: true });
+      if (error) throw toAppError(error);
+      return (data ?? []) as StickerIndexEntry[];
+    },
+  });
+  return { index: q.data ?? [], isLoading: q.isLoading };
 }
 
 export function useSticker(id: string | undefined) {

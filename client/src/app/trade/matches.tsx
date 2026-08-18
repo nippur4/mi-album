@@ -5,6 +5,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, Vie
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { CardSearchField } from '@/components/card-search-field';
+import { Pager } from '@/components/pager';
 import { ScreenHeader } from '@/components/screen-header';
 import { SegmentedControl } from '@/components/segmented-control';
 import { StickerCell } from '@/components/sticker-cell';
@@ -27,18 +29,18 @@ import { useDesktopCap } from '@/lib/use-is-desktop';
 type Tab = 'repes' | 'matches';
 
 export default function TradeMatchesScreen() {
-  // give=<stickerId>: al entrar desde la vista de una figurita, abrimos
-  // Coincidencias ya filtrando por esa figurita.
+  // give=<stickerId>: al entrar desde una figurita, abrimos Coincidencias ya
+  // filtrando por esa figurita.
   const { albumId, give } = useLocalSearchParams<{ albumId: string; give?: string }>();
   const router = useRouter();
   const desktopCap = useDesktopCap(720);
   const [tab, setTab] = useState<Tab>(give ? 'matches' : 'repes');
-  // Coincidencias: elegís QUÉ figurita tuya querés cambiar (giveFilter) para no
-  // ver todas las coincidencias de golpe, + búsqueda por carta/usuario (aplica
-  // al tocar "Buscar") + paginado.
   const [giveFilter, setGiveFilter] = useState<string | null>(give ?? null);
   const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
   const [page, setPage] = useState(0);
+  // Solapa "Para cambiar": buscador por nombre/número + paginado de a 50.
+  const [repesQuery, setRepesQuery] = useState('');
+  const [repesPage, setRepesPage] = useState(0);
 
   const { album, stickers } = useAlbumDetail(albumId);
   const {
@@ -85,8 +87,18 @@ export default function TradeMatchesScreen() {
     return out;
   }, [collection, stickers]);
 
-  // Opciones del selector "qué figurita querés cambiar": las figuritas mías que
-  // efectivamente tienen coincidencia (i_give), así cada chip da resultados.
+  const filteredTradables = repesQuery
+    ? tradables.filter((t) => cardMatches(repesQuery, [t.sticker]))
+    : tradables;
+  const REPES_PAGE_SIZE = 50;
+  const repesPageCount = Math.max(1, Math.ceil(filteredTradables.length / REPES_PAGE_SIZE));
+  const repesSafePage = Math.min(repesPage, repesPageCount - 1);
+  const pagedTradables = filteredTradables.slice(
+    repesSafePage * REPES_PAGE_SIZE,
+    (repesSafePage + 1) * REPES_PAGE_SIZE,
+  );
+
+  // Solo las figuritas mías con coincidencia (i_give), así cada chip da resultados.
   const giveOptions = useMemo(() => {
     const m = new Map<string, { number: number; name: string }>();
     for (const mt of matches) {
@@ -98,7 +110,6 @@ export default function TradeMatchesScreen() {
       .sort((a, b) => a.number - b.number);
   }, [matches]);
 
-  // Coincidencias filtradas: por la figurita elegida + búsqueda de texto.
   const filteredMatches = useMemo(
     () =>
       matches.filter((m) => {
@@ -179,18 +190,42 @@ export default function TradeMatchesScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.repesGrid}>
-                {tradables.map(({ sticker, repeCount, pasted }) => (
-                  <View key={sticker.id} style={styles.repeCell}>
-                    {/* Repe real (pegada + sobran) → badge "REPE ×N". Sin pegar →
-                        estado to_paste (gold), NO se marca como repe. */}
-                    <StickerCell
-                      sticker={sticker}
-                      state={pasted ? 'pasted' : 'to_paste'}
-                      extraCount={repeCount}
-                    />
+              <View style={{ gap: Spacing.md }}>
+                {tradables.length > 12 && (
+                  <CardSearchField
+                    value={repesQuery}
+                    onChange={(v) => {
+                      setRepesQuery(v);
+                      setRepesPage(0);
+                    }}
+                  />
+                )}
+                {filteredTradables.length === 0 ? (
+                  <View style={styles.empty}>
+                    <Text style={styles.emptyTitle}>Nada coincide con la búsqueda.</Text>
                   </View>
-                ))}
+                ) : (
+                  <>
+                    <View style={styles.repesGrid}>
+                      {pagedTradables.map(({ sticker, repeCount, pasted }) => (
+                        <View key={sticker.id} style={styles.repeCell}>
+                          {/* Repe real (pegada + sobran) → "REPE ×N". Sin pegar →
+                              to_paste (gold), NO se marca como repe. */}
+                          <StickerCell
+                            sticker={sticker}
+                            state={pasted ? 'pasted' : 'to_paste'}
+                            extraCount={repeCount}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                    <Pager
+                      page={repesSafePage}
+                      pageCount={repesPageCount}
+                      onChange={setRepesPage}
+                    />
+                  </>
+                )}
               </View>
             )
           ) : matches.length === 0 ? (
@@ -202,7 +237,6 @@ export default function TradeMatchesScreen() {
             </View>
           ) : (
             <View style={{ gap: Spacing.md }}>
-              {/* Selector "qué figurita querés cambiar" + búsqueda por carta/usuario. */}
               {giveOptions.length > 1 && (
                 <FilterChips
                   label="QUÉ FIGURITA QUERÉS CAMBIAR"
@@ -272,32 +306,11 @@ export default function TradeMatchesScreen() {
                     </Pressable>
                   ))}
 
-                  {matchPageCount > 1 && (
-                    <View style={styles.pager}>
-                      <Pressable
-                        onPress={() => goMatchPage(matchSafePage - 1)}
-                        disabled={matchSafePage === 0}
-                        hitSlop={8}
-                        style={[styles.pagerBtn, matchSafePage === 0 && styles.pagerBtnDisabled]}
-                      >
-                        <Feather name="chevron-left" size={18} color={Colors.ink} />
-                      </Pressable>
-                      <Text style={styles.pagerLabel}>
-                        {matchSafePage + 1} / {matchPageCount}
-                      </Text>
-                      <Pressable
-                        onPress={() => goMatchPage(matchSafePage + 1)}
-                        disabled={matchSafePage >= matchPageCount - 1}
-                        hitSlop={8}
-                        style={[
-                          styles.pagerBtn,
-                          matchSafePage >= matchPageCount - 1 && styles.pagerBtnDisabled,
-                        ]}
-                      >
-                        <Feather name="chevron-right" size={18} color={Colors.ink} />
-                      </Pressable>
-                    </View>
-                  )}
+                  <Pager
+                    page={matchSafePage}
+                    pageCount={matchPageCount}
+                    onChange={goMatchPage}
+                  />
                 </>
               )}
             </View>
@@ -461,33 +474,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.body,
     fontSize: FontSize.caption,
     color: Colors.inkSoft,
-    textAlign: 'center',
-  },
-  pager: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  pagerBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.paper2,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pagerBtnDisabled: { opacity: 0.35 },
-  pagerLabel: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.bodySmall,
-    fontWeight: '700',
-    color: Colors.ink,
-    letterSpacing: 1,
-    minWidth: 44,
     textAlign: 'center',
   },
   prefs: {

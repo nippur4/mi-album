@@ -278,6 +278,7 @@
     <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla.</li>
     <li><strong>Completar</strong>: al pegar todas se corta el sobre diario automáticamente. También se puede silenciar por álbum (<code>daily_muted</code>).</li>
   </ol>
+  <p><strong>Vista grande de figurita</strong> (<code>sticker-view-mode</code>): carta foil + paginador prev/next. <strong>Zoom cross-platform</strong> (2026-08, <code>components/sticker-zoom-modal.tsx</code>): tap en la imagen abre un lightbox con pinch, arrastre y doble-tap para acercar (mobile táctil + web trackpad/mouse). El botón de cerrar (X) del header va con <code>zIndex</code> + <code>elevation</code> altos porque la carta tiene <code>elevation: 12</code> y en Android eso la dibujaba por encima del header. El paginador usa <code>useAlbumStickerIndex</code> (índice id+number cacheado por álbum) para no re-consultar la lista en cada navegación — clave en el álbum de 1001.</p>
 </section>
 
 <section id="economia">
@@ -290,6 +291,7 @@
     <tr><td><strong>Publicidad</strong></td><td>Rewarded ad (AdMob) → 1 sobre. Solo en los 3 álbumes especiales, tope 2/día por usuario, solo Android. Ver abajo.</td><td>Android</td></tr>
   </table>
   <p>El tab <strong>Sobres</strong> es el tablero: badge rojo con reclamables + sobres sin abrir, orden reclamables primero. El sorteo de figuritas ocurre server-side en <code>open_pack</code> según rareza.</p>
+  <p><strong>Sin repetidas dentro del mismo sobre</strong> (2026-08): el sorteo es <em>weighted sampling sin reemplazo</em> — se elige ponderado por rareza y se retira la figurita del pool en cada extracción, así una misma figurita no puede salir dos veces en el mismo sobre (sí entre sobres distintos, que es lo que alimenta los cambios). Si un álbum tuviera menos figuritas que el tamaño del sobre, se entregan tantas únicas como haya. Aplica a todos los orígenes (diario, QR, ad, comprado) porque todos pasan por <code>open_pack</code>. La RPC <code>fn_apply_pack_open</code> no cambió (recibe ids únicos y suma +1 a cada uno).</p>
 
   <h3 id="ads">Sobres por publicidad (rewarded ads · AdMob)</h3>
   <p>Migración <code>0059_ad_packs.sql</code>. El jugador mira un video con recompensa y recibe un sobre extra. <strong>Solo Android</strong>: el SDK de AdMob es nativo (el rewarded web de Google está en beta, limitado a juegos H5) y iOS está descartado. En web/iOS el botón no existe (<code>ADS_SUPPORTED = false</code>).</p>
@@ -328,6 +330,13 @@
     <li><strong>Matches por álbum</strong>: <code>fn_album_matches</code> cruza tus faltantes con repes de otros (cap de 5 pares por contraparte). "Para cambiar" incluye repes reales (badge REPE) y sin pegar (badge PEGAR).</li>
     <li><strong>Ofertas 1:1</strong>: elegís qué das y qué recibís; la contraparte acepta o rechaza. Push + badge en el tab Cambios.</li>
     <li><strong>Reglas del owner</strong>: intercambios on/off y límite por día/semana/mes. El límite se chequea <strong>al aceptar</strong>; <code>fn_trade_limit_status</code> alimenta el banner informativo del jugador.</li>
+    <li><strong>Búsqueda + paginado (2026-08)</strong>: todo filtrado <strong>client-side</strong> sobre datos ya cargados (los matches ya vienen capeados por par; las ofertas son las tuyas), con tope de <strong>50 resultados</strong> mostrados y paginado de a 10. Helpers en <code>lib/trade-filter.ts</code> (<code>cardMatches</code> por nombre o número sin tildes, <code>userMatches</code>); UI en <code>components/trade-filter-panel.tsx</code> (<code>TradeFilterPanel</code> colapsable "Buscar" + <code>FilterChips</code>).
+      <ul>
+        <li><strong>Ofertas</strong> (tab Cambios): chip de álbum (inmediato) + búsqueda por carta (ofrecida o pedida) y por usuario (la contraparte). La búsqueda de texto se aplica al tocar <strong>Buscar</strong>, no en vivo (el usuario lo pidió así).</li>
+        <li><strong>Coincidencias</strong> (<code>trade/matches.tsx</code>): selector "Qué figurita querés cambiar" (chips derivados de <code>i_give</code>, para no listar todas las coincidencias de golpe) + búsqueda por carta/usuario. Entrar desde la vista de una figurita con "Proponer cambio" pasa <code>?give=&lt;stickerId&gt;</code> y abre Coincidencias ya filtrado por esa figurita.</li>
+      </ul>
+    </li>
+    <li><strong>Repetidas: buscador + paginado de a 50</strong> en las dos listas de repes — "EN TU BOLSILLO" (<code>album-user-view</code>) y solapa "Para cambiar" (<code>matches</code>). Acá el buscador filtra <strong>en vivo</strong> (sin botón) porque son listas ya en memoria, sin costo de query. Componentes reutilizables: <code>components/card-search-field.tsx</code> y <code>components/pager.tsx</code>.</li>
   </ul>
 </section>
 

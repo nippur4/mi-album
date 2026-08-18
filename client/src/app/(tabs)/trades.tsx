@@ -43,8 +43,6 @@ export default function TradesTab() {
   const [tab, setTab] = useState<Tab>('received');
   const [section, setSection] = useState<Section>('open');
   const [page, setPage] = useState(0);
-  // Filtros: álbum (chip, inmediato) + búsqueda de texto (carta/usuario, se
-  // aplica recién al tocar "Buscar" en el panel).
   const [albumFilter, setAlbumFilter] = useState<string | null>(null);
   const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
   const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
@@ -55,15 +53,13 @@ export default function TradesTab() {
   const receivedPending = received.filter((o) => o.status === 'pending').length;
   const sentPending = sent.filter((o) => o.status === 'pending').length;
 
-  // Álbumes presentes en el tab activo (para el chip de filtro).
   const albumOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const o of tabList) if (!m.has(o.album_id)) m.set(o.album_id, o.album_name);
     return [...m].map(([key, label]) => ({ key, label: label || 'Álbum' }));
   }, [tabList]);
 
-  // El filtro de álbum aplica a los conteos de las sub-secciones (los pills);
-  // el de texto se aplica después, dentro de la sección elegida.
+  // El filtro de álbum aplica a los conteos de los pills; el de texto, después.
   const albumScoped = albumFilter ? tabList.filter((o) => o.album_id === albumFilter) : tabList;
 
   const counts: Record<Section, number> = { open: 0, done: 0, closed: 0 };
@@ -75,8 +71,7 @@ export default function TradesTab() {
       sectionList.filter((o) => {
         if (search.card && !cardMatches(search.card, [o.offered_sticker, o.requested_sticker]))
           return false;
-        // Buscamos por la contraparte: en Recibidas es quien ofrece; en
-        // Enviadas, a quién le ofrecí.
+        // Contraparte: en Recibidas quien ofrece; en Enviadas a quién ofrecí.
         const counterpart = tab === 'received' ? o.from_user_name : o.to_user_name;
         if (search.user && !userMatches(search.user, [counterpart])) return false;
         return true;
@@ -84,19 +79,17 @@ export default function TradesTab() {
     [sectionList, search, tab],
   );
 
-  // Tope de resultados para no renderear listas enormes; el resto se avisa.
   const capped = filtered.slice(0, RESULTS_CAP);
   const overflowed = filtered.length > RESULTS_CAP;
   const pageCount = Math.max(1, Math.ceil(capped.length / PAGE_SIZE));
-  // Clamp defensivo: si la lista se achica (refetch/filtro) la página no queda colgada.
+  // Clamp defensivo: si la lista se achica, la página no queda colgada.
   const safePage = Math.min(page, pageCount - 1);
   const list = capped.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   function goTab(k: Tab) {
     setTab(k);
     setPage(0);
-    // El álbum elegido puede no existir en el otro tab → reset para no caer en
-    // un estado vacío confuso.
+    // El álbum elegido puede no existir en el otro tab → reset.
     setAlbumFilter(null);
     setSearch(EMPTY_SEARCH);
   }

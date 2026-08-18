@@ -2,7 +2,7 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-07-19. Migraciones aplicadas hasta la **0061**. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
+Última actualización: 2026-08-18. Migraciones aplicadas hasta la **0061**. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
 
 ### Lo que se completó
 
@@ -25,6 +25,28 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-08-18 — zoom de figurita, búsqueda/paginado en cambios + repes, no-repes-en-sobre, review DB (sin migraciones)
+
+Sesión 100% de cliente + 1 Edge Function. **Cero migraciones.** Todo validado por typecheck (baseline 0). `open_pack` **ya deployada**.
+
+1. **Vista grande de figurita** (`sticker-view-mode.tsx`):
+   - **Fix botón cerrar tapado**: la carta tiene `elevation: 12` (sombra dorada) y en Android eso la dibuja POR ENCIMA del header → la X quedaba abajo. Fix: wrapper del header con `zIndex: 10` + `elevation: 24` (gana el stacking siempre). Lección: en Android el `elevation` define el orden de dibujo por encima del orden del árbol; cualquier header sobre contenido elevado necesita su propio elevation mayor.
+   - **Zoom cross-platform** nuevo (`components/sticker-zoom-modal.tsx`): tap en la imagen → lightbox fullscreen con **pinch + arrastre + doble-tap** (mobile táctil y web trackpad/mouse), clamp del pan según escala, tap simple (sin zoom) o X para cerrar. Reanimated + gesture-handler (ya montado en root). Solo para `owned && url` (las bloqueadas siguen con candado anti-spoiler).
+
+2. **Búsqueda + paginado en Intercambios** (client-side, tope 50 + paginado de a 10):
+   - Nuevos: `lib/trade-filter.ts` (`cardMatches` nombre/número sin tildes con fallback si Hermes no soporta `normalize`; `userMatches`; `RESULTS_CAP=50`, `PAGE_SIZE=10`) + `components/trade-filter-panel.tsx` (`TradeFilterPanel` colapsable + `FilterChips`).
+   - **Ofertas** (`(tabs)/trades.tsx`): chip de álbum (inmediato) + búsqueda por carta (ofrecida o pedida) y usuario (contraparte). Texto se aplica **al tocar "Buscar"**, NO en vivo (pedido explícito: "que los buscadores por nombre y número solo busquen si el user pone buscar"). Reset de filtros al cambiar Recibidas/Enviadas (el álbum puede no existir en el otro tab).
+   - **Coincidencias** (`trade/matches.tsx`): selector "Qué figurita querés cambiar" (chips de `i_give` distintos, así no lista todas las coincidencias de golpe) + búsqueda carta/usuario. "Proponer cambio" desde `sticker-view-mode` pasa `?give=<stickerId>` → abre Coincidencias ya filtrado por esa figurita.
+   - **Decisión client-side**: filtrar en PostgREST por doble embed de sticker (ofrecida/pedida) es inviable en una query; y `fn_album_matches` ya viene capeado. Cero migración. El "no pese la consulta" del usuario era por costo de DB — acá no hay query nueva, se filtra en memoria.
+
+3. **Repetidas: buscador + paginado de a 50** en las dos listas de repes — "EN TU BOLSILLO" (`album-user-view.tsx`) y solapa "Para cambiar" (`matches.tsx`). Nuevos reutilizables: `components/card-search-field.tsx` (buscador de 1 línea) y `components/pager.tsx` (‹ N/M ›). **Acá el buscador filtra EN VIVO** (sin botón) porque son listas ya en memoria (tu colección), sin costo de query — el "solo al tocar buscar" aplicaba al costo de DB, que acá no existe. El buscador aparece recién con >12 ítems. El `Pager` nuevo también reemplazó el pager inline de Coincidencias (borré sus estilos duplicados).
+
+4. **Label**: en Cambios el toggle de filtros pasó de "Filtrar"/"Filtros activos" a **"Buscar"/"Búsqueda activa"** (+ ícono lupa).
+
+5. **Review de uso de DB** (pedido explícito). Conclusión: la capa de queries ya está muy bien (bundles/batch RPCs eliminan N+1: `fn_home_bundle`, `fn_my_packs_tab_data`, `fn_player_album_sidedata`, ofertas con embedded resources, `fn_ad_pack_summary`). **Único desperdicio real encontrado y corregido**: el paginador prev/next de la figurita grande re-consultaba id+number de TODAS las figuritas del álbum en CADA navegación (era `useEffect`+`useState` local, no cacheado) → crítico en el álbum de 1001. Ahora `useAlbumStickerIndex` (react-query, clave `['stickers','index',albumId]`, staleTime 60s) + invalidación en `useAddSticker`/`useDeleteSticker`. No toqué: `useAlbumDetail` `select('*')` (la única col pesada es `traits` y casi siempre es `{}`, nadie la lee) ni el merge de `trade/new` (bajo retorno).
+
+6. **No repetidas dentro del mismo sobre** (`supabase/functions/open_pack/index.ts`, **DEPLOYADA**): el sorteo elegía cada figurita independiente (con reemplazo) → podían salir dos iguales en un sobre, mala UX. Ahora **weighted sampling SIN reemplazo**: `pickPack(stickers, count)` sortea ponderado por rareza y RETIRA la elegida del pool en cada extracción. Si el álbum tuviera menos figuritas que el pack size, entrega tantas únicas como haya. Aplica a todos los orígenes (diario/QR/ad/comprado, todos pasan por `open_pack`). `fn_apply_pack_open` sin cambios (ya manejaba bien ids únicos, +1 c/u). Entre sobres distintos SÍ podés repetir (alimenta los cambios) — la unicidad es solo intra-sobre.
 
 #### Sesiones 2026-07-13 → 2026-07-19 — hojas/títulos, calidad de imágenes, web fixes, stats admin, rewarded ads, trades (migraciones 0057–0061)
 

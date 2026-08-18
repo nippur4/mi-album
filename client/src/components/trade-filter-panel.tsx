@@ -7,27 +7,20 @@ import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme
 import { EMPTY_SEARCH, hasSearch, type TradeSearch } from '@/lib/trade-filter';
 
 interface PanelProps {
-  // Búsqueda YA aplicada (fuente de verdad en la pantalla).
   search: TradeSearch;
-  // Se dispara al tocar "Buscar" o "Limpiar" — recién ahí corre el filtro de
-  // texto (el usuario pidió que nombre/número no busquen en vivo).
+  // Se dispara al tocar "Buscar" o "Limpiar" — recién ahí corre el filtro.
   onApply: (s: TradeSearch) => void;
-  // true si además hay algún chip/selector activo (para marcar el toggle).
   extraActive?: boolean;
-  // Chips (álbum / figurita a cambiar) que van arriba de los campos de texto.
   children?: React.ReactNode;
 }
 
-// Panel de filtros colapsable para Ofertas y Coincidencias. Cerrado por
-// defecto: se abre al tocar "Filtrar". Los campos de texto (carta / usuario)
-// solo se aplican al confirmar con "Buscar".
+// Panel de filtros colapsable; los campos de texto se aplican al tocar "Buscar".
 export function TradeFilterPanel({ search, onApply, extraActive, children }: PanelProps) {
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState(search.card);
   const [user, setUser] = useState(search.user);
 
-  // Si la pantalla resetea la búsqueda por fuera (ej. cambiar de tab), refleja
-  // en los drafts.
+  // Reflejar en los drafts si la pantalla resetea la búsqueda por fuera.
   useEffect(() => {
     setCard(search.card);
     setUser(search.user);
@@ -47,9 +40,9 @@ export function TradeFilterPanel({ search, onApply, extraActive, children }: Pan
   return (
     <View style={styles.wrap}>
       <Pressable style={styles.toggle} onPress={() => setOpen((o) => !o)} hitSlop={6}>
-        <Feather name="filter" size={15} color={active ? Colors.red : Colors.ink} />
+        <Feather name="search" size={15} color={active ? Colors.red : Colors.ink} />
         <Text style={[styles.toggleText, active && { color: Colors.red }]}>
-          {active ? 'Filtros activos' : 'Filtrar'}
+          {active ? 'Búsqueda activa' : 'Buscar'}
         </Text>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.muted} />
       </Pressable>

@@ -25,10 +25,10 @@ import { errorMessage } from '@/lib/errors';
 import type { Sticker } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { usePasteSticker } from '@/lib/queries/packs';
+import { useAlbumStickerIndex } from '@/lib/queries/stickers';
 import { useTradeLimitStatus } from '@/lib/queries/trades';
 import { playSfx } from '@/lib/sfx';
 import { r2Url } from '@/lib/storage';
-import { supabase } from '@/lib/supabase';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 
 interface Props {
@@ -80,21 +80,11 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
   const borderColor = RarityFrame[sticker.rarity];
   const url = r2Url(sticker.large_key);
 
-  // Paginador: cargamos id + number de TODAS las figuritas del álbum para
-  // saber cuál es la previa y la siguiente. La consulta es liviana (solo 2
-  // campos) y se cachea a nivel de componente porque la vista se recrea al
-  // navegar entre figuritas (el `id` del route cambia y expo-router monta
-  // un componente nuevo — ver useEffect abajo).
   const [zoomOpen, setZoomOpen] = useState(false);
-  const [siblings, setSiblings] = useState<Array<{ id: string; number: number }>>([]);
-  useEffect(() => {
-    supabase
-      .from('stickers')
-      .select('id, number')
-      .eq('album_id', sticker.album_id)
-      .order('number', { ascending: true })
-      .then(({ data }) => setSiblings((data ?? []) as Array<{ id: string; number: number }>));
-  }, [sticker.album_id]);
+
+  // Paginador prev/next: índice (id + number) del álbum, cacheado por react-query
+  // → navegar entre figuritas ya no re-consulta la lista.
+  const { index: siblings } = useAlbumStickerIndex(sticker.album_id);
 
   const currentIdx = siblings.findIndex((s) => s.id === sticker.id);
   const prev = currentIdx > 0 ? siblings[currentIdx - 1] : null;
@@ -166,9 +156,8 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* zIndex + elevation altos: la carta tiene elevation 12 (sombra dorada)
-          y en Android eso la dibuja POR ENCIMA del header, tapando la X. El
-          header tiene que ganar el stacking siempre. */}
+      {/* La carta tiene elevation 12 (sombra): en Android eso la dibuja sobre
+          el header y tapa la X. El header tiene que ganar el stacking. */}
       <View style={[desktopCap, styles.headerWrap]}>
         <ScreenHeader
           title={`FIGURITA ${sticker.number} / ${albumTotal}`}
@@ -206,7 +195,6 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
               {owned && url ? (
                 <Pressable style={StyleSheet.absoluteFill} onPress={() => setZoomOpen(true)}>
                   <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="contain" />
-                  {/* Pista de zoom */}
                   <View pointerEvents="none" style={styles.zoomHint}>
                     <Feather name="zoom-in" size={16} color={Colors.paper} />
                   </View>
@@ -317,7 +305,7 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
         )}
         <Button
           label={tradesDisabled ? 'Cambios desactivados' : 'Proponer cambio'}
-          // give=<id>: abre Cambios en Coincidencias filtrando por esta figurita.
+          // give=<id>: Cambios abre en Coincidencias filtrando por esta figurita.
           onPress={() => router.push(`/trade/matches?albumId=${sticker.album_id}&give=${sticker.id}`)}
           disabled={tradesDisabled}
         />

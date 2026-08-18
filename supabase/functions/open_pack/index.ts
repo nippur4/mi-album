@@ -109,11 +109,11 @@ serve(async (req) => {
     return jsonError('no_stickers_in_album', 422);
   }
 
-  // 4. Sortear N stickers ponderado por rareza.
-  const picked: Sticker[] = [];
-  for (let i = 0; i < packSize; i++) {
-    picked.push(pickSticker(stickers as Sticker[]));
-  }
+  // 4. Sortear N stickers ÚNICOS dentro del sobre: sampling ponderado por
+  //    rareza pero SIN reemplazo, así una misma figurita no se repite en el
+  //    mismo sobre. Si el álbum tuviera menos figuritas que el tamaño del sobre,
+  //    se entregan tantas únicas como haya.
+  const picked = pickPack(stickers as Sticker[], packSize);
 
   // 5. Persistir transaccionalmente vía RPC.
   const { data: applied, error: applyErr } = await supabase.rpc(
@@ -161,18 +161,31 @@ function clampPackSize(configured: unknown): number {
   return n;
 }
 
-function pickSticker(stickers: Sticker[]): Sticker {
-  // Sortear ponderado sobre TODAS las figuritas, con peso individual según
-  // rareza. Equivale a "poner N copias de cada figurita en una caja y agarrar
-  // una al azar" — modelo intuitivo, robusto a álbumes desbalanceados.
+// Arma el sobre eligiendo `count` figuritas ÚNICAS. En cada extracción sortea
+// ponderado por rareza y RETIRA la elegida del pool, para que no pueda volver a
+// salir en el mismo sobre (weighted sampling sin reemplazo). Modelo "caja de
+// figuritas" pero sacando de a una sin reponer.
+function pickPack(stickers: Sticker[], count: number): Sticker[] {
+  const pool = stickers.slice();
+  const n = Math.min(count, pool.length);
+  const out: Sticker[] = [];
+  for (let i = 0; i < n; i++) {
+    const idx = pickWeightedIndex(pool);
+    out.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+  return out;
+}
+
+function pickWeightedIndex(stickers: Sticker[]): number {
   let total = 0;
   for (const s of stickers) total += STICKER_WEIGHTS[s.rarity];
 
   let r = Math.random() * total;
-  for (const s of stickers) {
-    r -= STICKER_WEIGHTS[s.rarity];
-    if (r <= 0) return s;
+  for (let i = 0; i < stickers.length; i++) {
+    r -= STICKER_WEIGHTS[stickers[i].rarity];
+    if (r <= 0) return i;
   }
   // Fallback numérico: por floating-point puede que r > 0 al final.
-  return stickers[stickers.length - 1];
+  return stickers.length - 1;
 }

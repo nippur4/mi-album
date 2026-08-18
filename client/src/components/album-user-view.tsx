@@ -10,8 +10,10 @@ import Feather from '@expo/vector-icons/Feather';
 import { AlbumPager } from '@/components/album-pager';
 import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
+import { CardSearchField } from '@/components/card-search-field';
 import { Countdown } from '@/components/countdown';
 import { FloatingPack } from '@/components/floating-pack';
+import { Pager } from '@/components/pager';
 import { PastedFlash } from '@/components/pasted-flash';
 import { ProgressCard } from '@/components/progress-card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -34,6 +36,7 @@ import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
+import { cardMatches } from '@/lib/trade-filter';
 
 interface Props {
   album: Album;
@@ -164,6 +167,8 @@ export function UserAlbumView({ album, stickers }: Props) {
   // retoma al volver.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [pocketQuery, setPocketQuery] = useState('');
+  const [pocketPage, setPocketPage] = useState(0);
 
   async function doLeave() {
     if (hiding) return;
@@ -231,6 +236,17 @@ export function UserAlbumView({ album, stickers }: Props) {
       return stock > 0;
     })
     .sort((a, b) => a.number - b.number);
+
+  const filteredPocket = pocketQuery
+    ? toPasteList.filter((s) => cardMatches(pocketQuery, [s]))
+    : toPasteList;
+  const POCKET_PAGE_SIZE = 50;
+  const pocketPageCount = Math.max(1, Math.ceil(filteredPocket.length / POCKET_PAGE_SIZE));
+  const pocketSafePage = Math.min(pocketPage, pocketPageCount - 1);
+  const pagedPocket = filteredPocket.slice(
+    pocketSafePage * POCKET_PAGE_SIZE,
+    (pocketSafePage + 1) * POCKET_PAGE_SIZE,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -325,26 +341,42 @@ export function UserAlbumView({ album, stickers }: Props) {
             <Text style={styles.sectionHint}>
               Pegá las que te faltan en el álbum o cambialas con otros jugadores.
             </Text>
-            <View style={{ gap: Spacing.sm }}>
-              {toPasteList.map((s) => {
-                const entry = collection.get(s.id)!;
-                const stock = entry.quantity - (entry.pasted ? 1 : 0);
-                return (
-                  <ToPasteCard
-                    key={s.id}
-                    sticker={s}
-                    stock={stock}
-                    canPaste={!entry.pasted}
-                    busy={pastingId === s.id}
-                    onPaste={() => onPaste(s.id)}
-                    onTrade={() =>
-                      router.push(`/trade/matches?albumId=${album.id}&stickerId=${s.id}`)
-                    }
-                    onPress={() => router.push(`/sticker/${s.id}`)}
-                  />
-                );
-              })}
-            </View>
+            {toPasteList.length > 12 && (
+              <CardSearchField
+                value={pocketQuery}
+                onChange={(v) => {
+                  setPocketQuery(v);
+                  setPocketPage(0);
+                }}
+              />
+            )}
+            {filteredPocket.length === 0 ? (
+              <Text style={styles.sectionHint}>Nada coincide con la búsqueda.</Text>
+            ) : (
+              <>
+                <View style={{ gap: Spacing.sm }}>
+                  {pagedPocket.map((s) => {
+                    const entry = collection.get(s.id)!;
+                    const stock = entry.quantity - (entry.pasted ? 1 : 0);
+                    return (
+                      <ToPasteCard
+                        key={s.id}
+                        sticker={s}
+                        stock={stock}
+                        canPaste={!entry.pasted}
+                        busy={pastingId === s.id}
+                        onPaste={() => onPaste(s.id)}
+                        onTrade={() =>
+                          router.push(`/trade/matches?albumId=${album.id}&stickerId=${s.id}`)
+                        }
+                        onPress={() => router.push(`/sticker/${s.id}`)}
+                      />
+                    );
+                  })}
+                </View>
+                <Pager page={pocketSafePage} pageCount={pocketPageCount} onChange={setPocketPage} />
+              </>
+            )}
           </View>
         )}
 

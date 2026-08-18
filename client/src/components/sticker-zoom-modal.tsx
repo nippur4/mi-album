@@ -22,10 +22,7 @@ const MAX_SCALE = 4;
 const MIN_SCALE = 1;
 const DOUBLE_TAP_SCALE = 2.5;
 
-// Lightbox de figurita con zoom cross-platform (mobile táctil + web trackpad/mouse).
-// Pinch para escalar, arrastre (dedo o mouse) para desplazar, doble tap/click
-// para alternar zoom. Todo en el UI thread con Reanimated; clamp del pan según
-// la escala para que la imagen no se pierda fuera de pantalla.
+// Lightbox de figurita con zoom cross-platform: pinch, arrastre y doble tap.
 export function StickerZoomModal({ visible, url, onClose }: Props) {
   const { width, height } = useWindowDimensions();
 
@@ -46,7 +43,6 @@ export function StickerZoomModal({ visible, url, onClose }: Props) {
     savedTy.value = 0;
   }
 
-  // Límite de desplazamiento: cuánto puede correrse la imagen sin dejar bordes.
   function clamp(value: number, max: number) {
     'worklet';
     return Math.max(-max, Math.min(max, value));
@@ -90,7 +86,7 @@ export function StickerZoomModal({ visible, url, onClose }: Props) {
       }
     });
 
-  // Un tap simple (sin haber hecho zoom) cierra el lightbox.
+  // Tap simple (sin zoom) cierra.
   const singleTap = Gesture.Tap()
     .numberOfTaps(1)
     .maxDuration(250)
