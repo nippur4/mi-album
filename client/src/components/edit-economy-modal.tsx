@@ -1,6 +1,8 @@
 import Feather from '@expo/vector-icons/Feather';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -54,6 +56,7 @@ export function EditEconomyModal({
   onClose,
   onSaved,
 }: Props) {
+  const router = useRouter();
   const [config, setConfig] = useState<PackConfig>(currentConfig);
   const [tradeConfig, setTradeConfig] = useState<TradeConfig>(currentTradeConfig);
   const [saving, setSaving] = useState(false);
@@ -173,6 +176,26 @@ export function EditEconomyModal({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator
             >
+                {!isPro && Platform.OS !== 'web' && (
+                  <Pressable
+                    onPress={() => {
+                      onClose();
+                      router.push(
+                        `/paywall?reason=${encodeURIComponent(
+                          'Desbloqueá sobres por QR, frecuencia semanal, más sobres y control de intercambios.',
+                        )}` as any,
+                      );
+                    }}
+                    style={({ pressed }) => [styles.upsellBanner, pressed && { opacity: 0.85 }]}
+                  >
+                    <Feather name="award" size={18} color={Colors.ink} />
+                    <Text style={styles.upsellText}>
+                      Hacete Pro para desbloquear QR, sobre semanal y más
+                    </Text>
+                    <Feather name="chevron-right" size={18} color={Colors.ink} />
+                  </Pressable>
+                )}
+
                 {/* Modo */}
                 <Text style={styles.label}>MODO</Text>
                 <View style={styles.modeList}>
@@ -562,6 +585,22 @@ const styles = StyleSheet.create({
     fontSize: FontSize.caption,
     color: Colors.inkSoft,
     marginTop: Spacing.xs,
+  },
+  upsellBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.gold,
+    padding: Spacing.md,
+    borderRadius: Radius.card,
+    marginBottom: Spacing.md,
+  },
+  upsellText: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    fontWeight: '700',
+    color: Colors.ink,
   },
   freeNotice: {
     backgroundColor: Colors.paper2,

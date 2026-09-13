@@ -12,6 +12,7 @@ import { EditNameModal } from '@/components/edit-name-modal';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { signOut, useSession } from '@/lib/auth';
 import { useIsAdmin } from '@/lib/queries/admin';
+import { useIsPro } from '@/lib/queries/subscriptions';
 import { updateAvatar, useMyProfile } from '@/lib/queries/profile';
 import { useIsDesktop } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
@@ -22,6 +23,7 @@ export default function ProfileTab() {
   const { session } = useSession();
   const { profile, refetch } = useMyProfile();
   const { isAdmin } = useIsAdmin();
+  const { isPro } = useIsPro();
   const [editingName, setEditingName] = useState(false);
   const [pickingAvatar, setPickingAvatar] = useState(false);
 
@@ -70,6 +72,17 @@ export default function ProfileTab() {
           <Text style={styles.label}>EMAIL</Text>
           <Text style={styles.value}>{session?.user.email ?? '—'}</Text>
         </View>
+
+        {/* Suscripción Pro: entrada permanente. El paywall resuelve el estado
+            (comprar / ya sos Pro / gestionar). */}
+        <Pressable
+          onPress={() => router.push('/paywall' as any)}
+          style={({ pressed }) => [styles.proRow, pressed && styles.pressed]}
+        >
+          <Feather name="award" size={18} color={Colors.ink} />
+          <Text style={styles.proLabel}>{isPro ? 'Gestionar suscripción Pro' : 'Mejorar a Pro'}</Text>
+          <Feather name="chevron-right" size={20} color={Colors.ink} />
+        </Pressable>
 
         {isAdmin && (
           <Pressable
@@ -178,6 +191,23 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   value: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  proRow: {
+    marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.gold,
+    borderRadius: Radius.cardLg,
+  },
+  proLabel: {
+    flex: 1,
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,
     fontWeight: '700',

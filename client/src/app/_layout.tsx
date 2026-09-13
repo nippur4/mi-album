@@ -10,6 +10,7 @@ import { DesktopHeader } from '@/components/desktop-header';
 import { useAppFonts } from '@/lib/fonts';
 import { useSession, useDeepLinkAuth, useJoinDeepLink } from '@/lib/auth';
 import { useNotificationTapResponder, useRegisterPushToken } from '@/lib/notifications';
+import { usePurchasesIdentity } from '@/lib/use-purchases-identity';
 import { ProfileProvider } from '@/lib/queries/profile';
 import { ensurePwaHead } from '@/lib/pwa-head';
 import { queryClient } from '@/lib/query-client';
@@ -27,6 +28,7 @@ export default function RootLayout() {
   useJoinDeepLink();
   useRegisterPushToken();
   useNotificationTapResponder();
+  usePurchasesIdentity();
   const { session, isLoading } = useSession();
   const segments = useSegments();
   const router = useRouter();
@@ -71,6 +73,7 @@ export default function RootLayout() {
             <Stack.Screen name="pack" />
             <Stack.Screen name="trade" />
             <Stack.Screen name="admin" />
+            <Stack.Screen name="paywall" />
           </Stack>
         </View>
       </ProfileProvider>

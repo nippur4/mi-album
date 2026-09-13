@@ -26,4 +26,9 @@ export const env = {
     'EXPO_PUBLIC_R2_PUBLIC_BASE_URL',
     process.env.EXPO_PUBLIC_R2_PUBLIC_BASE_URL,
   ).replace(/\/$/, ''),
+  // Public API key de RevenueCat (Android). Es OPCIONAL: solo se usa en la app
+  // Android para inicializar el SDK de compras. En web/iOS no aplica (el stub
+  // no la lee) y en dev sin cuenta RC queda vacía → el paywall muestra el
+  // fallback "Disponible en la app Android". Es una key PÚBLICA, va en el bundle.
+  revenuecatAndroidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
 };

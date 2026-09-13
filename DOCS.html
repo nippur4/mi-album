@@ -308,7 +308,7 @@
   <ol>
     <li><strong>Publicar la app en Play Store</strong> (aunque sea closed testing → producción): AdMob exige verificar la app contra su ficha de la tienda para servir ads reales.</li>
     <li><strong>Crear cuenta AdMob</strong> (admob.google.com, con la cuenta Google del negocio) y completar los datos de pago (paga a partir de ~USD 100 acumulados).</li>
-    <li>En AdMob: <strong>Apps → Agregar app</strong> → Android → vincular con el package <code>com.mialbum.figuritas</code> de Play Store. Copiar el <strong>App ID</strong> (formato <code>ca-app-pub-XXXX<b>~</b>YYYY</code>, con tilde).</li>
+    <li>En AdMob: <strong>Apps → Agregar app</strong> → Android → vincular con el package <code>mi.album.figuritas</code> de Play Store. Copiar el <strong>App ID</strong> (formato <code>ca-app-pub-XXXX<b>~</b>YYYY</code>, con tilde).</li>
     <li>Crear un <strong>bloque de anuncios Rewarded</strong> dentro de esa app. Copiar el <strong>Ad Unit ID</strong> (formato <code>ca-app-pub-XXXX<b>/</b>ZZZZ</code>, con barra). Son dos ids distintos — no confundirlos.</li>
     <li>Reemplazar en el código (los dos puntos están marcados con <code>TODO(admob)</code>):
       <ul>
@@ -321,6 +321,31 @@
     <li><strong>Consentimiento (si hay usuarios UE)</strong>: hoy pedimos <code>requestNonPersonalizedAdsOnly</code>; para cumplir GDPR formalmente hay que integrar el UMP SDK (viene en el mismo paquete: <code>AdsConsent</code>) y mostrar el formulario de consentimiento de Google antes del primer ad. Para lanzamiento solo-Argentina se puede posponer.</li>
     <li><strong>NUNCA tocar ads reales en dispositivos propios</strong> durante pruebas (riesgo de ban por invalid traffic). Para probar en release: registrar el dispositivo como test device en AdMob, o seguir usando builds de desarrollo (fuerzan test ads solos).</li>
     <li>Verificación final: instalar el build de producción en un test device registrado → mirar el ad → confirmar que llega el sobre y que el tope de 2/día corta.</li>
+  </ol>
+
+  <h3 id="pro">Suscripción Pro (RevenueCat · Google Play)</h3>
+  <p><strong>Modelo definido 2026-09.</strong> Canal ÚNICO: Google Play Billing vía <strong>RevenueCat</strong> (se descartó web/LemonSqueezy — los CTAs son in-app y Play obliga Play Billing, ARS nativo evita impuesto PAÍS, y en ticket bajo mensual el fee fijo de LemonSqueezy borra la ventaja del %). Es una sub de <strong>creador</strong>: el jugador juega gratis; paga quien arma álbumes grandes o con más economía.</p>
+  <ul>
+    <li><strong>Plan</strong>: un solo producto mensual <code>pro_monthly</code>, sin trial, bajo el entitlement <code>pro</code>.</li>
+    <li><strong>Precios</strong>: Google Play <strong>fuerza USD para Argentina</strong> (moneda volátil), así que no se puede cobrar en ARS. 🇦🇷 Argentina <strong>US$1.99/mes</strong>. 🌎 Resto del mundo <strong>US$2.99/mes</strong> (base, auto-convertido por Google). Producto <code>pro_monthly</code>, plan base <code>mensual</code>, activo en 174 países (2026-09).</li>
+    <li><strong>Qué desbloquea</strong>: figuritas 30→1000, sobres por QR, frecuencia semanal, más figuritas de bienvenida, rarezas ≠ común, 1–10 sobres diarios, control del límite de intercambios.</li>
+    <li><strong>Solo Android</strong>: wrapper por plataforma <code>lib/purchases.android.ts</code> (real, RevenueCat) y <code>lib/purchases.ts</code> (stub — <code>PURCHASES_SUPPORTED = false</code>). En web/iOS el paywall muestra "Disponible en la app Android".</li>
+    <li><strong>Identidad</strong>: <code>Purchases.logIn(auth.users.id)</code> (hook <code>usePurchasesIdentity</code> en el layout raíz). El <code>app_user_id</code> de RC = uuid del usuario, así el webhook escribe la fila correcta.</li>
+    <li><strong>Flujo</strong>: paywall (3 entradas: al topar límite en <code>album/new</code> y <code>edit-economy-modal</code>, botón en Perfil, y el mismo <code>album/new</code>) → <code>useProActions().buy()</code> → refresh inmediato de <code>useIsPro</code> (+ álbumes) sin esperar el webhook. Restore purchases obligatorio + link a gestionar en Play.</li>
+    <li><strong>Backend ya hecho</strong>: tabla <code>subscriptions</code>, <code>fn_subscription_upsert</code> (0007), <code>fn_enforce_subscription_gates</code> (read_only al vencer) + <code>_fn_restore_pro_albums</code> (reactiva al volver Pro), Edge Function <code>revenuecat_webhook</code> completa. Solo faltan los secrets reales.</li>
+    <li><strong>Módulo NATIVO</strong> (<code>react-native-purchases</code>): requiere rebuild del dev build de EAS (como expo-camera/audio/ads).</li>
+  </ul>
+
+  <h3>Paso a paso para activar el Pro (producción)</h3>
+  <ol>
+    <li><strong>Play Console → Monetize → Products → Subscriptions</strong> → crear <code>pro_monthly</code>, base plan auto-renovable de 1 mes. Precios: base + editar Argentina a mano (ARS 3.000), resto default US$2.99. Activar. (Requiere un build ya subido — internal testing sirve.)</li>
+    <li><strong>Play Console → Setup → API access</strong>: vincular proyecto de Google Cloud, crear una <strong>service account</strong> con permisos "View financial data" + "Manage orders and subscriptions", descargar el <strong>JSON key</strong>.</li>
+    <li><strong>RevenueCat</strong> (revenuecat.com): nuevo Project → Add app → Google Play Store, package <code>mi.album.figuritas</code>, subir el JSON key. Copiar la <strong>Public API Key (Android)</strong>.</li>
+    <li>En RevenueCat: <strong>Entitlements</strong> → crear <code>pro</code> · <strong>Products</strong> → importar <code>pro_monthly</code> y asociarlo a <code>pro</code> · <strong>Offerings</strong> → offering <code>default</code> con un package (mensual) apuntando a <code>pro_monthly</code>.</li>
+    <li><strong>Cliente</strong>: setear <code>EXPO_PUBLIC_REVENUECAT_ANDROID_KEY</code> en <code>client/.env</code> (y en los env de EAS) con la Public API Key. Es pública, va en el bundle. Sin ella, <code>PURCHASES_SUPPORTED = false</code> y el paywall cae al fallback.</li>
+    <li><strong>Webhook</strong>: RevenueCat → Integrations → Webhooks → URL <code>https://baexxbixcrhngbjptlkt.functions.supabase.co/revenuecat_webhook</code>, header <code>Authorization: Bearer &lt;secreto-largo&gt;</code>. En Supabase (Edge Functions → Secrets): <code>REVENUECAT_WEBHOOK_SECRET</code> = el secreto (sin "Bearer "), <code>REVENUECAT_PRO_ENTITLEMENT_ID</code> = <code>pro</code>.</li>
+    <li><strong>Rebuild</strong>: <code>eas build -p android --profile production</code> (SDK nativo — no llega por OTA).</li>
+    <li><strong>Testing</strong>: Play Console → Setup → License testing → agregar tu cuenta Google (compras de prueba, no se cobran). Probar E2E desde el internal testing track: comprar → webhook → fila en <code>subscriptions</code> → <code>useIsPro()</code> true.</li>
   </ol>
 </section>
 
@@ -462,7 +487,7 @@ node client/scripts/gen-sfx.js
 <section id="pendientes">
   <h2>12 · Pendientes</h2>
   <ul>
-    <li><strong>Paywall + RevenueCat real</strong> (pantallas 12/13): SDK, productos sandbox, secret real del webhook, test E2E compra → <code>useIsPro()</code>.</li>
+    <li><strong>Paywall + RevenueCat</strong>: ⚙️ CÓDIGO LISTO (2026-09) — SDK integrado, paywall + confirmación, 3 CTAs, stub web/iOS. Falta la <strong>config de dashboards</strong>: producto <code>pro_monthly</code> en Play Console, cuenta RC + entitlement/offering, <code>EXPO_PUBLIC_REVENUECAT_ANDROID_KEY</code> en env, secrets del webhook en Supabase, rebuild EAS + test E2E. Paso a paso en la sección 5 (Suscripción Pro).</li>
     <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
     <li><strong>SMTP custom (Brevo)</strong>: ✅ configurado y funcionando (2026-07-19). El runbook de abajo queda como referencia (p.ej. para migrar el remitente al dominio propio).</li>
     <li><strong>Android App Links</strong> (cuando haya dominio propio): <code>assetlinks.json</code> + intent filter para que el link de invitación abra la app nativa.</li>

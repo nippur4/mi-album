@@ -412,3 +412,9 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Edge Function del webhook de RevenueCat: recibe eventos de un tercero (RC), no
+# de un usuario logueado, así que NO puede exigir JWT de Supabase. Valida su
+# propio header Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET> internamente.
+[functions.revenuecat_webhook]
+verify_jwt = false

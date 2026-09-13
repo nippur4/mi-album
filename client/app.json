@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mi Álbum de Figuritas",
     "slug": "mi-album-figuritas",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mialbum",
@@ -13,7 +13,7 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.mialbum.figuritas",
+      "package": "mi.album.figuritas",
       "adaptiveIcon": {
         "backgroundColor": "#FBF3E2",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -63,6 +63,15 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
+          }
         }
       ]
     ],

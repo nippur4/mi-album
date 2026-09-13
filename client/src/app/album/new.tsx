@@ -81,6 +81,20 @@ export default function NewAlbumScreen() {
                 ? `Free: máximo ${FREE_MAX}. Para tener hasta ${PRO_MAX}, bajate la app Android.`
                 : `Free: máximo ${FREE_MAX}. Pro permite hasta ${PRO_MAX}.`}
           </Text>
+          {!isPro && Platform.OS !== 'web' && (
+            <Button
+              label="Hacerme Pro"
+              variant="gold"
+              style={styles.proCta}
+              onPress={() =>
+                router.push(
+                  `/paywall?reason=${encodeURIComponent(
+                    `En free podés armar álbumes de hasta ${FREE_MAX} figuritas. Con Pro llegás a ${PRO_MAX}.`,
+                  )}` as any,
+                )
+              }
+            />
+          )}
         </View>
 
         {errMsg && <Text style={styles.error}>{errMsg}</Text>}
@@ -122,6 +136,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   field: { gap: Spacing.sm },
+  proCta: { marginTop: Spacing.sm },
   label: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,
