@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mi Álbum de Figuritas",
     "slug": "mi-album-figuritas",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mialbum",
@@ -15,7 +15,7 @@
     "android": {
       "package": "mi.album.figuritas",
       "adaptiveIcon": {
-        "backgroundColor": "#FBF3E2",
+        "backgroundColor": "#A0CBC4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
