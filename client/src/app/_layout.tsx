@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,7 +13,7 @@ import { useNotificationTapResponder, useRegisterPushToken } from '@/lib/notific
 import { usePurchasesIdentity } from '@/lib/use-purchases-identity';
 import { ProfileProvider } from '@/lib/queries/profile';
 import { ensurePwaHead } from '@/lib/pwa-head';
-import { queryClient } from '@/lib/query-client';
+import { queryClient, persister, PERSIST_MAX_AGE, PERSIST_BUSTER } from '@/lib/query-client';
 import { Colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -59,7 +59,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister, maxAge: PERSIST_MAX_AGE, buster: PERSIST_BUSTER }}
+      >
       <ProfileProvider>
         <StatusBar style="dark" />
         {showTopNav && <DesktopHeader />}
@@ -77,7 +80,7 @@ export default function RootLayout() {
           </Stack>
         </View>
       </ProfileProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </GestureHandlerRootView>
   );
 }

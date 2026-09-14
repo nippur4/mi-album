@@ -116,10 +116,28 @@ export function useIsMember(albumId: string | undefined) {
 }
 
 // Detalle de un álbum: el album + sus stickers cargados (por número).
+//
+// El grueso del payload son los stickers (hasta 1001 filas con sus keys de
+// imagen en el álbum especial). Una vez publicado, el contenido del álbum es
+// INMUTABLE (decisión #11): ni las figuritas ni sus keys de imagen vuelven a
+// cambiar — solo el estado de colección del jugador (pegada/repes), que vive
+// aparte en `fn_player_album_sidedata`. Por eso, para un álbum no-draft
+// congelamos el cache (`staleTime: Infinity`): abrir un álbum que ya estás
+// jugando NO vuelve a bajar la grilla entera. El `useFocusRefetchStale` del
+// router respeta este staleTime, así que "volver" al álbum es gratis.
+//   - Draft: el owner lo está editando → 30s (que refresque al enfocar).
+//   - Cualquier mutación del owner (editar hojas/nombre/etc.) llama refetch()
+//     directo, que IGNORA staleTime → sus cambios se ven al instante igual.
+// El gcTime largo (24h, default global) + la persistencia en disco hacen que
+// la grilla sobreviva la navegación entre pantallas Y el arranque en frío.
 export function useAlbumDetail(id: string | undefined) {
   const q = useQuery({
     queryKey: qk.albums.detail(id),
     enabled: !!id,
+    staleTime: (query) =>
+      query.state.data?.album && query.state.data.album.status !== 'draft'
+        ? Infinity
+        : 30_000,
     queryFn: async () => {
       const [albumRes, stickersRes] = await Promise.all([
         supabase.from('albums').select('*').eq('id', id!).maybeSingle(),

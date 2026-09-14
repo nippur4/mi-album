@@ -43,3 +43,6 @@ example
 # generated native folders
 /ios
 /android
+
+# artefactos de build descargados (fetch-aab.ps1)
+/builds

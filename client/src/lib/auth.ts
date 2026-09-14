@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './supabase';
+import { queryClient, persister } from './query-client';
 
 // Necesario para que openAuthSessionAsync cierre el browser embebido al
 // volver del OAuth callback (en algunos Safari). No-op en mobile fuera de iOS.
@@ -130,7 +131,13 @@ export async function signInWithGoogle() {
 }
 
 export async function signOut() {
-  return supabase.auth.signOut();
+  const res = await supabase.auth.signOut();
+  // Vaciar el cache en memoria + el blob persistido en disco. Las query keys ya
+  // están scopeadas por uid, pero limpiar en logout evita el flash de datos del
+  // usuario anterior y libera el storage.
+  queryClient.clear();
+  await Promise.resolve(persister.removeClient()).catch(() => {});
+  return res;
 }
 
 // Captura deep links del magic link (mialbum://#access_token=...&refresh_token=...)
