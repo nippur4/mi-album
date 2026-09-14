@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Keyboard, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,7 @@ const PRO_MAX = 1000;
 
 export default function NewAlbumScreen() {
   const router = useRouter();
+  const qc = useQueryClient();
   const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
@@ -46,6 +48,8 @@ export default function NewAlbumScreen() {
       return;
     }
     const albumId = data as unknown as string;
+    // El logro "creaste tu primer/3/5 álbumes" depende de este conteo.
+    qc.invalidateQueries({ queryKey: ['achievements'] });
     router.replace(`/album/${albumId}`);
   }
 

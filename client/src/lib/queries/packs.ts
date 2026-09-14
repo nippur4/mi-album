@@ -114,6 +114,8 @@ export function usePasteSticker(albumId: string) {
       qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
       // Pegar en el álbum de avatares puede desbloquear un avatar.
       qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
+      // Y completar el álbum → logro de completado.
+      qc.invalidateQueries({ queryKey: ['achievements'] });
     },
   });
 }

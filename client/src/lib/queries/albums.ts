@@ -142,6 +142,31 @@ export function useAlbumDetail(id: string | undefined) {
   };
 }
 
+// Solo la fila del álbum (sin stickers). Para pantallas que necesitan los
+// metadatos del álbum (nombre, pack_config, keys del sobre) pero NO la grilla
+// completa — ej. /pack/open, que solo pinta el sobre. useAlbumDetail traía
+// además TODOS los stickers (1001 en el álbum especial), un costo inútil ahí.
+// Si el detail ya está cacheado (venís de la vista del álbum) lo reusamos como
+// initialData: cero fetch. Si no (venís del tab Sobres), es 1 fila liviana.
+export function useAlbumRow(id: string | undefined) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['albums', 'row', id] as const,
+    enabled: !!id,
+    staleTime: 60_000,
+    initialData: () => {
+      const detail = qc.getQueryData<{ album: Album | null }>(qk.albums.detail(id));
+      return detail?.album ?? undefined;
+    },
+    queryFn: async () => {
+      const { data, error } = await supabase.from('albums').select('*').eq('id', id!).maybeSingle();
+      if (error) throw toAppError(error);
+      return (data ?? null) as Album | null;
+    },
+  });
+  return { album: q.data ?? null, isLoading: q.isLoading, refetch: q.refetch };
+}
+
 // ============================================================================
 // Mutations
 // ============================================================================

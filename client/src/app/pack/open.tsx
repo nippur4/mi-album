@@ -21,14 +21,14 @@ import { PresetBackground } from '@/components/preset-background';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
-import { albumNumberStart, useAlbumDetail } from '@/lib/queries/albums';
+import { albumNumberStart, useAlbumRow } from '@/lib/queries/albums';
 import {
   fetchNextUnopenedPack,
   openPack,
   pasteSticker,
   type OpenedSticker,
 } from '@/lib/queries/packs';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { isPreset, presetIdFromKey, r2Url, thumbFromLargeKey } from '@/lib/storage';
 import { albumSfxTheme, initSfx, playSfx } from '@/lib/sfx';
 
 type Phase = 'idle' | 'opening' | 'revealed';
@@ -39,11 +39,14 @@ export default function OpenPackScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
 
-  // El sobre muestra la imagen/preset de sobre del álbum y su nombre real
-  // (antes era un diseño hardcodeado del handoff). Cacheado por react-query
-  // si el user viene del detalle del álbum.
-  const { album } = useAlbumDetail(albumId);
-  const packKey = album?.pack_large_key ?? album?.pack_thumb_key;
+  // El sobre muestra la imagen/preset de sobre del álbum y su nombre real.
+  // useAlbumRow trae SOLO la fila del álbum (no los stickers) y reusa el cache
+  // del detalle si ya existe — evita traer 1001 stickers para pintar un sobre.
+  const { album } = useAlbumRow(albumId);
+  // El sobre se muestra a ~200px: el thumb (512px) es de sobra y —clave— suele
+  // estar YA cacheado (la vista del álbum y el tab Sobres renderizan el thumb),
+  // así aparece instantáneo. El large (1200px) era una descarga fresca y lenta.
+  const packKey = album?.pack_thumb_key ?? album?.pack_large_key;
   const packUrl = r2Url(packKey);
   const packPresetId = packKey && isPreset(packKey) ? presetIdFromKey(packKey) : null;
   const packSize = Number((album?.pack_config as any)?.pack_size ?? 5);
@@ -118,6 +121,13 @@ export default function OpenPackScreen() {
     try {
       const result = await openPack(packId);
       setStickers(result);
+      // Precargar los thumbs de las figuritas mientras corre la animación de
+      // apertura (~500ms), para que la reveal no tenga que esperar la descarga.
+      // Muchas ya estarán en cache (grilla del álbum), esto cubre las nuevas.
+      const urls = result
+        .map((s) => r2Url(thumbFromLargeKey(s.large_key)))
+        .filter((u): u is string => !!u);
+      if (urls.length) Image.prefetch(urls).catch(() => {});
       // El contador de pendientes cambió (badge de la tab Sobres + listados)
       // y la colección del jugador recibió figuritas nuevas. También el
       // estado de sobres-por-ad, para que la card aparezca fresca al volver
@@ -125,6 +135,8 @@ export default function OpenPackScreen() {
       qc.invalidateQueries({ queryKey: ['packs-tab'] });
       qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
       qc.invalidateQueries({ queryKey: ['ad-packs'] });
+      // Logro "abriste N sobres": el conteo cambió.
+      qc.invalidateQueries({ queryKey: ['achievements'] });
       setTimeout(() => {
         // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
         // En el álbum de dinos, un rugido encima le pone el tema.
@@ -184,6 +196,8 @@ export default function OpenPackScreen() {
       qc.invalidateQueries({ queryKey: ['player-album', 'sidedata', albumId] });
       qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
       qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
+      // Pegar puede completar el álbum → logro de completado.
+      qc.invalidateQueries({ queryKey: ['achievements'] });
     } catch (err: any) {
       Alert.alert('Error', errorMessage(err));
     } finally {
@@ -375,7 +389,9 @@ function RevealedCard({
     };
   });
 
-  const url = r2Url(sticker.large_key);
+  // La card se ve a 140px: el thumb (512px) alcanza y suele estar cacheado por
+  // la grilla del álbum. El large (1600px) por card era pesado y lento (×N).
+  const url = r2Url(thumbFromLargeKey(sticker.large_key));
   const borderColor = sticker.was_new ? Colors.gold : RarityFrame[sticker.rarity];
 
   return (

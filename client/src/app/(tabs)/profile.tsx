@@ -84,6 +84,16 @@ export default function ProfileTab() {
           <Feather name="chevron-right" size={20} color={Colors.ink} />
         </Pressable>
 
+        {/* Logros del jugador (sobres abiertos, álbumes completados/creados). */}
+        <Pressable
+          onPress={() => router.push('/achievements' as any)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <Feather name="star" size={18} color={Colors.ink} />
+          <Text style={styles.linkLabel}>Ver logros</Text>
+          <Feather name="chevron-right" size={20} color={Colors.muted} />
+        </Pressable>
+
         {isAdmin && (
           <Pressable
             onPress={() => router.push('/admin')}
@@ -226,6 +236,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   adminLabel: {
+    flex: 1,
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '700',
+    color: Colors.ink,
+  },
+  linkRow: {
+    marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  linkLabel: {
     flex: 1,
     fontFamily: FontFamily.body,
     fontSize: FontSize.body,

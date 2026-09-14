@@ -27,3 +27,17 @@ export function r2Url(key: string | null | undefined): string | null {
   if (!key || isPreset(key)) return null;
   return `${env.r2PublicBaseUrl}/${key}`;
 }
+
+// Deriva la key del thumb a partir de la del large. Las dos variantes solo se
+// diferencian por el sufijo `-large.` / `-thumb.` (ver upload_image), así que
+// donde solo tenemos el large_key (ej. lo que devuelve open_pack) podemos
+// pedir el thumb — mucho más liviano y casi siempre ya cacheado por la grilla
+// del álbum, que renderiza thumbs. Si la key no matchea el patrón, devolvemos
+// la original tal cual (fallback seguro).
+export function thumbFromLargeKey(key: string | null | undefined): string | null {
+  if (!key || isPreset(key)) return null;
+  // isPreset es un type guard `key is string`, así que en esta rama TS reduce
+  // key a `never`; el cast lo devuelve a string (en runtime siempre lo es).
+  const k = key as string;
+  return k.includes('-large.') ? k.replace('-large.', '-thumb.') : k;
+}
