@@ -9,6 +9,7 @@ import { Avatar } from '@/components/avatar';
 import { AvatarPickerModal } from '@/components/avatar-picker-modal';
 import { Button } from '@/components/button';
 import { EditNameModal } from '@/components/edit-name-modal';
+import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { signOut, useSession } from '@/lib/auth';
 import { useIsAdmin } from '@/lib/queries/admin';
@@ -52,6 +53,7 @@ export default function ProfileTab() {
               <Feather name="edit-2" size={14} color={Colors.paper} />
             </View>
           </Pressable>
+          {isPro && <StatusBadge variant="pro" />}
           <Text style={styles.avatarHint}>Tocá para cambiar tu avatar</Text>
         </View>
 

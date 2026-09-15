@@ -2,7 +2,7 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-08-18. Migraciones aplicadas hasta la **0061**. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
+Última actualización: 2026-09-15. Migraciones aplicadas hasta la **0066**. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
 
 ### Lo que se completó
 
@@ -25,6 +25,27 @@
 **Tab bar custom** con `Tabs` clásico + `@expo/vector-icons` (Feather).
 
 **Sobre diario** con countdown integrado en vista user del álbum + sección en tab Sobres.
+
+#### Sesión 2026-09-14/15 — consumo de DB (cache persistente), seguridad (column-security REAL) + hCaptcha (migraciones 0064–0066)
+
+Tanda de optimización de consumo de DB + hardening de seguridad. Todo typecheck 0 + export web OK.
+
+1. **Cache de álbum publicado congelado** (`lib/queries/albums.ts` `useAlbumDetail`): el grueso del payload son los stickers (hasta 1001 filas con keys de imagen), y una vez publicado el contenido es INMUTABLE (decisión #11). `staleTime` pasó a ser **función del status**: `Infinity` si el álbum NO es draft, 30s si es draft (el owner lo edita). Abrir un álbum que ya jugás NO vuelve a bajar la grilla. Seguro porque toda mutación del owner llama `refetch()` directo (ignora staleTime). El estado de colección (pegadas/repes) vive aparte en `fn_player_album_sidedata`, sin tocar.
+
+2. **Persistencia del cache de react-query en disco** (`lib/query-client.ts` + `_layout.tsx`): `PersistQueryClientProvider` + `createAsyncStoragePersister` (AsyncStorage → localStorage en web). El arranque en frío pinta desde disco sin esperar la red. gcTime global subió a **24h** (debe ser >= `PERSIST_MAX_AGE`=24h: react-query solo persiste queries vivas en memoria al deshidratar; con 5min se recolectaban antes de guardarse). `PERSIST_BUSTER='v1'` — **bumpear a 'v2', 'v3'… cuando cambie el shape de una query o se regeneren tipos con migraciones que rompan** (descarta el cache viejo en vez de rehidratar datos incompatibles). `signOut()` ahora hace `queryClient.clear()` + `persister.removeClient()`. Deps nuevas: `@tanstack/react-query-persist-client` + `@tanstack/query-async-storage-persister`.
+
+3. **GOTCHA de seguridad crítico — `revoke select (columna)` NO pisa el grant de SELECT a nivel TABLA** que Supabase da por default a anon/authenticated. Verificado en remoto con `has_column_privilege`: las migraciones **0009 (`albums.qr_secret`) y 0064 (`profiles.push_token`) fueron INEFECTIVAS** — ambos secretos SIEMPRE fueron legibles con la anon key pública y viajaban en cada `select('*')`. `qr_secret` es la clave HMAC de los QR de sobres (se podían forjar QR; mitigado en parte por el cooldown de redeem). **Fix real (0066):** `revoke select on <tabla>` + re-grant de TODAS las columnas MENOS la sensible (DO block dinámico). PostgREST respeta privilegios de columna → `select=*` devuelve solo las permitidas, el cliente sigue con `.select('*')` sin cambios. Las Edge Functions leen `qr_secret` con service_role (bypasea) y las RPCs SECURITY DEFINER corren como owner → nada se rompe, sin redeploy. `is_admin` queda visible a propósito (bajo riesgo; `useMyProfile` lo pide explícito de su propia fila). **Migración 0064 (`revoke select (push_token)`) quedó aplicada pero inerte — la buena es la 0066.**
+
+4. **`statement_timeout` por rol de API (0065, defensa DoS):** `alter role anon set statement_timeout='5s'` + `authenticated='12s'` + `notify pgrst reload`. La anon key es pública; RLS protege confidencialidad/integridad pero NO consumo de recursos. Esto corta queries armadas a mano que acaparen el pooler. Método oficial de Supabase.
+
+5. **CAPTCHA con hCaptcha (anti-spam de magic links)** — implementado cross-platform + ACTIVADO en web. El vector real de abuso es el email-bombing que agota el cupo Brevo (100/h) y DoSea el login; los rate limits de Supabase son por IP (una botnet los esquiva), hCaptcha exige token por intento.
+   - Paquetes: `@hcaptcha/react-hcaptcha` (web, widget DOM) + `@hcaptcha/react-native-hcaptcha` (nativo, WebView → arrastra `react-native-webview`, **requiere rebuild EAS**).
+   - Arquitectura: `<Captcha>` con split por plataforma (`components/captcha.web.tsx` / `components/captcha.tsx`), handle imperativo `getToken()` (invisible: corre el challenge al enviar). Contrato en `lib/captcha.ts` (`CAPTCHA_ENABLED`, `CaptchaHandle`). `env.hcaptchaSiteKey` (`EXPO_PUBLIC_HCAPTCHA_SITE_KEY`, pública, en `.env` + `.env.example` + `eas.json` de los 3 perfiles). **Si está vacía → captcha OFF, login normal** (degradación elegante).
+   - `signInWithMagicLink(email, captchaToken?)` pasa el token; `login.tsx` corre `getToken()` antes de enviar. **Solo el magic link (OTP) lleva token; Google OAuth NO** (es un redirect, Supabase no lo gatea).
+   - Modo hCaptcha: **99.9% Passive** (challenge solo a sospechosos, resto invisible). Domain allowlisting **OFF** (el nativo corre en WebView sin dominio real; el allowlist rompería mobile).
+   - **Orden de activación (si se invierte, se rompe el login):** (1) site key en cliente → (2) `build:web` + wrangler y rebuild EAS → (3) probar con toggle Supabase OFF → (4) RECIÉN activar toggle en Supabase Auth → Attack Protection → hCaptcha + secret. El **secret** es de la cuenta hCaptcha (Settings), va SOLO en Supabase, nunca en el cliente.
+   - **Estado: web EN VIVO funcionando** (login manda token, Supabase valida). **Android PENDIENTE de rebuild EAS** — hasta entonces el dev build viejo NO puede loguearse (error `no captcha_token found`).
+   - **GOTCHA Metro:** cambios de `.env` NO siempre reintegran (el primer `build:web` salió con la key vieja, mismo hash de bundle). Fix: `build:web` ahora usa `expo export --platform web --clear`. Para verificar que una env pública quedó en el bundle: `grep -rl "<valor>" dist/`.
 
 #### Sesión 2026-08-18 — zoom de figurita, búsqueda/paginado en cambios + repes, no-repes-en-sobre, review DB (sin migraciones)
 
@@ -349,3 +370,7 @@ Con la base sólida, lo que queda del MVP user-facing es **Paywall + RevenueCat 
 - Después de cualquier cambio a Edge Functions: `supabase functions deploy <name>`.
 - Después de migraciones que toquen tablas: regenerar tipos (`supabase gen types ... | Out-File -Encoding utf8 ...`).
 - Para validar flujos de intercambios o joining, Nico necesita 2 cuentas — la más simple es cerrar sesión y registrarse con otro mail desde el dev build.
+- **⚠️ Grants por columna en `profiles` y `albums` (desde 0066):** estas dos tablas YA NO tienen grant de SELECT a nivel tabla para anon/authenticated (se hizo así para ocultar `push_token` y `qr_secret`). **Toda columna nueva que se agregue a `profiles` o `albums` necesita, en la MISMA migración: `grant select (nueva_col) on <tabla> to anon, authenticated;`** — si no, queda invisible para el cliente (PostgREST `select=*` la omite en silencio, mismo tipo de footgun que el `max_rows` de la 0045). Column-level security se hace SIEMPRE con revoke-tabla + grant-columnas, NUNCA con `revoke select (col)` suelto (no pisa el grant de tabla — así fallaron 0009 y 0064).
+- **Column-level security con `has_column_privilege`:** para verificar en remoto usar el **SQL Editor del dashboard** (`supabase db query` en la CLI v2.107 apunta a la LOCAL/Docker). Ej: `select has_column_privilege('authenticated','albums','qr_secret','select');` → debe dar `false`.
+- **Verificar que una env `EXPO_PUBLIC_*` quedó en el bundle web:** `grep -rl "<valor>" dist/` después de `build:web`. Metro cachea y puede servir un bundle viejo ante cambios de `.env` — por eso `build:web` usa `--clear`.
+- **Activar/desactivar hCaptcha:** el toggle vive en Supabase → Authentication → Attack Protection (con el secret de la cuenta hCaptcha). Al activarlo se exige token YA en todos los OTP. Orden seguro: primero deployar cliente con `EXPO_PUBLIC_HCAPTCHA_SITE_KEY` (web + rebuild EAS), DESPUÉS activar el toggle. Para desactivar: apagar el toggle primero, después sacar la site key. Google OAuth no lleva captcha.

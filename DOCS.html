@@ -229,6 +229,7 @@
   <ul>
     <li>Magic link de Supabase. Deep link <code>mialbum://</code> parseado por <code>useDeepLinkAuth</code> (token en fragment) y <code>useJoinDeepLink</code> para <code>mialbum://join/&lt;CODE&gt;</code>.</li>
     <li>Las Edge Functions reenvían el JWT del caller para que <code>auth.uid()</code> funcione dentro de las RPCs.</li>
+    <li><strong>CAPTCHA (hCaptcha)</strong> sobre el magic link para frenar bots / email-bombing (agota el cupo SMTP y DoSea el login). Widget invisible cross-platform (<code>components/captcha.web.tsx</code> DOM + <code>components/captcha.tsx</code> WebView), token pasado a <code>signInWithOtp</code>. Google OAuth NO lleva captcha (es redirect). Site key pública en <code>EXPO_PUBLIC_HCAPTCHA_SITE_KEY</code>; secret solo en Supabase (Attack Protection). Si la site key está vacía, el captcha queda apagado. Ver runbook en §12.</li>
   </ul>
 </section>
 
@@ -440,6 +441,8 @@
     <li>Si un campo altera un invariante (ej. <code>number_start</code>), grepear <strong>todas</strong> las RPCs que lo asumen.</li>
     <li>Listados sin <code>.range()</code> quedan capados por <code>max_rows</code> (hoy 2000) — paginar si algo pudiera superarlo.</li>
     <li>pgcrypto vive en schema <code>extensions</code>: funciones que lo usan llevan <code>set search_path = public, extensions</code>.</li>
+    <li><strong>Column-level security (0066):</strong> ocultar una columna se hace con <code>revoke select on &lt;tabla&gt;</code> + re-grant de TODAS las columnas menos la sensible. <strong>NUNCA con <code>revoke select (col)</code> suelto</strong> — no pisa el grant de SELECT a nivel tabla (así fallaron 0009 <code>qr_secret</code> y 0064 <code>push_token</code>, secretos legibles con la anon key durante meses). PostgREST respeta privilegios de columna → <code>select=*</code> devuelve solo las permitidas. <strong>Regla:</strong> <code>profiles</code> y <code>albums</code> ya no tienen grant de tabla → toda columna nueva ahí necesita su <code>grant select (col) to anon, authenticated</code> en la misma migración, o queda invisible al cliente.</li>
+    <li><strong>Defensa DoS (0065):</strong> <code>statement_timeout</code> por rol de API (anon 5s, authenticated 12s). La anon key es pública; RLS protege datos pero no consumo de recursos.</li>
   </ul>
 
   <h3>Cliente / Web</h3>
@@ -453,8 +456,11 @@
     <li><strong>Medir contenedores con onLayout</strong>, no <code>useWindowDimensions</code>, cuando hay caps de ancho (desktop). SVG en web necesita width/height en px explícitos.</li>
     <li><strong>Cap desktop sobre el contenido</strong>: <code>contentContainerStyle=[base, useDesktopCap(n)]</code>; envolver el ScrollView deja la barra de scroll flotando.</li>
     <li><strong>Queries</strong>: toda lectura hace <code>if (error) throw toAppError(error)</code>; pull-to-refresh usa <code>isRefetching</code>.</li>
+    <li><strong>Cache persistido en disco</strong> (<code>PersistQueryClientProvider</code> + AsyncStorage/localStorage): el arranque en frío pinta desde disco sin esperar la red. <code>gcTime</code> global 24h (>= <code>PERSIST_MAX_AGE</code>, si no las queries se recolectan antes de guardarse). <strong>Bumpear <code>PERSIST_BUSTER</code></strong> cuando cambie el shape de una query o se regeneren tipos con migraciones que rompan. <code>signOut()</code> limpia memoria + disco.</li>
+    <li><strong>Álbum publicado = cache congelado</strong>: <code>useAlbumDetail</code> usa <code>staleTime: Infinity</code> si el álbum no es draft (contenido inmutable, decisión #11); la grilla no se re-baja al volver. Las mutaciones del owner llaman <code>refetch()</code> directo (ignora staleTime).</li>
     <li>State global compartido vía Context (<code>ProfileProvider</code>); <code>useNow()</code> singleton para countdowns.</li>
     <li>Keys cortas en DB (colores, layouts, presets) — el cliente resuelve valores; cambiar un hex no requiere migración.</li>
+    <li><strong>Metro cachea cambios de <code>.env</code></strong>: <code>build:web</code> usa <code>--clear</code> para que una env pública siempre entre al bundle. Verificar: <code>grep -rl "&lt;valor&gt;" dist/</code>.</li>
   </ul>
 </section>
 
@@ -481,6 +487,8 @@ node client/scripts/gen-sfx.js
     <li>Para probar trades/joins hacen falta 2 cuentas (cerrar sesión y registrarse con otro mail).</li>
     <li>Álbumes especiales protegidos contra borrado (P0201, migración 0058): avatares, 0..1000 (<code>number_start = 0</code>), dinosaurios, más un id histórico sin identificar. Espejo client-side en <code>PROTECTED_ALBUM_IDS</code>.</li>
     <li><strong>Estadísticas</strong>: Panel admin → Estadísticas (<code>fn_admin_stats</code>, migración 0057): usuarios, activos/día y logins/día (desde <code>auth.audit_log_entries</code>, hora argentina), álbumes, figuritas, sobres, cambios.</li>
+    <li><strong>Verificar column-security</strong> (privilegios de columna) en remoto: SQL Editor del dashboard con <code>has_column_privilege('authenticated','albums','qr_secret','select')</code> → debe dar <code>false</code>. La CLI <code>supabase db query</code> apunta a la base LOCAL (Docker), no al remoto.</li>
+    <li><strong>hCaptcha</strong>: activar/desactivar en Supabase → Authentication → Attack Protection (con el secret de la cuenta hCaptcha). Al activar se exige token YA. Orden seguro: deployar cliente con la site key (web + rebuild EAS) → probar con toggle OFF → activar toggle. Ver runbook en §12.</li>
   </ul>
 </section>
 
@@ -491,6 +499,7 @@ node client/scripts/gen-sfx.js
     <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
     <li><strong>SMTP custom (Brevo)</strong>: ✅ configurado y funcionando (2026-07-19). El runbook de abajo queda como referencia (p.ej. para migrar el remitente al dominio propio).</li>
     <li><strong>Android App Links</strong> (cuando haya dominio propio): <code>assetlinks.json</code> + intent filter para que el link de invitación abra la app nativa.</li>
+    <li><strong>hCaptcha en Android</strong>: ✅ web EN VIVO (2026-09-15). Falta <strong>rebuild EAS</strong> (trae <code>react-native-webview</code>) para que el login nativo mande el token — hasta entonces el dev build viejo no puede loguearse. Runbook abajo.</li>
     <li>Limpieza técnica opcional: warnings de <code>runOnJS</code> (Reanimated 4).</li>
   </ul>
 
@@ -510,9 +519,21 @@ node client/scripts/gen-sfx.js
     <li><strong>Subir el rate limit</strong>: con SMTP custom activo, Supabase deja editarlo — Authentication → Rate Limits → "Emails sent per hour" → p.ej. <code>100</code>.</li>
     <li><strong>Probar</strong>: cerrar sesión → pedir magic link → el mail debe llegar en segundos (revisar spam la primera vez) y el remitente ser el verificado. Si no llega, Brevo → Logs muestra cada envío.</li>
   </ol>
+
+  <h3>Runbook: hCaptcha (anti-bot en el magic link)</h3>
+  <p>El código ya está integrado (invisible, cross-platform). Esto es el setup externo + la activación. <strong>El orden importa: si activás el toggle de Supabase antes de que los clientes manden el token, se rompe el login.</strong></p>
+  <ol>
+    <li><strong>Cuenta hCaptcha</strong>: dashboard.hcaptcha.com → New site. Modo <strong>99.9% Passive</strong> (challenge solo a sospechosos). <strong>Domain allowlisting OFF</strong> (el nativo corre en WebView sin dominio real; el allowlist rompe mobile).</li>
+    <li>Anotar la <strong>site key</strong> (pública, por sitio) y el <strong>secret</strong> (privado, de la cuenta → Settings).</li>
+    <li><strong>Cliente</strong>: <code>EXPO_PUBLIC_HCAPTCHA_SITE_KEY</code> en <code>client/.env</code> (dev + web) y en <code>eas.json</code> (build Android). Sin ella, el captcha queda apagado.</li>
+    <li><strong>Deployar el cliente CON la key</strong>: web <code>npm run build:web</code> + wrangler (verificar con <code>grep -rl "&lt;site key&gt;" dist/</code>); Android <strong>rebuild EAS</strong> (<code>react-native-webview</code> es nativo).</li>
+    <li><strong>Probar con el toggle de Supabase todavía OFF</strong>: login por mail en web y en el build nuevo → debe andar normal (el token se manda y Supabase lo ignora).</li>
+    <li><strong>Recién ahí activar</strong>: Supabase → Authentication → Attack Protection → Enable Captcha protection → provider hCaptcha → pegar el <strong>secret</strong> → Save.</li>
+    <li><strong>Verificar</strong>: login por mail (con 99.9% Passive suele entrar invisible) y Google (sin captcha). Si algo falla, apagar el toggle vuelve al estado anterior al instante.</li>
+  </ol>
 </section>
 
-<footer>MI ÁLBUM DE FIGURITAS · DOCUMENTACIÓN TÉCNICA · 2026-07</footer>
+<footer>MI ÁLBUM DE FIGURITAS · DOCUMENTACIÓN TÉCNICA · 2026-09</footer>
 
 </div>
 </body>

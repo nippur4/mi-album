@@ -38,6 +38,7 @@
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
+    "jimp": "^1.6.1",
     "jsqr": "^1.4.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -68,7 +69,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build:web": "expo export --platform web && node scripts/postexport-web.mjs",
+    "build:web": "expo export --platform web --clear && node scripts/postexport-web.mjs",
     "build:android": "eas build --platform android --profile production",
     "aab": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-aab.ps1"
   },
