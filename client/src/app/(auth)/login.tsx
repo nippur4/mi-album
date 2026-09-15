@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { Button } from '@/components/button';
+import { Captcha } from '@/components/captcha';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { GOOGLE_SUPPORTED, signInWithGoogle, signInWithMagicLink } from '@/lib/auth';
+import { CAPTCHA_ENABLED, type CaptchaHandle } from '@/lib/captcha';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'google';
 
@@ -14,6 +16,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   const trimmed = email.trim();
   const canSubmit = trimmed.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
@@ -22,7 +25,21 @@ export default function Login() {
     Keyboard.dismiss();
     setStatus('sending');
     setErrorMsg(null);
-    const { error } = await signInWithMagicLink(trimmed);
+
+    // Si el captcha está activo, corremos el challenge (invisible) y sacamos el
+    // token ANTES de pedir el magic link. Sin token válido no seguimos.
+    let captchaToken: string | undefined;
+    if (CAPTCHA_ENABLED) {
+      const token = await captchaRef.current?.getToken();
+      if (!token) {
+        setStatus('error');
+        setErrorMsg('No pudimos verificar que no sos un bot. Probá de nuevo.');
+        return;
+      }
+      captchaToken = token;
+    }
+
+    const { error } = await signInWithMagicLink(trimmed, captchaToken);
     if (error) {
       setStatus('error');
       setErrorMsg(error.message);
@@ -125,6 +142,8 @@ export default function Login() {
             <Text style={styles.fineprint}>
               Te mandamos un link mágico al mail. Sin contraseña.
             </Text>
+            {/* Invisible: no ocupa espacio; corre solo al tocar "Enviarme el link". */}
+            <Captcha ref={captchaRef} />
           </View>
         )}
       </KeyboardAvoidingView>

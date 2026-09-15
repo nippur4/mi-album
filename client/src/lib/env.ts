@@ -31,4 +31,11 @@ export const env = {
   // no la lee) y en dev sin cuenta RC queda vacía → el paywall muestra el
   // fallback "Disponible en la app Android". Es una key PÚBLICA, va en el bundle.
   revenuecatAndroidKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '',
+  // Site key de hCaptcha (pública, va en el bundle). OPCIONAL: si está vacía, el
+  // captcha queda desactivado (login funciona sin token, como antes). Cuando se
+  // configure ESTA + el toggle de CAPTCHA en Supabase Auth (con el secret),
+  // el magic link empieza a exigir verificación. IMPORTANTE el orden: primero
+  // deployar el cliente con esta key, DESPUÉS activar el toggle en Supabase
+  // (si se activa antes, el login se rompe porque nadie manda el token).
+  hcaptchaSiteKey: process.env.EXPO_PUBLIC_HCAPTCHA_SITE_KEY ?? '',
 };

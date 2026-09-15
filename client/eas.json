@@ -8,19 +8,22 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_HCAPTCHA_SITE_KEY": "d3ae9f7a-01a6-4fb8-acfe-0420f3a2d10e"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_HCAPTCHA_SITE_KEY": "d3ae9f7a-01a6-4fb8-acfe-0420f3a2d10e"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_HCAPTCHA_SITE_KEY": "d3ae9f7a-01a6-4fb8-acfe-0420f3a2d10e"
       }
     }
   },

@@ -57,14 +57,16 @@ export function useSession() {
 // Ambas URLs deben estar autorizadas en Supabase Dashboard → Authentication
 // → URL Configuration → Redirect URLs (mialbum://, http://localhost:5000,
 // y el dominio de prod cuando se deploye).
-export async function signInWithMagicLink(email: string) {
+// captchaToken: token de hCaptcha cuando CAPTCHA está activo en Supabase Auth.
+// Si el proyecto no tiene captcha, se pasa undefined y Supabase lo ignora.
+export async function signInWithMagicLink(email: string, captchaToken?: string) {
   const emailRedirectTo =
     Platform.OS === 'web' && typeof window !== 'undefined'
       ? window.location.origin
       : 'mialbum://';
   return supabase.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
-    options: { emailRedirectTo },
+    options: { emailRedirectTo, captchaToken },
   });
 }
 
@@ -90,6 +92,8 @@ export async function signInWithMagicLink(email: string) {
 //   4) En Supabase → URL Configuration → Redirect URLs: `mialbum://**` ya debería estar
 export const GOOGLE_SUPPORTED = true;
 
+// NOTA: el OAuth de Google NO lleva captchaToken. Supabase gatea con captcha los
+// endpoints de OTP/signup/recover, no el flujo OAuth (es un redirect a Google).
 export async function signInWithGoogle() {
   if (Platform.OS === 'web') {
     const redirectTo =
