@@ -18,6 +18,7 @@ import { useMyProfile } from '@/lib/queries/profile';
 import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
+import { openPrivacyPolicy } from '@/lib/legal';
 
 export default function HomeTab() {
   const router = useRouter();
@@ -266,6 +267,14 @@ export default function HomeTab() {
 
           <Button label="Crear álbum nuevo" variant="outline" onPress={() => router.push('/album/new')} />
         </View>
+
+        <Pressable
+          onPress={openPrivacyPolicy}
+          hitSlop={8}
+          style={({ pressed }) => [styles.privacyLink, pressed && { opacity: 0.6 }]}
+        >
+          <Text style={styles.privacyLinkText}>Política de Privacidad</Text>
+        </Pressable>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -393,5 +402,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     fontWeight: '700',
+  },
+  privacyLink: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  privacyLinkText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.muted,
+    textDecorationLine: 'underline',
   },
 });

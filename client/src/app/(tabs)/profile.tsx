@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/avatar';
 import { AvatarPickerModal } from '@/components/avatar-picker-modal';
 import { Button } from '@/components/button';
+import { DeleteAccountModal } from '@/components/delete-account-modal';
 import { EditNameModal } from '@/components/edit-name-modal';
 import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -27,6 +28,7 @@ export default function ProfileTab() {
   const { isPro } = useIsPro();
   const [editingName, setEditingName] = useState(false);
   const [pickingAvatar, setPickingAvatar] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const displayName = profile?.display_name ?? session?.user.email?.split('@')[0] ?? 'Vos';
   const avatarKey = profile?.avatar_thumb_key ?? null;
@@ -110,6 +112,15 @@ export default function ProfileTab() {
         <View style={{ flex: 1 }} />
 
         <Button label="Cerrar sesión" variant="outline" onPress={signOut} />
+
+        <Pressable
+          onPress={() => setDeletingAccount(true)}
+          hitSlop={8}
+          style={({ pressed }) => [styles.deleteLink, pressed && { opacity: 0.6 }]}
+        >
+          <Feather name="trash-2" size={14} color={Colors.red} />
+          <Text style={styles.deleteLinkText}>Eliminar cuenta</Text>
+        </Pressable>
       </ScrollView>
 
       <EditNameModal
@@ -125,6 +136,11 @@ export default function ProfileTab() {
         currentThumbKey={avatarKey}
         onClose={() => setPickingAvatar(false)}
         onSelect={onAvatarSelected}
+      />
+
+      <DeleteAccountModal
+        visible={deletingAccount}
+        onClose={() => setDeletingAccount(false)}
       />
     </SafeAreaView>
   );
@@ -262,5 +278,19 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     fontWeight: '700',
     color: Colors.ink,
+  },
+  deleteLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  deleteLinkText: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.red,
+    fontWeight: '700',
   },
 });

@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -72,7 +72,7 @@ export type Database = {
           name: string
           number_start: number
           owner_hidden: boolean
-          owner_id: string
+          owner_id: string | null
           pack_config: Json
           pack_large_key: string | null
           pack_thumb_key: string | null
@@ -98,7 +98,7 @@ export type Database = {
           name: string
           number_start?: number
           owner_hidden?: boolean
-          owner_id: string
+          owner_id?: string | null
           pack_config?: Json
           pack_large_key?: string | null
           pack_thumb_key?: string | null
@@ -124,7 +124,7 @@ export type Database = {
           name?: string
           number_start?: number
           owner_hidden?: boolean
-          owner_id?: string
+          owner_id?: string | null
           pack_config?: Json
           pack_large_key?: string | null
           pack_thumb_key?: string | null
@@ -200,7 +200,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           kind: string
           large_key: string
@@ -212,7 +212,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           kind: string
           large_key: string
@@ -224,7 +224,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           kind?: string
           large_key?: string
@@ -655,7 +655,7 @@ export type Database = {
         Returns: {
           active: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           kind: string
           large_key: string
@@ -693,7 +693,7 @@ export type Database = {
         Returns: {
           active: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           kind: string
           large_key: string
@@ -720,7 +720,7 @@ export type Database = {
         Returns: {
           active: boolean
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           kind: string
           large_key: string
@@ -788,7 +788,7 @@ export type Database = {
           name: string
           number_start: number
           owner_hidden: boolean
-          owner_id: string
+          owner_id: string | null
           pack_config: Json
           pack_large_key: string | null
           pack_thumb_key: string | null
@@ -835,6 +835,7 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_delete_account: { Args: never; Returns: undefined }
       fn_delete_album: {
         Args: { p_album_id: string; p_confirm_email: string }
         Returns: string

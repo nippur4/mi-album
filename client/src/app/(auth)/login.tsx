@@ -9,6 +9,7 @@ import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { GOOGLE_SUPPORTED, signInWithGoogle, signInWithMagicLink } from '@/lib/auth';
 import { CAPTCHA_ENABLED, type CaptchaHandle } from '@/lib/captcha';
+import { openPrivacyPolicy } from '@/lib/legal';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'google';
 
@@ -144,6 +145,13 @@ export default function Login() {
             </Text>
             {/* Invisible: no ocupa espacio; corre solo al tocar "Enviarme el link". */}
             <Captcha ref={captchaRef} />
+            <Text style={styles.consent}>
+              Al continuar, aceptás nuestra{' '}
+              <Text style={styles.consentLink} onPress={openPrivacyPolicy}>
+                Política de Privacidad
+              </Text>
+              .
+            </Text>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -260,6 +268,18 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     textAlign: 'center',
     marginTop: Spacing.xs,
+  },
+  consent: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.muted,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  consentLink: {
+    color: Colors.red,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   error: {
     fontFamily: FontFamily.body,

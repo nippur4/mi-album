@@ -18,6 +18,7 @@ import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from './supabase';
 import { queryClient, persister } from './query-client';
+import { callEdgeFunction } from './edge';
 
 // Necesario para que openAuthSessionAsync cierre el browser embebido al
 // volver del OAuth callback (en algunos Safari). No-op en mobile fuera de iOS.
@@ -142,6 +143,18 @@ export async function signOut() {
   queryClient.clear();
   await Promise.resolve(persister.removeClient()).catch(() => {});
   return res;
+}
+
+// Borra la cuenta del usuario y sus datos personales (perfil, colección,
+// membresías, suscripción). Los álbumes que creó y que YA juegan otros usuarios
+// NO se destruyen: quedan retirados (read-only) y sin dueño, para que esos
+// jugadores conserven su colección — misma regla que "retirar" un álbum. Lo
+// hace la Edge Function delete_account (+ RPC fn_delete_account, migración 0070).
+// Tras borrar, limpiamos la sesión local igual que signOut → el _layout
+// redirige a login. Lanza { error } si algo falla (la cuenta NO se tocó).
+export async function deleteAccount() {
+  await callEdgeFunction('delete_account', {});
+  await signOut();
 }
 
 // Captura deep links del magic link (mialbum://#access_token=...&refresh_token=...)
