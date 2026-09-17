@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -74,6 +74,12 @@ export default function Login() {
         style={styles.inner}
       >
         <View style={styles.hero}>
+          <Image
+            source={require('../../../assets/images/logoApp-sm.png')}
+            style={styles.logo}
+            resizeMode="cover"
+            accessibilityLabel="Mi Álbum de Figuritas"
+          />
           <Text style={styles.kicker}>Mi álbum de</Text>
           <Text style={styles.title}>FIGURITAS</Text>
         </View>
@@ -194,6 +200,12 @@ const styles = StyleSheet.create({
   hero: {
     alignItems: 'center',
     marginTop: Spacing.xxl,
+  },
+  logo: {
+    width: 104,
+    height: 104,
+    borderRadius: 24,
+    marginBottom: Spacing.lg,
   },
   kicker: {
     fontFamily: FontFamily.mono,

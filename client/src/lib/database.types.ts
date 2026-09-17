@@ -62,6 +62,48 @@ export type Database = {
           },
         ]
       }
+      album_reports: {
+        Row: {
+          album_id: string
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_reports_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "album_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       albums: {
         Row: {
           cover_large_key: string | null
@@ -527,6 +569,39 @@ export type Database = {
           },
         ]
       }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_collection: {
         Row: {
           first_obtained_at: string
@@ -812,6 +887,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_block_user: { Args: { p_blocked: string }; Returns: undefined }
       fn_claim_ad_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_claim_daily_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_count_active_albums: { Args: { p_owner: string }; Returns: number }
@@ -866,6 +942,15 @@ export type Database = {
       fn_join_album: { Args: { p_share_code: string }; Returns: Json }
       fn_my_achievement_stats: { Args: never; Returns: Json }
       fn_my_avatar_unlocks: { Args: never; Returns: Json }
+      fn_my_blocks: {
+        Args: never
+        Returns: {
+          avatar_thumb_key: string
+          blocked_id: string
+          created_at: string
+          display_name: string
+        }[]
+      }
       fn_my_daily_status: {
         Args: { p_album_ids: string[] }
         Returns: {
@@ -898,6 +983,10 @@ export type Database = {
       fn_player_album_sidedata: { Args: { p_album_id: string }; Returns: Json }
       fn_publish_album: { Args: { p_album_id: string }; Returns: undefined }
       fn_register_push_token: { Args: { p_token: string }; Returns: undefined }
+      fn_report_album: {
+        Args: { p_album: string; p_details?: string; p_reason: string }
+        Returns: undefined
+      }
       fn_resolve_trade_offer: {
         Args: { p_action: string; p_offer_id: string }
         Returns: Json
@@ -948,6 +1037,7 @@ export type Database = {
         Args: { p_album_id: string }
         Returns: undefined
       }
+      fn_unblock_user: { Args: { p_blocked: string }; Returns: undefined }
       fn_unhide_album_by_player: {
         Args: { p_album_id: string }
         Returns: undefined

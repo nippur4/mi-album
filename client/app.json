@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mi Álbum de Figuritas",
     "slug": "mi-album-figuritas",
-    "version": "1.2.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mialbum",

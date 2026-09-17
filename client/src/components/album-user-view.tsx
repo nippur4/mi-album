@@ -37,6 +37,8 @@ import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 import { cardMatches } from '@/lib/trade-filter';
+import { ReportAlbumModal } from '@/components/report-album-modal';
+import { useBlockActions } from '@/lib/queries/moderation';
 
 interface Props {
   album: Album;
@@ -169,6 +171,29 @@ export function UserAlbumView({ album, stickers }: Props) {
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const [pocketQuery, setPocketQuery] = useState('');
   const [pocketPage, setPocketPage] = useState(0);
+
+  // Moderación: reportar el álbum o bloquear a su creador (dejar de verlo).
+  const [reporting, setReporting] = useState(false);
+  const [confirmingBlock, setConfirmingBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+  const { block } = useBlockActions();
+  const creatorId = album.owner_id;
+  const canBlockCreator = !!creatorId && creatorId !== session?.user.id;
+
+  async function doBlock() {
+    if (blocking || !creatorId) return;
+    setBlockError(null);
+    setBlocking(true);
+    const { error } = await block(creatorId);
+    setBlocking(false);
+    if (error) {
+      setBlockError(errorMessage(error));
+      return;
+    }
+    setConfirmingBlock(false);
+    router.back();
+  }
 
   async function doLeave() {
     if (hiding) return;
@@ -424,7 +449,68 @@ export function UserAlbumView({ album, stickers }: Props) {
             </Text>
           </Pressable>
         )}
+
+        {/* Moderación: disponible para cualquiera que NO sea el owner (miembro o
+            no). Reportar el álbum o bloquear a su creador para dejar de verlo. */}
+        {!isOwnerViewing && (
+          <View style={styles.modRow}>
+            <Pressable
+              onPress={() => setReporting(true)}
+              hitSlop={8}
+              style={({ pressed }) => [styles.modLink, pressed && { opacity: 0.6 }]}
+            >
+              <Feather name="flag" size={12} color={Colors.muted} />
+              <Text style={styles.modLinkText}>Reportar álbum</Text>
+            </Pressable>
+            {canBlockCreator && (
+              <Pressable
+                onPress={() => {
+                  setBlockError(null);
+                  setConfirmingBlock(true);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [styles.modLink, pressed && { opacity: 0.6 }]}
+              >
+                <Feather name="slash" size={12} color={Colors.muted} />
+                <Text style={styles.modLinkText}>Bloquear al creador</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      <ReportAlbumModal
+        visible={reporting}
+        albumId={album.id}
+        onClose={() => setReporting(false)}
+      />
+
+      <BottomSheet
+        visible={confirmingBlock}
+        onClose={() => setConfirmingBlock(false)}
+        dismissable={!blocking}
+        title="Bloquear al creador"
+      >
+        <Text style={sheetStyles.hint}>
+          No vas a ver más los álbumes públicos de esta persona ni sus propuestas de
+          intercambio. Podés desbloquearla cuando quieras desde tu Perfil.
+        </Text>
+        {blockError && <Text style={sheetStyles.error}>{blockError}</Text>}
+        <View style={sheetStyles.actions}>
+          <Button
+            label="Cancelar"
+            variant="outline"
+            onPress={() => setConfirmingBlock(false)}
+            disabled={blocking}
+          />
+          <Button
+            label={blocking ? 'Bloqueando...' : 'Bloquear'}
+            onPress={doBlock}
+            loading={blocking}
+            disabled={blocking}
+          />
+        </View>
+      </BottomSheet>
 
       <BottomSheet
         visible={confirmingLeave}
@@ -784,6 +870,27 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   hideBtnText: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  modRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.lg,
+    marginTop: Spacing.sm,
+  },
+  modLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: Spacing.xs,
+  },
+  modLinkText: {
     fontFamily: FontFamily.mono,
     fontSize: FontSize.monoLabelSmall,
     color: Colors.muted,

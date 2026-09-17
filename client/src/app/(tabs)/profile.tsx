@@ -98,6 +98,16 @@ export default function ProfileTab() {
           <Feather name="chevron-right" size={20} color={Colors.muted} />
         </Pressable>
 
+        {/* Gestión de usuarios bloqueados (moderación). */}
+        <Pressable
+          onPress={() => router.push('/blocked' as any)}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+        >
+          <Feather name="slash" size={18} color={Colors.ink} />
+          <Text style={styles.linkLabel}>Usuarios bloqueados</Text>
+          <Feather name="chevron-right" size={20} color={Colors.muted} />
+        </Pressable>
+
         {isAdmin && (
           <Pressable
             onPress={() => router.push('/admin')}

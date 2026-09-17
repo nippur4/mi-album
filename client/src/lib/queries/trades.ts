@@ -1,11 +1,13 @@
 // Queries y mutations del sistema de intercambios.
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
 import { qk } from '@/lib/query-client';
 import { toAppError } from '@/lib/errors';
+import { useBlockedIds } from '@/lib/queries/moderation';
 import type { Database } from '@/lib/database.types';
 import type { Sticker } from '@/lib/queries/albums';
 
@@ -135,9 +137,22 @@ export function useMyOffers() {
       };
     },
   });
+
+  // Filtro de moderación: ocultamos ofertas de/para usuarios que el caller
+  // bloqueó (recibidas de un bloqueado, y las propias enviadas a un bloqueado).
+  const blocked = useBlockedIds();
+  const received = useMemo(
+    () => (q.data?.received ?? []).filter((o) => !blocked.has(o.from_user)),
+    [q.data?.received, blocked],
+  );
+  const sent = useMemo(
+    () => (q.data?.sent ?? []).filter((o) => !blocked.has(o.to_user)),
+    [q.data?.sent, blocked],
+  );
+
   return {
-    received: q.data?.received ?? [],
-    sent: q.data?.sent ?? [],
+    received,
+    sent,
     isLoading: q.isLoading,
     isRefetching: q.isRefetching,
     refetch: q.refetch,
@@ -158,7 +173,13 @@ export function useAlbumMatches(albumId: string | undefined) {
       return ((data ?? []) as any[]) as AlbumMatch[];
     },
   });
-  return { matches: q.data ?? [], isLoading: q.isLoading, refetch: q.refetch };
+  // Ocultamos coincidencias con usuarios bloqueados por el caller.
+  const blocked = useBlockedIds();
+  const matches = useMemo(
+    () => (q.data ?? []).filter((m) => !blocked.has(m.other_user_id)),
+    [q.data, blocked],
+  );
+  return { matches, isLoading: q.isLoading, refetch: q.refetch };
 }
 
 // Reglas de intercambio del álbum para el jugador: si está habilitado, el tope

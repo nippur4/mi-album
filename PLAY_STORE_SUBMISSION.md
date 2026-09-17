@@ -67,8 +67,8 @@ Descargá Mi Álbum de Figuritas y empezá tu colección hoy.
 **Preguntas iniciales:**
 - ¿Recopila o comparte datos de usuario? → **Sí**
 - ¿Los datos están cifrados en tránsito? → **Sí**
-- ¿Ofrecés forma de solicitar la eliminación de datos? → **Sí** → URL de eliminación: `https://mi-album.pages.dev/privacy`
-  *(Además la app ya tiene borrado de cuenta in-app en Perfil → “Eliminar cuenta”.)*
+- ¿Ofrecés forma de solicitar la eliminación de datos? → **Sí** → URL de eliminación de cuenta: `https://mi-album.pages.dev/delete-account`
+  *(Página dedicada. Además la app tiene borrado in-app en Perfil → “Eliminar cuenta”.)*
 
 **Tipos de datos a declarar** (todos: Recopilado = Sí, No efímero, Requerido):
 
@@ -76,6 +76,7 @@ Descargá Mi Álbum de Figuritas y empezá tu colección hoy.
 |---|---|---|
 | Dirección de correo electrónico | No | Gestión de la cuenta, comunicaciones |
 | Nombre (nombre para mostrar) | No | Gestión de la cuenta |
+| ID de usuario (ID de cuenta interno) | No | Gestión de la cuenta, Funcionalidad |
 | Fotos (imágenes de álbum que sube el creador) | No | Funcionalidad de la app |
 | Acciones dentro de la app / contenido generado | No | Funcionalidad de la app |
 | ID de dispositivo o de otro tipo (ID de publicidad) | **Sí** | **Publicidad o marketing**, Funcionalidad |
@@ -89,7 +90,8 @@ Descargá Mi Álbum de Figuritas y empezá tu colección hoy.
 
 ## 3. Clasificación de contenido (Content rating — cuestionario IARC)
 
-Categoría del cuestionario: si es App → **“Aplicación de utilidad, productividad, comunicación u otra”**; si es Juego → **“Juego”**. Las respuestas de contenido son las mismas:
+Email de contacto: `nuestra.caja.app@gmail.com`.
+Categoría del cuestionario: **“El resto de los tipos de app”** (producto de entretenimiento; NO "Juego" — evita preguntas de azar/loot boxes que no aplican; NO "Social o de comunicación"). Respuestas de contenido:
 
 - Violencia (realista o de fantasía): **No**
 - Contenido sexual / desnudez: **No**
@@ -119,17 +121,28 @@ Resultado esperado: apta para todo público / adolescentes, sin restricciones.
 - [ ] **Data safety**: (ver sección 2).
 
 ### Acceso para el revisor (App access) — respuesta: **Sí, está restringida**
-La opción "No" no aplica (la app requiere cuenta). Elegí **Sí**. Luego cargá instrucciones de acceso.
+La opción "No" no aplica (la app requiere cuenta). Elegí **Sí**. Los detalles van **en inglés**.
 
-**Solución con la cuenta de Google** (el revisor no puede recibir el magic link, pero sí puede tocar "Continuar con Google"):
-1. Creá/reutilizá una **cuenta de Google descartable** (ej. `mialbum.demo@gmail.com`).
-2. Agregar instrucciones de acceso:
-   - **Nombre del flujo:** `Acceso general`
-   - **Usuario:** email de la cuenta Google de prueba
-   - **Contraseña:** contraseña de esa cuenta Google
-   - **Instrucciones:** `En la pantalla de inicio, tocar "Continuar con Google" e ingresar con estas credenciales. No usar el login por email (magic link).`
+**Cuenta demo = Yahoo + magic link** (NO usar la cuenta owner de Play). Cuenta: `miapp.beta@yahoo.com`.
 
-Con eso el revisor entra con Google usando usuario+contraseña, sin depender del magic link. Sirve tanto para la prueba cerrada como para producción.
+- **Nombre:** `General access`
+- **Usuario/email:** `miapp.beta@yahoo.com`
+- **Contraseña:** la contraseña de la cuenta de Yahoo (para que el revisor entre al inbox y saque el link).
+- **Instrucciones — campo "cualquier otra información" (máx. 500, pegar en inglés):**
+```
+This app uses passwordless email sign-in (magic link).
+
+1. On the login screen, enter miapp.beta@yahoo.com and tap "Enviarme el link".
+2. Open https://mail.yahoo.com and sign in with the username and password above.
+3. Open the email from "Mi Álbum de Figuritas" and tap the sign-in link. It opens the app and logs you in.
+
+Do NOT use "Continuar con Google". If the email is missing, check the Spam folder.
+```
+
+**Preparación antes de guardar:**
+1. Desactivar **verificación en 2 pasos** en la cuenta de Yahoo (si no, el revisor no entra al webmail).
+2. **Probar el flujo completo** con el build 1.2.0: email en la app → mail.yahoo.com → clic al link → abre la app y loguea.
+3. Marcar el mail como "no es spam" en Yahoo si cae ahí.
 
 ---
 
