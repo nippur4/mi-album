@@ -213,7 +213,7 @@
 
   <h3>Backend (<code>supabase/</code>)</h3>
   <ul>
-    <li><strong>~55 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
+    <li><strong>~69 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
     <li><strong>6 Edge Functions</strong> (Deno): <code>open_pack</code>, <code>redeem_qr</code>, <code>revenuecat_webhook</code>, <code>upload_image</code>, <code>generate_qr</code>, <code>upload_preset_image</code>. Helpers compartidos en <code>_shared/http.ts</code> (CORS, auth, respuestas) y <code>_shared/r2.ts</code> (R2 vía <code>aws4fetch</code>).</li>
     <li><code>pg_cron</code> activo para el sobre diario y limpiezas.</li>
     <li>Proyecto: <code>baexxbixcrhngbjptlkt</code> (sa-east-1). PostgREST con <code>db_max_rows = 2000</code> (el álbum especial supera las 1000 filas).</li>
@@ -287,7 +287,7 @@
   <table>
     <tr><th>Mecanismo</th><th>Cómo funciona</th><th>Gate</th></tr>
     <tr><td><strong>Sobre diario</strong></td><td>Cooldown nominal 24h/168h con margen de −1h efectivo. Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
-    <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret con column-level security). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
+    <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret en la tabla aparte <code>album_qr_secrets</code>, sin acceso público). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
     <tr><td><strong>Bienvenida</strong></td><td>Sobres extra configurables al unirse.</td><td>—</td></tr>
     <tr><td><strong>Publicidad</strong></td><td>Rewarded ad (AdMob) → 1 sobre. Solo en los 3 álbumes especiales, tope 2/día por usuario, solo Android. Ver abajo.</td><td>Android</td></tr>
   </table>
@@ -441,7 +441,9 @@
     <li>Si un campo altera un invariante (ej. <code>number_start</code>), grepear <strong>todas</strong> las RPCs que lo asumen.</li>
     <li>Listados sin <code>.range()</code> quedan capados por <code>max_rows</code> (hoy 2000) — paginar si algo pudiera superarlo.</li>
     <li>pgcrypto vive en schema <code>extensions</code>: funciones que lo usan llevan <code>set search_path = public, extensions</code>.</li>
-    <li><strong>Column-level security (0066):</strong> ocultar una columna se hace con <code>revoke select on &lt;tabla&gt;</code> + re-grant de TODAS las columnas menos la sensible. <strong>NUNCA con <code>revoke select (col)</code> suelto</strong> — no pisa el grant de SELECT a nivel tabla (así fallaron 0009 <code>qr_secret</code> y 0064 <code>push_token</code>, secretos legibles con la anon key durante meses). PostgREST respeta privilegios de columna → <code>select=*</code> devuelve solo las permitidas. <strong>Regla:</strong> <code>profiles</code> y <code>albums</code> ya no tienen grant de tabla → toda columna nueva ahí necesita su <code>grant select (col) to anon, authenticated</code> en la misma migración, o queda invisible al cliente.</li>
+    <li><strong>Secretos en tablas aparte (0069):</strong> <code>qr_secret</code> (clave HMAC del QR) y <code>push_token</code> viven en <code>album_qr_secrets</code> y <code>profile_push_tokens</code>, <strong>sin acceso para anon/authenticated</strong> (RLS activa sin policies + <code>revoke all</code>); solo las leen las Edge Functions (service_role) y las RPCs <code>SECURITY DEFINER</code>. Así <code>albums</code>/<code>profiles</code> conservan su grant de SELECT de tabla y el cliente sigue con <code>.select('*')</code> sin exponer nada.
+      <div class="callout rule" style="margin-top:8px"><strong>Por qué NO column-level revoke:</strong> el enfoque previo (0009/0064/0066/0067 — <code>revoke select (col)</code> y re-grant del resto) <strong>es incompatible con <code>.select('*')</code></strong> en este proyecto: PostgREST expande el <code>*</code> a TODAS las columnas y la ejecuta como anon/authenticated → si a esa columna le falta el privilegio, deniega la query entera (<code>42501 permission denied for table albums</code>). Recargar el schema cache no lo cambia. Verificado con la API real: <code>select=*</code> denegaba y <code>select=id,name</code> funcionaba. Por eso se movieron los secretos fuera de las tablas expuestas.</div>
+    </li>
     <li><strong>Defensa DoS (0065):</strong> <code>statement_timeout</code> por rol de API (anon 5s, authenticated 12s). La anon key es pública; RLS protege datos pero no consumo de recursos.</li>
   </ul>
 
@@ -487,7 +489,7 @@ node client/scripts/gen-sfx.js
     <li>Para probar trades/joins hacen falta 2 cuentas (cerrar sesión y registrarse con otro mail).</li>
     <li>Álbumes especiales protegidos contra borrado (P0201, migración 0058): avatares, 0..1000 (<code>number_start = 0</code>), dinosaurios, más un id histórico sin identificar. Espejo client-side en <code>PROTECTED_ALBUM_IDS</code>.</li>
     <li><strong>Estadísticas</strong>: Panel admin → Estadísticas (<code>fn_admin_stats</code>, migración 0057): usuarios, activos/día y logins/día (desde <code>auth.audit_log_entries</code>, hora argentina), álbumes, figuritas, sobres, cambios.</li>
-    <li><strong>Verificar column-security</strong> (privilegios de columna) en remoto: SQL Editor del dashboard con <code>has_column_privilege('authenticated','albums','qr_secret','select')</code> → debe dar <code>false</code>. La CLI <code>supabase db query</code> apunta a la base LOCAL (Docker), no al remoto.</li>
+    <li><strong>Verificar la seguridad de secretos</strong>: con la anon key, <code>GET /rest/v1/albums?select=*</code> y <code>?select=*</code> sobre <code>profiles</code> deben responder <strong>200</strong> (ya no llevan columnas sensibles); <code>GET /rest/v1/album_qr_secrets?select=*</code> y <code>/profile_push_tokens</code> deben dar <strong>42501 permission denied</strong>. La CLI <code>supabase db query</code> apunta a la base LOCAL (Docker), no al remoto — usar el SQL Editor del dashboard para inspeccionar el remoto.</li>
     <li><strong>hCaptcha</strong>: activar/desactivar en Supabase → Authentication → Attack Protection (con el secret de la cuenta hCaptcha). Al activar se exige token YA. Orden seguro: deployar cliente con la site key (web + rebuild EAS) → probar con toggle OFF → activar toggle. Ver runbook en §12.</li>
   </ul>
 </section>

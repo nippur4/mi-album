@@ -8,11 +8,6 @@ import { Platform } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
 
-/** CTA corto, ej para reemplazar "Hacete Pro" en botones. */
-export function upsellShort(): string {
-  return IS_WEB ? 'Bajate la app' : 'Hacete Pro';
-}
-
 /** Descripción de una feature pro-only en contexto. */
 export function proFeatureHint(featureDescription: string): string {
   if (IS_WEB) {

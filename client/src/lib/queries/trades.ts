@@ -1,6 +1,6 @@
 // Queries y mutations del sistema de intercambios.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
@@ -220,31 +220,5 @@ export async function resolveTradeOffer(offerId: string, action: 'accept' | 'rej
   return supabase.rpc('fn_resolve_trade_offer', {
     p_offer_id: offerId,
     p_action: action,
-  });
-}
-
-// Mutations con invalidación automática de las ofertas y matches.
-export function useCreateTradeOffer() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: createTradeOffer,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trades'] });
-    },
-  });
-}
-
-export function useResolveTradeOffer(albumId?: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (args: { offerId: string; action: 'accept' | 'reject' | 'cancel' }) =>
-      resolveTradeOffer(args.offerId, args.action),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trades'] });
-      // Aceptar transfiere colección — invalidamos el side data del álbum.
-      if (albumId) {
-        qc.invalidateQueries({ queryKey: qk.playerAlbum.sideData(albumId) });
-      }
-    },
   });
 }

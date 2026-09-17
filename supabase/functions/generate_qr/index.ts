@@ -35,12 +35,13 @@ serve(async (req) => {
   const callerId = await getCallerId(userClient(authHeader));
   if (!callerId) return jsonError('auth_required', 401);
 
-  // Service role para leer qr_secret (revoke select(qr_secret) to authenticated)
+  // Service role: para leer el álbum + su qr_secret (que vive en la tabla
+  // aparte album_qr_secrets, sin acceso para anon/authenticated).
   const adminSupabase = adminClient();
 
   const { data: album, error: albErr } = await adminSupabase
     .from('albums')
-    .select('id, owner_id, status, pack_config, qr_secret')
+    .select('id, owner_id, status, pack_config')
     .eq('id', albumId)
     .maybeSingle();
 
@@ -53,12 +54,20 @@ serve(async (req) => {
 
   const qrEnabled = (album.pack_config as any)?.qr?.enabled === true;
   if (!qrEnabled) return jsonError('qr_not_enabled', 422);
-  if (!album.qr_secret) return jsonError('qr_not_configured', 422);
+
+  const { data: secretRow, error: secErr } = await adminSupabase
+    .from('album_qr_secrets')
+    .select('qr_secret')
+    .eq('album_id', albumId)
+    .maybeSingle();
+
+  if (secErr) return jsonError(secErr.message, 500);
+  if (!secretRow?.qr_secret) return jsonError('qr_not_configured', 422);
 
   const nonce = crypto.randomUUID();
   const token = await encodeQrToken(
     { album_id: albumId, nonce, issued_at: new Date().toISOString() },
-    album.qr_secret,
+    secretRow.qr_secret,
   );
 
   return jsonOk({ token });

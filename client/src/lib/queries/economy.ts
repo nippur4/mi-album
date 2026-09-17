@@ -37,7 +37,6 @@ export const DEFAULT_TRADE_CONFIG: TradeConfig = {
 
 // Opciones de UI para pack size (todos), welcome free vs pro, y trade limits.
 export const PACK_SIZE_OPTIONS = [1, 3, 5, 7, 10] as const;
-export type PackSize = (typeof PACK_SIZE_OPTIONS)[number];
 
 export const WELCOME_FREE_OPTIONS = [0, 1, 3] as const;
 export const WELCOME_PRO_OPTIONS = [0, 1, 3, 5, 7, 10] as const;

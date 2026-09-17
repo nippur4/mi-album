@@ -16,6 +16,7 @@ import url from 'node:url';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, '..', 'dist');
+const staticDir = path.resolve(__dirname, '..', 'web-static');
 const oldPath = path.join(distDir, 'assets', 'node_modules');
 const newPath = path.join(distDir, 'assets', 'vendor');
 const bundlesDir = path.join(distDir, '_expo', 'static', 'js', 'web');
@@ -61,4 +62,21 @@ if (fs.existsSync(bundlesDir)) {
   console.log(`[postexport-web] Bundles actualizados: ${touched}/${files.length}`);
 } else {
   console.log(`[postexport-web] No se encontró ${bundlesDir} — nada que reescribir.`);
+}
+
+// Copiar los archivos estáticos "sueltos" (páginas legales, etc.) a dist/.
+// Van servidos como HTML plano en una URL fija (ej: /privacy.html), fuera del
+// routing de la SPA — así el revisor de Play Store y los crawlers los abren
+// directo sin depender de que cargue el bundle de la app.
+if (fs.existsSync(staticDir)) {
+  const entries = fs.readdirSync(staticDir, { withFileTypes: true });
+  let copied = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    fs.copyFileSync(path.join(staticDir, entry.name), path.join(distDir, entry.name));
+    copied++;
+  }
+  console.log(`[postexport-web] Estáticos copiados desde web-static/: ${copied}`);
+} else {
+  console.log(`[postexport-web] No hay web-static/ — skip estáticos.`);
 }

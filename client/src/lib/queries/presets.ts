@@ -4,7 +4,7 @@
 // primero los gradientes locales y abajo las imágenes activas de admin
 // filtradas por kind.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { toAppError } from '@/lib/errors';
@@ -130,22 +130,4 @@ export async function updateAdminPreset(args: {
 
 export async function deleteAdminPreset(id: string) {
   return supabase.rpc('fn_admin_delete_preset', { p_id: id });
-}
-
-// Mutation wrapper: invalida ambos listados (admin ve todos, users ven activos).
-export function useInvalidatePresets() {
-  const qc = useQueryClient();
-  return () => {
-    qc.invalidateQueries({ queryKey: ['admin', 'presets'] });
-    qc.invalidateQueries({ queryKey: ['presets'] });
-  };
-}
-
-export function usePresetMutations() {
-  const invalidate = useInvalidatePresets();
-  return {
-    create: useMutation({ mutationFn: createAdminPreset, onSuccess: invalidate }),
-    update: useMutation({ mutationFn: updateAdminPreset, onSuccess: invalidate }),
-    remove: useMutation({ mutationFn: deleteAdminPreset, onSuccess: invalidate }),
-  };
 }

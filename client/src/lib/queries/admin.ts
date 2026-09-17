@@ -4,7 +4,7 @@
 // fn_set_album_public chequean is_admin). El cliente usa useIsAdmin solo para
 // mostrar/ocultar el acceso al panel — no es una garantía de seguridad.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { qk } from '@/lib/query-client';
@@ -110,18 +110,5 @@ export async function setAlbumPublicRank(albumId: string, rank: number) {
   return supabase.rpc('fn_set_album_public_rank', {
     p_album_id: albumId,
     p_rank: rank,
-  });
-}
-
-export function useSetAlbumPublic() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (args: { albumId: string; isPublic: boolean }) =>
-      setAlbumPublic(args.albumId, args.isPublic),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.admin.albums() });
-      // Los álbumes públicos del Home salen del bundle.
-      qc.invalidateQueries({ queryKey: ['home-bundle'] });
-    },
   });
 }

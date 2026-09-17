@@ -17,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/button';
-import { PresetBackground } from '@/components/preset-background';
+import { MediaBackground } from '@/components/media-background';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
@@ -28,7 +28,7 @@ import {
   pasteSticker,
   type OpenedSticker,
 } from '@/lib/queries/packs';
-import { isPreset, presetIdFromKey, r2Url, thumbFromLargeKey } from '@/lib/storage';
+import { isPreset, r2Url, thumbFromLargeKey } from '@/lib/storage';
 import { albumSfxTheme, initSfx, playSfx } from '@/lib/sfx';
 
 type Phase = 'idle' | 'opening' | 'revealed';
@@ -47,8 +47,7 @@ export default function OpenPackScreen() {
   // estar YA cacheado (la vista del álbum y el tab Sobres renderizan el thumb),
   // así aparece instantáneo. El large (1200px) era una descarga fresca y lenta.
   const packKey = album?.pack_thumb_key ?? album?.pack_large_key;
-  const packUrl = r2Url(packKey);
-  const packPresetId = packKey && isPreset(packKey) ? presetIdFromKey(packKey) : null;
+  const hasPackMedia = !!packKey && (isPreset(packKey) || !!r2Url(packKey));
   const packSize = Number((album?.pack_config as any)?.pack_size ?? 5);
   // El álbum especial (number_start=0, 1001 figuritas) no muestra número ni
   // nombre en la reveal: son irrelevantes ahí y tapan la figurita. Sí la rareza.
@@ -288,20 +287,19 @@ export default function OpenPackScreen() {
         <Text style={styles.idleKicker}>SOBRE DISPONIBLE</Text>
         <Pressable onPress={handleOpen} disabled={phase !== 'idle' || !packId}>
           <Animated.View style={[styles.envelope, envelopeStyle]}>
-            {packUrl ? (
-              <Image source={{ uri: packUrl }} style={StyleSheet.absoluteFill} contentFit="cover" />
-            ) : packPresetId ? (
-              <PresetBackground id={packPresetId} />
-            ) : (
-              <LinearGradient
-                colors={[Colors.red, Colors.redDark]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-              />
-            )}
+            <MediaBackground
+              mediaKey={packKey}
+              fallback={
+                <LinearGradient
+                  colors={[Colors.red, Colors.redDark]}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                />
+              }
+            />
             {/* Scrim para que los textos se lean sobre foto/preset */}
-            {(packUrl || packPresetId) && (
+            {hasPackMedia && (
               <LinearGradient
                 colors={['rgba(0,0,0,0.40)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.60)']}
                 style={StyleSheet.absoluteFill}

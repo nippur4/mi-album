@@ -1,6 +1,6 @@
 // Mutations sobre stickers (RPCs del backend) + hook de lectura.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { qk } from '@/lib/query-client';
@@ -64,42 +64,6 @@ export async function swapStickerPositions(albumId: string, numberA: number, num
     p_album_id: albumId,
     p_number_a: numberA,
     p_number_b: numberB,
-  });
-}
-
-// Helpers de mutation con invalidación automática del detail del álbum.
-export function useAddSticker(albumId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: addSticker,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
-      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
-      qc.invalidateQueries({ queryKey: ['stickers', 'index', albumId] });
-    },
-  });
-}
-
-export function useUpdateSticker(albumId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: updateSticker,
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: qk.stickers.one(vars.sticker_id) });
-      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
-    },
-  });
-}
-
-export function useDeleteSticker(albumId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: deleteSticker,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
-      qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
-      qc.invalidateQueries({ queryKey: ['stickers', 'index', albumId] });
-    },
   });
 }
 

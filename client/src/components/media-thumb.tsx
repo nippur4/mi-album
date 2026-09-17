@@ -1,19 +1,10 @@
-// Thumbnail unificado para carátulas de álbum y sobres.
-// Reemplazó AlbumThumb (album-card), PackThumb (daily-album-row) y el bloque
-// interno de FloatingPack — los tres tenían la misma lógica con paletas
-// duplicadas.
-//
-// Renderiza en orden de prioridad:
-//   1. Preset (gradient) si mediaKey es "preset:X"
-//   2. Imagen R2 si mediaKey es una key válida
-//   3. Fallback: bloque de color hasheado desde `seed` con la inicial
+// Thumbnail para carátulas y sobres: MediaBackground + fallback de color
+// hasheado desde `seed` con la inicial.
 
-import { Image } from 'expo-image';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { PresetBackground } from '@/components/preset-background';
-import { Colors, FontFamily, Radius } from '@/constants/theme';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { MediaBackground } from '@/components/media-background';
+import { Colors, FontFamily } from '@/constants/theme';
 import { fallbackBgFor, initialOf } from '@/lib/thumb-fallback';
 
 interface Props {
@@ -41,37 +32,18 @@ export function MediaThumb({
   style,
 }: Props) {
   const height = width / aspect;
-  const radius = borderRadius ?? Radius.card;
-  const containerStyle = [
-    styles.container,
-    { width, height, borderRadius },
-    style,
-  ];
-
-  if (mediaKey && isPreset(mediaKey)) {
-    return (
-      <View style={containerStyle}>
-        <PresetBackground id={presetIdFromKey(mediaKey)} />
-      </View>
-    );
-  }
-
-  const url = r2Url(mediaKey);
-  if (url) {
-    return (
-      <View style={containerStyle}>
-        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      </View>
-    );
-  }
-
-  const bg = fallbackBgFor(seed);
-  const initial = initialOf(seed);
   const fontSize = fallbackFontSize ?? Math.round(width * 0.55);
 
   return (
-    <View style={[containerStyle, { backgroundColor: bg }]}>
-      <Text style={[styles.initial, { fontSize }]}>{initial}</Text>
+    <View style={[styles.container, { width, height, borderRadius }, style]}>
+      <MediaBackground
+        mediaKey={mediaKey}
+        fallback={
+          <View style={[StyleSheet.absoluteFill, styles.fallback, { backgroundColor: fallbackBgFor(seed) }]}>
+            <Text style={[styles.initial, { fontSize }]}>{initialOf(seed)}</Text>
+          </View>
+        }
+      />
     </View>
   );
 }
@@ -80,6 +52,8 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     backgroundColor: Colors.paper2,
+  },
+  fallback: {
     alignItems: 'center',
     justifyContent: 'center',
   },

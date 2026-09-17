@@ -1,12 +1,10 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PresetBackground } from '@/components/preset-background';
+import { MediaBackground } from '@/components/media-background';
 import { ProgressBar } from '@/components/progress-bar';
 import { Colors, FontFamily, Radius, Shadow, Spacing } from '@/constants/theme';
-import { getPreset } from '@/lib/presets';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { r2Url } from '@/lib/storage';
 
 // Solo los campos que la card renderiza — compatible con el Album completo
 // y con la proyección mínima del bundle del Home (HomeAlbum).
@@ -29,12 +27,7 @@ interface Props {
 // Gradient (o foto) + tag PÚBLICO + total gold + nombre Anton grande + barra
 // + contador "X/N · P%". Texto blanco siempre encima.
 export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props) {
-  const url = r2Url(album.cover_large_key);
-  const presetId = isPreset(album.cover_large_key) ? presetIdFromKey(album.cover_large_key!) : null;
-  const preset = presetId ? getPreset(presetId) : null;
-
-  // Tinte de fallback si no hay imagen ni preset
-  const fallbackColors: [string, string] = [Colors.red, Colors.redDark];
+  const hasPhoto = !!r2Url(album.cover_large_key);
 
   const pctText = counter
     ? `${counter.current}/${counter.total} · ${Math.round((counter.current / counter.total) * 100)}%`
@@ -46,21 +39,19 @@ export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props
 
   return (
     <Pressable onPress={onPress} style={styles.card}>
-      {/* Capa de fondo */}
-      {url ? (
-        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : preset ? (
-        <PresetBackground id={preset.id} />
-      ) : (
-        <LinearGradient
-          colors={fallbackColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      {/* Overlay sutil para mejorar legibilidad sobre fotos */}
-      {url && (
+      <MediaBackground
+        mediaKey={album.cover_large_key}
+        fallback={
+          <LinearGradient
+            colors={[Colors.red, Colors.redDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        }
+      />
+      {/* Scrim para legibilidad del texto sobre fotos */}
+      {hasPhoto && (
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.45)']}
           start={{ x: 0, y: 0.3 }}

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -39,6 +39,29 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_qr_secrets: {
+        Row: {
+          album_id: string
+          qr_secret: string
+        }
+        Insert: {
+          album_id: string
+          qr_secret: string
+        }
+        Update: {
+          album_id?: string
+          qr_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_qr_secrets_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: true
+            referencedRelation: "albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       albums: {
         Row: {
           cover_large_key: string | null
@@ -60,7 +83,6 @@ export type Database = {
           page_texture: string
           public_rank: number
           published_at: string | null
-          qr_secret: string | null
           retired_at: string | null
           share_code: string
           status: Database["public"]["Enums"]["album_status"]
@@ -87,7 +109,6 @@ export type Database = {
           page_texture?: string
           public_rank?: number
           published_at?: string | null
-          qr_secret?: string | null
           retired_at?: string | null
           share_code: string
           status?: Database["public"]["Enums"]["album_status"]
@@ -114,7 +135,6 @@ export type Database = {
           page_texture?: string
           public_rank?: number
           published_at?: string | null
-          qr_secret?: string | null
           retired_at?: string | null
           share_code?: string
           status?: Database["public"]["Enums"]["album_status"]
@@ -223,6 +243,29 @@ export type Database = {
           },
         ]
       }
+      profile_push_tokens: {
+        Row: {
+          push_token: string
+          user_id: string
+        }
+        Insert: {
+          push_token: string
+          user_id: string
+        }
+        Update: {
+          push_token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_thumb_key: string | null
@@ -231,7 +274,6 @@ export type Database = {
           display_name: string
           id: string
           is_admin: boolean
-          push_token: string | null
         }
         Insert: {
           avatar_thumb_key?: string | null
@@ -240,7 +282,6 @@ export type Database = {
           display_name: string
           id: string
           is_admin?: boolean
-          push_token?: string | null
         }
         Update: {
           avatar_thumb_key?: string | null
@@ -249,7 +290,6 @@ export type Database = {
           display_name?: string
           id?: string
           is_admin?: boolean
-          push_token?: string | null
         }
         Relationships: []
       }
@@ -759,7 +799,6 @@ export type Database = {
           page_texture: string
           public_rank: number
           published_at: string | null
-          qr_secret: string | null
           retired_at: string | null
           share_code: string
           status: Database["public"]["Enums"]["album_status"]

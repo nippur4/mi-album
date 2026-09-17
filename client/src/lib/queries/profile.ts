@@ -6,7 +6,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import { createElement } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
@@ -73,20 +73,4 @@ export async function updateDisplayName(newName: string) {
 // el param y aplica el default null del RPC (migración 0056).
 export async function updateAvatar(thumbKey: string | null) {
   return supabase.rpc('fn_update_avatar', { p_thumb_key: thumbKey ?? undefined });
-}
-
-export function useUpdateDisplayName() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: updateDisplayName,
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.profile.me() }),
-  });
-}
-
-export function useUpdateAvatar() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: updateAvatar,
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.profile.me() }),
-  });
 }

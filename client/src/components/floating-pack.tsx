@@ -6,7 +6,6 @@
 // R2). Fallback: sobre con icono si no hay thumb todavía.
 
 import Feather from '@expo/vector-icons/Feather';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -19,9 +18,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { PresetBackground } from '@/components/preset-background';
+import { MediaBackground } from '@/components/media-background';
 import { Colors, Radius } from '@/constants/theme';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
 
 interface Props {
   packThumbKey?: string | null;
@@ -54,27 +52,20 @@ export function FloatingPack({ packThumbKey, size = 90 }: Props) {
     ],
   }));
 
-  const url = r2Url(packThumbKey);
-  const preset = packThumbKey && isPreset(packThumbKey) ? presetIdFromKey(packThumbKey) : null;
-
   return (
     <Animated.View style={[styles.wrap, { width: size, height: size * 4 / 3 }, animatedStyle]}>
       <View style={styles.pack}>
-        {preset ? (
-          <PresetBackground id={preset} />
-        ) : url ? (
-          <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-        ) : (
-          <LinearGradient
-            colors={[Colors.gold, '#B8871B']}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
-        {!url && !preset && (
-          <View style={styles.fallbackIcon}>
-            <Feather name="mail" size={size * 0.35} color={Colors.paper} />
-          </View>
-        )}
+        <MediaBackground
+          mediaKey={packThumbKey}
+          fallback={
+            <>
+              <LinearGradient colors={[Colors.gold, '#B8871B']} style={StyleSheet.absoluteFill} />
+              <View style={styles.fallbackIcon}>
+                <Feather name="mail" size={size * 0.35} color={Colors.paper} />
+              </View>
+            </>
+          }
+        />
       </View>
     </Animated.View>
   );

@@ -44,24 +44,33 @@ serve(async (req) => {
     return jsonError('invalid_token', 400);
   }
 
-  // Service-role para leer qr_secret (no expuesto vía RLS).
+  // Service-role: para leer el álbum + su qr_secret (en la tabla aparte
+  // album_qr_secrets, sin acceso para anon/authenticated).
   const adminSupabase = adminClient();
 
   const { data: album, error: albErr } = await adminSupabase
     .from('albums')
-    .select('id, status, qr_secret')
+    .select('id, status')
     .eq('id', albumIdGuess)
     .maybeSingle();
 
   if (albErr) return jsonError(albErr.message, 500);
   if (!album) return jsonError('album_not_found', 404);
-  if (!album.qr_secret) return jsonError('qr_not_configured', 422);
   if (album.status !== 'published') {
     return jsonError(`album_not_available_${album.status}`, 403);
   }
 
+  const { data: secretRow, error: secErr } = await adminSupabase
+    .from('album_qr_secrets')
+    .select('qr_secret')
+    .eq('album_id', album.id)
+    .maybeSingle();
+
+  if (secErr) return jsonError(secErr.message, 500);
+  if (!secretRow?.qr_secret) return jsonError('qr_not_configured', 422);
+
   // Validar firma HMAC.
-  const payload = await decodeQrToken(token, album.qr_secret);
+  const payload = await decodeQrToken(token, secretRow.qr_secret);
   if (!payload) return jsonError('invalid_signature', 401);
   if (payload.album_id !== album.id) return jsonError('token_album_mismatch', 400);
 

@@ -1,12 +1,11 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
 
-import { PresetBackground } from '@/components/preset-background';
+import { MediaBackground } from '@/components/media-background';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { isPreset, r2Url } from '@/lib/storage';
 
 interface Props {
   // key actual de la imagen subida (thumb_key). null si no hay imagen.
@@ -71,25 +70,23 @@ export function ImageUploadCard({
     }
   }
 
-  const url = r2Url(largeKey ?? thumbKey);
-  const isPresetKey = isPreset(thumbKey);
+  const mediaKey = largeKey ?? thumbKey;
   const showLoader = busy || picking;
   const ratio = aspect[0] / aspect[1];
-  const hasContent = isPresetKey || !!url;
+  const hasContent = isPreset(mediaKey) || !!r2Url(mediaKey);
 
   return (
     <Pressable onPress={pick} disabled={showLoader} style={[styles.card, { aspectRatio: ratio }]}>
-      {isPresetKey ? (
-        <PresetBackground id={presetIdFromKey(thumbKey!)} />
-      ) : url ? (
-        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
-      ) : (
-        <View style={styles.empty}>
-          <Text style={styles.plus}>+</Text>
-          <Text style={styles.label}>{label}</Text>
-          {hint && <Text style={styles.hint}>{hint}</Text>}
-        </View>
-      )}
+      <MediaBackground
+        mediaKey={mediaKey}
+        fallback={
+          <View style={styles.empty}>
+            <Text style={styles.plus}>+</Text>
+            <Text style={styles.label}>{label}</Text>
+            {hint && <Text style={styles.hint}>{hint}</Text>}
+          </View>
+        }
+      />
       {/* Badge arriba con el label, visible siempre que haya contenido. Sin
           contenido el label central ya lo cubre, así no duplicamos. */}
       {hasContent && (

@@ -4,10 +4,7 @@
 // packs-tab (bundle Home Sobres). Este archivo mantiene el tipo, el parser
 // del shape crudo de las RPCs y la mutation para reclamar.
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import { supabase } from '@/lib/supabase';
-import { qk } from '@/lib/query-client';
 
 export interface DailyPackStatus {
   enabled: boolean;
@@ -42,18 +39,5 @@ export async function setDailyMuted(albumId: string, muted: boolean) {
   return supabase.rpc('fn_set_daily_muted', {
     p_album_id: albumId,
     p_muted: muted,
-  });
-}
-
-// Wrapper de mutation: al reclamar, invalida el bundle Home Sobres y el
-// sidedata del álbum (ambos exponen el daily y packs disponibles).
-export function useClaimDailyPack() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (albumId: string) => claimDailyPack(albumId),
-    onSuccess: (_data, albumId) => {
-      qc.invalidateQueries({ queryKey: ['packs-tab'] });
-      qc.invalidateQueries({ queryKey: qk.playerAlbum.sideData(albumId) });
-    },
   });
 }
