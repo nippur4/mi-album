@@ -1,34 +1,23 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
-import { Alert } from '@/lib/alert';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar } from '@/components/avatar';
 import { ScreenHeader } from '@/components/screen-header';
-import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { setAlbumPublic, setAlbumPublicRank, useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
+import { useAdminAlbums, useAdminReports } from '@/lib/queries/admin';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
-import { errorMessage } from '@/lib/errors';
 
 export default function AdminScreen() {
   const router = useRouter();
   const desktopCap = useDesktopCap(960);
-  const { albums, isLoading, isRefetching, error, refetch } = useAdminAlbums();
+  // Contadores para los badges de las secciones de moderación.
+  const { reports } = useAdminReports();
+  const { albums } = useAdminAlbums();
+  const pendingPublic = albums.filter((a) => !!a.public_requested_at && !a.is_public).length;
 
-  useFocusRefetchStale(['admin', 'albums']);
+  useFocusRefetchStale(['admin', 'albums'], ['admin', 'reports']);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -38,199 +27,89 @@ export default function AdminScreen() {
           back
           right={<Feather name="shield" size={20} color={Colors.ink} />}
         />
-        <View style={styles.intro}>
-          <Text style={styles.introText}>
-            Marcá un álbum publicado como público para que aparezca en el carrusel del Landing.
-            Los borradores y pausados no pueden volverse públicos hasta que el owner los publique.
-          </Text>
-        </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.scroll, desktopCap]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.red} />
-        }
-      >
-        <Pressable
-          onPress={() => router.push('/admin/presets')}
-          style={styles.menuItem}
-        >
-          <Feather name="image" size={20} color={Colors.ink} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.menuTitle}>Plantillas de imágenes</Text>
-            <Text style={styles.menuSubtitle}>
-              Carátulas y sobres por defecto disponibles para todos los owners.
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={20} color={Colors.muted} />
-        </Pressable>
+      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
+        <Text style={styles.sectionLabel}>MODERACIÓN</Text>
 
-        <Pressable
-          // Cast: la ruta recién entra a los tipos generados de expo-router
-          // cuando el dev server la descubre (próximo `expo start`).
+        <MenuItem
+          icon="globe"
+          title="Gestionar álbumes públicos"
+          subtitle="Álbumes en el carrusel del inicio + solicitudes para ser público."
+          badge={pendingPublic || undefined}
+          onPress={() => router.push('/admin/public' as any)}
+        />
+        <MenuItem
+          icon="flag"
+          title="Reports"
+          subtitle="Álbumes reportados por los usuarios, con el motivo de cada reporte."
+          badge={reports.length || undefined}
+          onPress={() => router.push('/admin/reports' as any)}
+        />
+        <MenuItem
+          icon="shield"
+          title="Moderar álbumes"
+          subtitle="Todos los álbumes, con buscador. Bloquear (reversible) o eliminar."
+          onPress={() => router.push('/admin/moderate' as any)}
+        />
+
+        <Text style={[styles.sectionLabel, { marginTop: Spacing.md }]}>HERRAMIENTAS</Text>
+
+        <MenuItem
+          icon="bar-chart-2"
+          title="Estadísticas"
+          subtitle="Usuarios, actividad diaria, álbumes, figuritas, sobres y cambios."
           onPress={() => router.push('/admin/stats' as any)}
-          style={styles.menuItem}
-        >
-          <Feather name="bar-chart-2" size={20} color={Colors.ink} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.menuTitle}>Estadísticas</Text>
-            <Text style={styles.menuSubtitle}>
-              Usuarios, actividad diaria, álbumes, figuritas, sobres y cambios.
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={20} color={Colors.muted} />
-        </Pressable>
-
-        <Pressable
+        />
+        <MenuItem
+          icon="trash-2"
+          title="Limpieza de imágenes"
+          subtitle="Detecta y borra imágenes huérfanas de R2 (análisis primero, sin riesgo)."
           onPress={() => router.push('/admin/cleanup' as any)}
-          style={styles.menuItem}
-        >
-          <Feather name="trash-2" size={20} color={Colors.ink} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.menuTitle}>Limpieza de imágenes</Text>
-            <Text style={styles.menuSubtitle}>
-              Detecta y borra imágenes huérfanas de R2 (análisis primero, sin riesgo).
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={20} color={Colors.muted} />
-        </Pressable>
-
-        <Text style={styles.sectionLabel}>ÁLBUMES</Text>
-
-        {error ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>{errorMessage({ message: error })}</Text>
-          </View>
-        ) : isLoading && albums.length === 0 ? (
-          <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
-        ) : albums.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No hay álbumes publicados todavía.</Text>
-            <Text style={styles.emptyBody}>
-              Cuando algún owner publique un álbum, lo vas a ver acá.
-            </Text>
-          </View>
-        ) : (
-          <View style={{ gap: Spacing.listGap }}>
-            {albums.map((a) => (
-              <AdminAlbumRowItem key={a.id} row={a} onChanged={refetch} />
-            ))}
-          </View>
-        )}
+        />
+        <MenuItem
+          icon="image"
+          title="Plantillas de imágenes"
+          subtitle="Carátulas y sobres por defecto disponibles para todos los owners."
+          onPress={() => router.push('/admin/presets')}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function AdminAlbumRowItem({ row, onChanged }: { row: AdminAlbumRow; onChanged: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [optimistic, setOptimistic] = useState<boolean>(row.is_public);
-  // Orden en el carrusel (mayor = aparece antes). Optimista para respuesta ágil.
-  const [rank, setRank] = useState<number>(row.public_rank);
-  const [rankBusy, setRankBusy] = useState(false);
-
-  // Solo álbumes published pueden ser públicos (el RPC también lo enforza).
-  const canToggle = row.status === 'published';
-
-  async function onToggle(next: boolean) {
-    setOptimistic(next);
-    setBusy(true);
-    const { error } = await setAlbumPublic(row.id, next);
-    setBusy(false);
-    if (error) {
-      setOptimistic(row.is_public);
-      Alert.alert('No se pudo cambiar', errorMessage(error));
-      return;
-    }
-    onChanged();
-  }
-
-  async function changeRank(delta: number) {
-    const next = Math.max(0, rank + delta);
-    if (next === rank) return;
-    const prev = rank;
-    setRank(next);
-    setRankBusy(true);
-    const { error } = await setAlbumPublicRank(row.id, next);
-    setRankBusy(false);
-    if (error) {
-      setRank(prev);
-      // Inline no hace falta acá (admin desktop-first); Alert cubre native.
-      Alert.alert('No se pudo cambiar el orden', errorMessage(error));
-      return;
-    }
-    onChanged();
-  }
-
+function MenuItem({
+  icon,
+  title,
+  subtitle,
+  badge,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  title: string;
+  subtitle: string;
+  badge?: number;
+  onPress: () => void;
+}) {
   return (
-    <View style={styles.rowCol}>
-      <View style={styles.row}>
-        <Avatar source={row.name} size={42} />
-        <View style={styles.center2}>
-          <Text style={styles.name} numberOfLines={1}>{row.name}</Text>
-          <View style={styles.badgeRow}>
-            <StatusBadge variant={row.status as any} />
-          </View>
-          <Text style={styles.meta}>
-            {row.total_stickers} figus · @{row.owner_name} · {row.member_count} jugando
-          </Text>
-        </View>
-        <Switch
-          value={optimistic}
-          onValueChange={onToggle}
-          disabled={busy || !canToggle}
-          trackColor={{ true: Colors.green, false: Colors.paper3 }}
-          thumbColor={optimistic ? Colors.paper : Colors.paper2}
-        />
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.menuItem, pressed && { opacity: 0.7 }]}>
+      <Feather name={icon} size={20} color={Colors.ink} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={styles.menuSubtitle}>{subtitle}</Text>
       </View>
-
-      {/* Orden del carrusel: solo tiene sentido para públicos. Mayor = antes. */}
-      {optimistic && (
-        <View style={styles.rankRow}>
-          <Text style={styles.rankLabel}>ORDEN EN EL CARRUSEL</Text>
-          <View style={styles.rankControl}>
-            <Pressable
-              onPress={() => changeRank(-1)}
-              disabled={rankBusy || rank === 0}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.rankBtn,
-                (rankBusy || rank === 0) && styles.rankBtnDisabled,
-                pressed && { opacity: 0.6 },
-              ]}
-            >
-              <Feather name="minus" size={16} color={Colors.ink} />
-            </Pressable>
-            <Text style={styles.rankValue}>{rank}</Text>
-            <Pressable
-              onPress={() => changeRank(1)}
-              disabled={rankBusy}
-              hitSlop={8}
-              style={({ pressed }) => [styles.rankBtn, pressed && { opacity: 0.6 }]}
-            >
-              <Feather name="plus" size={16} color={Colors.ink} />
-            </Pressable>
-          </View>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
         </View>
-      )}
-    </View>
+      ) : null}
+      <Feather name="chevron-right" size={20} color={Colors.muted} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
-  intro: {
-    paddingHorizontal: Spacing.screenX,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-  },
-  introText: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    lineHeight: 18,
-  },
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingBottom: Spacing.xxl,
@@ -265,100 +144,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: Spacing.sm,
   },
-  center: {
-    paddingTop: Spacing.xxl,
-    alignItems: 'center',
-  },
-  empty: {
-    paddingTop: Spacing.xxl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  errorText: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    color: Colors.red,
-    textAlign: 'center',
-  },
-  rowCol: {
-    backgroundColor: Colors.paper2,
-    borderRadius: Radius.cardLg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: Spacing.sm,
-  },
-  rankLabel: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.monoLabelSmall,
-    color: Colors.muted,
-    letterSpacing: 1.2,
-  },
-  rankControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  rankBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.red,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 6,
   },
-  rankBtnDisabled: {
-    opacity: 0.35,
-  },
-  rankValue: {
+  badgeText: {
     fontFamily: FontFamily.mono,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-    minWidth: 24,
-    textAlign: 'center',
-  },
-  center2: { flex: 1, gap: 4 },
-  badgeRow: { flexDirection: 'row', marginVertical: 2 },
-  name: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  meta: {
-    fontFamily: FontFamily.mono,
-    fontSize: 10,
-    color: Colors.muted,
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.paper,
   },
 });

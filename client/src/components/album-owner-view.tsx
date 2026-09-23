@@ -28,6 +28,7 @@ import { PackProbabilityCard } from '@/components/pack-probability-card';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
 import { ProgressCard } from '@/components/progress-card';
 import { QrPosterModal } from '@/components/qr-poster-modal';
+import { RequestPublicModal } from '@/components/request-public-modal';
 import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { StickerCell, StickerCellEmpty } from '@/components/sticker-cell';
@@ -36,6 +37,7 @@ import {
   albumNumberStart,
   albumPlayerCount,
   archiveAlbumByOwner,
+  cancelAlbumPublicRequest,
   joinAlbumByCode,
   joinLinkFor,
   PROTECTED_ALBUM_IDS,
@@ -46,6 +48,8 @@ import {
   type Sticker,
 } from '@/lib/queries/albums';
 import { supabase } from '@/lib/supabase';
+import { downloadAlbumPdf } from '@/lib/album-pdf';
+import { nextDownloadLabel } from '@/lib/download-limit';
 import { useSession } from '@/lib/auth';
 import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackConfig, type TradeConfig } from '@/lib/queries/economy';
 import { proFeatureHint } from '@/lib/upsell-copy';
@@ -106,6 +110,9 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [reorderFrom, setReorderFrom] = useState<number | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [publicBusy, setPublicBusy] = useState(false);
+  const [requestingPublic, setRequestingPublic] = useState(false);
   // Estado "yo me joineé como jugador a mi propio álbum" (Fase 10).
   const [isJoinedAsPlayer, setIsJoinedAsPlayer] = useState<boolean | null>(null);
   const [joiningToPlay, setJoiningToPlay] = useState(false);
@@ -348,6 +355,46 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     await refetch();
   }
 
+  // Descargar el álbum como PDF. Desde el editor incluimos TODAS las figuritas
+  // cargadas (a diferencia de la vista jugador, que solo baja las pegadas).
+  async function onDownloadPdf() {
+    if (downloading || stickers.length === 0) return;
+    setDownloading(true);
+    try {
+      const res = await downloadAlbumPdf({
+        album,
+        stickers,
+        subtitle: `${stickers.length} figurita${stickers.length === 1 ? '' : 's'}`,
+        userId: session?.user.id ?? '',
+      });
+      if (res.status === 'rate-limited') {
+        Alert.alert(
+          'Ya lo descargaste esta semana',
+          `Podés volver a descargar este álbum ${nextDownloadLabel(res.nextAt)}.`,
+        );
+      } else if (res.status === 'ad-skipped') {
+        Alert.alert('Descarga cancelada', 'Mirá la propaganda completa para descargar el álbum.');
+      }
+    } catch (err: any) {
+      Alert.alert('No se pudo descargar', errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  // Retirar la solicitud de público (la de enviar la maneja RequestPublicModal).
+  async function onCancelPublicRequest() {
+    if (publicBusy) return;
+    setPublicBusy(true);
+    const { error } = await cancelAlbumPublicRequest(album.id);
+    setPublicBusy(false);
+    if (error) {
+      Alert.alert('No se pudo cancelar', errorMessage(error));
+      return;
+    }
+    await refetch();
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={desktopCap}>
@@ -399,6 +446,16 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 setEnablingQr(false);
               }
             }}
+          />
+        )}
+
+        {album.status === 'published' && (
+          <PublicSection
+            isPublic={album.is_public === true}
+            requested={!!(album as any).public_requested_at}
+            busy={publicBusy}
+            onRequest={() => setRequestingPublic(true)}
+            onCancel={onCancelPublicRequest}
           />
         )}
 
@@ -582,6 +639,19 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 </Text>
               </Pressable>
             )}
+            {stickers.length > 0 && (
+              <Pressable
+                onPress={onDownloadPdf}
+                disabled={downloading}
+                hitSlop={6}
+                style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+              >
+                <Feather name="download" size={12} color={Colors.ink} />
+                <Text style={styles.editPillText}>
+                  {downloading ? 'Generando…' : 'Descargar álbum'}
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {reorderMode && (
@@ -759,6 +829,13 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         onClose={() => setShowQr(false)}
       />
 
+      <RequestPublicModal
+        visible={requestingPublic}
+        albumId={album.id}
+        onClose={() => setRequestingPublic(false)}
+        onRequested={() => refetch()}
+      />
+
       <EditEconomyModal
         visible={editingEconomy}
         albumId={album.id}
@@ -894,6 +971,103 @@ function economyDescription(cfg: PackConfig, trade?: TradeConfig): string {
   if (tradeTxt) parts.push(tradeTxt);
   return parts.join(' · ');
 }
+
+// Sección "Álbum público": el owner solicita aparecer en el carrusel del inicio;
+// un admin aprueba. Tres estados: ya público / solicitud pendiente / sin pedir.
+function PublicSection({
+  isPublic,
+  requested,
+  busy,
+  onRequest,
+  onCancel,
+}: {
+  isPublic: boolean;
+  requested: boolean;
+  busy: boolean;
+  onRequest: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <View style={pubStyles.card}>
+      <View style={pubStyles.head}>
+        <Text style={pubStyles.label}>ÁLBUM PÚBLICO</Text>
+        {isPublic && <Text style={pubStyles.liveBadge}>EN EL CARRUSEL</Text>}
+      </View>
+      {isPublic ? (
+        <Text style={pubStyles.hint}>
+          Tu álbum aparece en la sección "Álbumes públicos" del inicio, visible para
+          cualquiera. Si querés sacarlo, escribinos.
+        </Text>
+      ) : requested ? (
+        <>
+          <Text style={pubStyles.hint}>
+            Enviaste la solicitud. Un moderador la va a revisar antes de publicarlo en
+            la sección pública.
+          </Text>
+          <Button
+            label={busy ? '...' : 'Cancelar solicitud'}
+            variant="outline"
+            onPress={onCancel}
+            disabled={busy}
+            loading={busy}
+          />
+        </>
+      ) : (
+        <>
+          <Text style={pubStyles.hint}>
+            Pedí que tu álbum aparezca en la sección pública del inicio, para que lo
+            descubra cualquiera. Lo revisa un moderador antes de publicarlo.
+          </Text>
+          <Button
+            label={busy ? '...' : 'Solicitar ser público'}
+            onPress={onRequest}
+            disabled={busy}
+            loading={busy}
+          />
+        </>
+      )}
+    </View>
+  );
+}
+
+const pubStyles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.paper2,
+    borderRadius: Radius.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  head: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  label: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  liveBadge: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    color: Colors.paper,
+    backgroundColor: Colors.green,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    letterSpacing: 1.2,
+    fontWeight: '800',
+  },
+  hint: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.bodySmall,
+    color: Colors.inkSoft,
+  },
+});
 
 // Sección QR de sobres: muestra el botón apropiado según estado pro + qr_enabled.
 function QrSection({

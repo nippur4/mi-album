@@ -20,6 +20,8 @@ import { ScreenHeader } from '@/components/screen-header';
 import { StickerCell, StickerCellMissing } from '@/components/sticker-cell';
 import { ToPasteCard } from '@/components/to-paste-card';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { downloadAlbumPdf } from '@/lib/album-pdf';
+import { nextDownloadLabel } from '@/lib/download-limit';
 import { useSession } from '@/lib/auth';
 import {
   albumNumberStart,
@@ -171,6 +173,7 @@ export function UserAlbumView({ album, stickers }: Props) {
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const [pocketQuery, setPocketQuery] = useState('');
   const [pocketPage, setPocketPage] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   // Moderación: reportar el álbum o bloquear a su creador (dejar de verlo).
   const [reporting, setReporting] = useState(false);
@@ -224,6 +227,38 @@ export function UserAlbumView({ album, stickers }: Props) {
     qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
     qc.invalidateQueries({ queryKey: ['avatars', 'unlocks'] });
     setJustPastedId(stickerId);
+  }
+
+  // Descargar el álbum como PDF. Desde la vista jugador incluimos SOLO las
+  // figuritas pegadas al momento (la colección real del jugador).
+  async function onDownloadPdf() {
+    if (downloading) return;
+    const pasted = stickers.filter((s) => collection.get(s.id)?.pasted);
+    if (pasted.length === 0) {
+      Alert.alert('Nada para descargar', 'Todavía no pegaste ninguna figurita en este álbum.');
+      return;
+    }
+    setDownloading(true);
+    try {
+      const res = await downloadAlbumPdf({
+        album,
+        stickers: pasted,
+        subtitle: `Mi colección · ${pasted.length} / ${album.total_stickers}`,
+        userId: session?.user.id ?? '',
+      });
+      if (res.status === 'rate-limited') {
+        Alert.alert(
+          'Ya lo descargaste esta semana',
+          `Podés volver a descargar este álbum ${nextDownloadLabel(res.nextAt)}.`,
+        );
+      } else if (res.status === 'ad-skipped') {
+        Alert.alert('Descarga cancelada', 'Mirá la propaganda completa para descargar el álbum.');
+      }
+    } catch (err: any) {
+      Alert.alert('No se pudo descargar', errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
   }
 
   let myPastedCount = 0;
@@ -284,11 +319,11 @@ export function UserAlbumView({ album, stickers }: Props) {
           right={
             isOwnerViewing ? (
               <Pressable
-                onPress={() => router.replace(`/album/${album.id}`)}
+                onPress={() => router.replace(`/album/${album.id}?as=edit`)}
                 hitSlop={8}
                 style={styles.configLink}
               >
-                <Text style={styles.configLinkText}>Config</Text>
+                <Text style={styles.configLinkText}>Editar</Text>
               </Pressable>
             ) : undefined
           }
@@ -410,6 +445,16 @@ export function UserAlbumView({ album, stickers }: Props) {
             label="Ver cambios posibles"
             variant="outline"
             onPress={() => router.push(`/trade/matches?albumId=${album.id}`)}
+          />
+        )}
+
+        {isMember && myPastedCount > 0 && (
+          <Button
+            label={downloading ? 'Generando…' : 'Descargar mi álbum (PDF)'}
+            variant="outline"
+            onPress={onDownloadPdf}
+            disabled={downloading}
+            loading={downloading}
           />
         )}
 

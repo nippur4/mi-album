@@ -22,6 +22,9 @@ export type AppErrorKey =
   | 'not_album_owner'
   | 'album_not_draft'
   | 'album_not_published'
+  | 'album_already_public'
+  | 'public_reason_required'
+  | 'album_blocked'
   | 'album_economy_locked'
   | 'album_cover_required'
   | 'album_pack_image_required'
@@ -106,6 +109,8 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0063: 'sticker_number_missing',
   P0070: 'admin_required',
   P0071: 'album_not_published',
+  P0072: 'album_already_public',
+  P0074: 'public_reason_required',
   P0080: 'share_code_required',
   P0081: 'owner_cannot_join_own_album',
   P0082: 'album_not_available',
@@ -148,6 +153,7 @@ const SQLSTATE_TO_KEY: Record<string, AppErrorKey> = {
   P0201: 'album_protected',
   P0210: 'ad_limit_reached',
   P0211: 'ad_not_available',
+  P0304: 'album_blocked',
 };
 
 export interface AppError {
@@ -187,6 +193,9 @@ export const ERROR_COPY: Record<AppErrorKey, string> = {
   not_album_owner: 'No sos el dueño de este álbum.',
   album_not_draft: 'El álbum ya fue publicado y no puede editarse.',
   album_not_published: 'El álbum aún no está publicado.',
+  album_already_public: 'Este álbum ya es público.',
+  public_reason_required: 'Contanos por qué querés que tu álbum sea público.',
+  album_blocked: 'Este álbum fue bloqueado por moderación.',
   album_economy_locked: 'Las opciones del álbum están bloqueadas.',
   album_cover_required: 'Cargá una carátula antes de publicar.',
   album_pack_image_required: 'Cargá una imagen para el sobre antes de publicar.',

@@ -121,7 +121,9 @@ export function useNotificationTapResponder() {
           return;
         case 'album_joined':
           if (data.album_id) {
-            router.push(`/album/${data.album_id}`);
+            // Notif para el OWNER (se unió un jugador): lo llevamos a la vista
+            // de gestión, no a la de jugar (owner+published defaultea a jugar).
+            router.push(`/album/${data.album_id}?as=edit`);
           }
           return;
       }

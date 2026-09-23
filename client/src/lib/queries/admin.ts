@@ -23,6 +23,28 @@ export interface AdminAlbumRow {
   member_count: number;
   // Orden en el carrusel de públicos: mayor = aparece antes (0 = sin fijar).
   public_rank: number;
+  // Solicitud del owner de ser público (null = sin pedido). Ver migración 0074.
+  public_requested_at: string | null;
+  // Motivo de la solicitud de público (migración 0075).
+  public_request_note: string | null;
+  // Bloqueado por moderación (null = activo). Reversible. Migración 0075.
+  blocked_at: string | null;
+  // Reports sin resolver de este álbum.
+  report_count: number;
+}
+
+// Un álbum con reports sin resolver, para el panel de moderación (migr 0075).
+export interface AdminReportRow {
+  album_id: string;
+  album_name: string;
+  owner_id: string;
+  owner_name: string;
+  status: 'draft' | 'published' | 'read_only' | 'archived';
+  is_public: boolean;
+  blocked_at: string | null;
+  report_count: number;
+  last_reported_at: string;
+  reports: { reason: string; details: string | null; reporter: string | null; created_at: string }[];
 }
 
 // El ProfileProvider ya trae is_admin en su fetch del profile — derivamos de
@@ -111,4 +133,52 @@ export async function setAlbumPublicRank(albumId: string, rank: number) {
     p_album_id: albumId,
     p_rank: rank,
   });
+}
+
+// Descarta la solicitud de público de un owner (sin hacerlo público).
+// Cast `as any` hasta regenerar los tipos post-migración 0074.
+export async function rejectAlbumPublicRequest(albumId: string) {
+  return (supabase.rpc as any)('fn_reject_album_public_request', {
+    p_album_id: albumId,
+  });
+}
+
+// --- Moderación de álbumes (admin, migración 0075) --------------------------
+
+// Reports sin resolver, agrupados por álbum (con detalle de cada reporte).
+export function useAdminReports() {
+  const q = useQuery({
+    queryKey: ['admin', 'reports'] as const,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('fn_admin_list_album_reports');
+      if (error) throw error;
+      return ((data ?? []) as any[]) as AdminReportRow[];
+    },
+  });
+  return {
+    reports: q.data ?? [],
+    isLoading: q.isLoading,
+    isRefetching: q.isRefetching,
+    error: q.error ? (q.error as any).message : null,
+    refetch: q.refetch,
+  };
+}
+
+// Bloquear (reversible) / desbloquear un álbum: lo saca del carrusel y frena joins.
+export async function blockAlbum(albumId: string) {
+  return (supabase.rpc as any)('fn_admin_block_album', { p_album_id: albumId });
+}
+export async function unblockAlbum(albumId: string) {
+  return (supabase.rpc as any)('fn_admin_unblock_album', { p_album_id: albumId });
+}
+
+// Borrar un álbum definitivo (cascade). Protege los especiales curados server-side.
+export async function adminDeleteAlbum(albumId: string) {
+  return (supabase.rpc as any)('fn_admin_delete_album', { p_album_id: albumId });
+}
+
+// Marca resueltos todos los reports de un álbum (los saca del listado).
+export async function resolveAlbumReports(albumId: string) {
+  return (supabase.rpc as any)('fn_admin_resolve_album_reports', { p_album_id: albumId });
 }

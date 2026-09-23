@@ -157,6 +157,35 @@
   .tag.pro { background: var(--gold); }
   .tag.srv { background: var(--green); }
   footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 32px; font-family: Consolas, monospace; letter-spacing: 1px; }
+  .pagenav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 6px;
+    box-shadow: 0 3px 8px rgba(0,0,0,.06);
+  }
+  .pagenav button {
+    flex: 1;
+    font-family: Consolas, monospace;
+    font-size: .8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    padding: 10px 14px;
+    border-radius: 99px;
+    cursor: pointer;
+  }
+  .pagenav button.active { background: var(--red); color: #fff; font-weight: 700; }
+  .cost-total {
+    font-family: 'Arial Black', 'Segoe UI', sans-serif;
+    font-size: 1.1rem;
+    color: var(--green);
+  }
   @media (max-width: 640px) {
     nav.toc ol { columns: 1; }
     section, header.hero { padding: 20px 18px; }
@@ -181,6 +210,13 @@
   </div>
 </header>
 
+<div class="pagenav">
+  <button id="tab-docs" class="active" onclick="showPage('docs')">📖 Documentación</button>
+  <button id="tab-costos" onclick="showPage('costos')">💰 Estimación de costos</button>
+</div>
+
+<div id="page-docs">
+
 <nav class="toc">
   <strong>CONTENIDO</strong>
   <ol>
@@ -190,6 +226,7 @@
     <li><a href="#flujo-jugador">Flujo del jugador</a></li>
     <li><a href="#economia">Economía de sobres</a></li>
     <li><a href="#trades">Intercambios</a></li>
+    <li><a href="#descarga">Descarga de álbum (PDF)</a></li>
     <li><a href="#hojas">Personalización de hojas</a></li>
     <li><a href="#imagenes">Pipeline de imágenes</a></li>
     <li><a href="#avatares">Avatares desbloqueables</a></li>
@@ -213,7 +250,7 @@
 
   <h3>Backend (<code>supabase/</code>)</h3>
   <ul>
-    <li><strong>~69 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
+    <li><strong>~75 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
     <li><strong>6 Edge Functions</strong> (Deno): <code>open_pack</code>, <code>redeem_qr</code>, <code>revenuecat_webhook</code>, <code>upload_image</code>, <code>generate_qr</code>, <code>upload_preset_image</code>. Helpers compartidos en <code>_shared/http.ts</code> (CORS, auth, respuestas) y <code>_shared/r2.ts</code> (R2 vía <code>aws4fetch</code>).</li>
     <li><code>pg_cron</code> activo para el sobre diario y limpiezas.</li>
     <li>Proyecto: <code>baexxbixcrhngbjptlkt</code> (sa-east-1). PostgREST con <code>db_max_rows = 2000</code> (el álbum especial supera las 1000 filas).</li>
@@ -266,8 +303,20 @@
     <li><strong>Editar hojas</strong>: color, textura, composición, títulos (ver §7).</li>
     <li><strong>Publicar</strong>: valida numeración completa server-side. <strong>Publicado = inmutable e irreversible</strong> (regla del mundo físico). Después de publicar solo se pueden editar las hojas.</li>
     <li><strong>Compartir</strong>: código de 6 caracteres (tap para copiar), link https clickeable (<code>mi-album.pages.dev/join/CODE</code> — los custom schemes no se linkifican en WhatsApp; helper <code>joinLinkFor()</code>), o póster QR.</li>
-    <li><strong>Ciclo de vida</strong>: archivar (reversible) · retirar (si hay jugadores: read-only, conservan colección) · eliminar (sin jugadores, confirmación con email). El owner no juega su propio álbum.</li>
+    <li><strong>Solicitar ser público</strong> <span class="tag srv">0074/0075</span>: el owner de un álbum publicado pide aparecer en el carrusel "Álbumes públicos" del inicio con un <strong>motivo obligatorio</strong> + una <strong>declaración</strong> (sin contenido sensible, es dueño de las imágenes / no infringe derechos de autor) — modal <code>request-public-modal.tsx</code> → <code>fn_request_album_public(id, note)</code> marca <code>public_requested_at</code> + <code>public_request_note</code>. Un <strong>admin aprueba</strong> desde el panel (ve el motivo, prende el switch <code>fn_set_album_public</code>, que limpia el pedido) o lo descarta (<code>fn_reject_album_public_request</code>). El owner puede retirar la solicitud (<code>fn_cancel_album_public_request</code>). Sección "ÁLBUM PÚBLICO" en la vista owner con 3 estados: sin pedir / pendiente / ya público. <em>Marcar público sigue siendo decisión de admin (moderación de contenido).</em></li>
+    <li><strong>Ciclo de vida</strong>: archivar (reversible) · retirar (si hay jugadores: read-only, conservan colección) · eliminar (sin jugadores, confirmación con email).</li>
   </ol>
+  <div class="callout">
+    <strong>Owner de un álbum publicado → abre la vista JUGADOR por default</strong> (no el editor). El thin router <code>app/album/[id].tsx</code> bifurca: publicado + owner → vista jugador (la que se colecciona); el editor se abre con el link <strong>"Editar"</strong> (<code>?as=edit</code>). Un draft o pausado siempre abre el editor (un draft no se puede jugar). El owner igual puede unirse y jugar su propio álbum (Fase 10).
+  </div>
+
+  <h3>Moderación de contenido (admin) <span class="tag srv">0072/0075</span></h3>
+  <p>Requisito de Play para contenido generado por usuarios. Cualquier usuario puede <strong>reportar</strong> un álbum (<code>report-album-modal.tsx</code> → <code>fn_report_album</code>, con motivo + detalle) o <strong>bloquear a un creador</strong> para dejar de verlo (<code>user_blocks</code>, one-directional; sus públicos se excluyen del Home server-side). El <strong>panel admin</strong> (<code>app/admin/index.tsx</code>) tiene 3 secciones de moderación + las herramientas (Estadísticas, Limpieza, Plantillas):</p>
+  <ul>
+    <li><strong>Gestionar álbumes públicos</strong> (<code>admin/public.tsx</code>): públicos en el carrusel + solicitudes pendientes con su motivo (aprobar/descartar) + orden (<code>public_rank</code>).</li>
+    <li><strong>Reports</strong> (<code>admin/reports.tsx</code>): álbumes reportados agrupados (<code>fn_admin_list_album_reports</code>), con cada motivo/detalle. Acciones: ver, bloquear, eliminar, descartar reports (<code>resolved_at</code>).</li>
+    <li><strong>Moderar álbumes</strong> (<code>admin/moderate.tsx</code>): TODOS los álbumes + buscador (nombre/creador). <strong>Bloquear</strong> (reversible, <code>blocked_at</code>: sale del carrusel + <code>fn_join_album</code> rechaza con <code>P0304</code>) o <strong>eliminar</strong> (cascade, <code>fn_admin_delete_album</code>, protege los especiales). Confirmación de borrado inline de 2 toques (Alert es no-op en web y el admin se usa en desktop). Acciones compartidas en <code>components/album-mod-actions.tsx</code>.</li>
+  </ul>
 </section>
 
 <section id="flujo-jugador">
@@ -366,8 +415,24 @@
   </ul>
 </section>
 
+<section id="descarga">
+  <h2>7 · Descarga de álbum (PDF)</h2>
+  <p>El usuario puede bajar un PDF del álbum (portada + grilla de figuritas con número, nombre y borde por rareza). Todo en <code>lib/album-pdf.ts</code> (genera el HTML y ofrece el archivo) + <code>lib/download-limit.ts</code> (límite semanal).</p>
+  <ul>
+    <li><strong>Qué incluye según el contexto</strong>: desde la <strong>vista jugador</strong> baja <strong>solo las pegadas</strong> al momento (su colección real); desde el <strong>editor del owner</strong> baja <strong>todas</strong> las cargadas.</li>
+    <li><strong>Imágenes</strong>: se referencian por URL pública de R2 (large→thumb); el WebView de impresión las baja al renderizar (requiere red). Los presets (gradientes locales) se dibujan con CSS. <strong>Costo = igual que consultarlas</strong> (egress R2 gratis + lecturas Class B).</li>
+    <li><strong>Cross-platform</strong>: nativo (Android/iOS) usa <code>expo-print</code> (<code>printToFileAsync</code>) → renombra al nombre del álbum → <code>expo-sharing</code>. Web usa <code>Print.printAsync</code> → diálogo de impresión del browser ("Guardar como PDF"). <em>Módulos nativos nuevos (<code>expo-print</code>/<code>expo-sharing</code>) → requieren rebuild EAS.</em></li>
+    <li><strong>Propaganda antes de descargar</strong>: rewarded ad (misma infra que los sobres, <code>showRewardedAd()</code>). Solo donde hay ads reales (<strong>Android</strong>); si no completa el ad, no descarga. En web/iOS (<code>ADS_SUPPORTED=false</code>) baja directo.</li>
+    <li><strong>Límite: 1 descarga por álbum por usuario cada 7 días</strong> (ventana rodante, <strong>client-side</strong> en AsyncStorage, namespaced por uid). Se chequea <em>antes</em> del ad (no hacerlo mirar propaganda para después bloquearlo). El timestamp se registra solo tras una descarga exitosa. Motivo: evitar re-descargas al pedo — en álbumes grandes (ej. el de 1001) la bajada de imágenes no es despreciable.</li>
+    <li><strong>Resultado tipado</strong> (<code>DownloadOutcome</code>): <code>ok</code> / <code>ad-skipped</code> / <code>rate-limited</code> (con <code>nextAt</code>). El caller muestra el mensaje apropiado.</li>
+  </ul>
+  <div class="callout">
+    <strong>Endurecimiento colateral</strong>: <code>initialOf</code>/<code>fallbackBgFor</code> (<code>lib/thumb-fallback.ts</code>) ahora blindan un <code>seed</code> null/no-string — corren por cada thumbnail y un throw en render, en release, cerraba la app entera.
+  </div>
+</section>
+
 <section id="hojas">
-  <h2>7 · Personalización de hojas</h2>
+  <h2>8 · Personalización de hojas</h2>
   <p>Todo vive en <code>client/src/lib/page-config.ts</code> (data) + <code>edit-pages-modal.tsx</code> (UI) + <code>album-pager.tsx</code> (render) + <code>page-texture.tsx</code> (SVG). Modelo: <strong>defaults a nivel álbum + overrides por hoja</strong>, persistidos como keys cortas — el cliente resuelve hex/dimensiones, así se pueden retocar sin migración.</p>
 
   <table>
@@ -402,7 +467,7 @@
 </section>
 
 <section id="imagenes">
-  <h2>8 · Pipeline de imágenes</h2>
+  <h2>9 · Pipeline de imágenes</h2>
   <p>El procesamiento es <strong>100% client-side</strong> (expo-image-manipulator); la Edge Function <code>upload_image</code> es un proxy trivial a R2. Razón: sharp en Deno Edge tiraba <code>WORKER_RESOURCE_LIMIT</code>.</p>
   <table>
     <tr><th>Kind</th><th>Thumb</th><th>Large</th><th>Calidad JPEG</th></tr>
@@ -421,7 +486,7 @@
 </section>
 
 <section id="avatares">
-  <h2>9 · Avatares desbloqueables</h2>
+  <h2>10 · Avatares desbloqueables</h2>
   <ul>
     <li>Los users <strong>no suben fotos</strong> (moderación): eligen de la galería curada por admin (presets kind <code>avatar</code>).</li>
     <li>Gimmick: existe un álbum público de avatares; <strong><code>preset_images.sort_order</code> = número de figurita</strong>. Pegás la figurita N → desbloqueás el avatar N. Libres para todos: {1, 4, 20, 22}.</li>
@@ -430,7 +495,7 @@
 </section>
 
 <section id="convenciones">
-  <h2>10 · Convenciones y decisiones técnicas</h2>
+  <h2>11 · Convenciones y decisiones técnicas</h2>
 
   <h3>Backend</h3>
   <ul>
@@ -467,7 +532,7 @@
 </section>
 
 <section id="operativas">
-  <h2>11 · Operativas / comandos</h2>
+  <h2>12 · Operativas / comandos</h2>
 <pre><code># Typecheck del cliente
 cd client && npx tsc --noEmit
 
@@ -495,7 +560,7 @@ node client/scripts/gen-sfx.js
 </section>
 
 <section id="pendientes">
-  <h2>12 · Pendientes</h2>
+  <h2>13 · Pendientes</h2>
   <ul>
     <li><strong>Paywall + RevenueCat</strong>: ⚙️ CÓDIGO LISTO (2026-09) — SDK integrado, paywall + confirmación, 3 CTAs, stub web/iOS. Falta la <strong>config de dashboards</strong>: producto <code>pro_monthly</code> en Play Console, cuenta RC + entitlement/offering, <code>EXPO_PUBLIC_REVENUECAT_ANDROID_KEY</code> en env, secrets del webhook en Supabase, rebuild EAS + test E2E. Paso a paso en la sección 5 (Suscripción Pro).</li>
     <li><strong>AdMob productivo</strong>: hoy corre con ids de TEST — seguir el paso a paso de la sección 5 (cuenta AdMob, App ID + ad unit reales, app-ads.txt, consentimiento UE si aplica).</li>
@@ -535,8 +600,87 @@ node client/scripts/gen-sfx.js
   </ol>
 </section>
 
+</div><!-- /page-docs -->
+
+<div id="page-costos" hidden>
+
+<section>
+  <h2>Estimación de costos</h2>
+  <p>Estimación de los costos posibles de operar la app. La arquitectura está elegida para minimizar costos: <strong>las imágenes NO pasan por la base de datos</strong> (solo keys en Supabase; los archivos viven en Cloudflare R2, con egress gratis). Los números de precios son de referencia (2025-2026) y pueden cambiar — verificar en cada proveedor.</p>
+  <div class="callout ok">
+    <strong>Resumen:</strong> hoy y por un buen tiempo, <span class="cost-total">US$0/mes</span> (+ US$25 único de Google Play). El primer gasto real recién aparece cuando el tráfico supere el free tier de Supabase (5 GB de egress/mes) → Supabase Pro <strong>~US$25/mes</strong>.
+  </div>
+
+  <h3>Costos fijos / one-time</h3>
+  <table>
+    <tr><th>Ítem</th><th>Costo</th><th>Nota</th></tr>
+    <tr><td><strong>Google Play</strong> (cuenta dev)</td><td>US$25 una vez</td><td>Pago único de por vida</td></tr>
+    <tr><td>Apple Developer</td><td>US$0</td><td>iOS descartado del plan</td></tr>
+    <tr><td>Dominio propio (opcional)</td><td>~US$10–15/año</td><td>Hoy se usa <code>mi-album.pages.dev</code> gratis</td></tr>
+    <tr><td>Google Cloud (OAuth login)</td><td>US$0</td><td>OAuth es gratis siempre; no depende del trial de GCP</td></tr>
+  </table>
+
+  <h3>Lo que hoy sale $0/mes (free tiers)</h3>
+  <table>
+    <tr><th>Servicio</th><th>Free tier</th><th>Qué consume</th></tr>
+    <tr><td><strong>Supabase</strong> (DB/Auth/Edge)</td><td>500 MB DB · <strong>5 GB egress/mes</strong> · 50k MAU · 500k edge/mes</td><td>Respuestas de API, login, <code>open_pack</code>/<code>redeem_qr</code></td></tr>
+    <tr><td><strong>Cloudflare R2</strong> (imágenes)</td><td><strong>10 GB storage</strong> · 1M writes · 10M reads/mes · <strong>egress gratis</strong></td><td>Guardar y servir figuritas/carátulas</td></tr>
+    <tr><td><strong>Cloudflare Pages</strong> (web)</td><td>Requests y ancho de banda ilimitados</td><td>Hosting de la web/PWA</td></tr>
+    <tr><td><strong>Brevo</strong> (magic links)</td><td>300 emails/día (~9k/mes)</td><td>Login por email (poco: con sesión persistente + Google, ~1 vez por dispositivo)</td></tr>
+    <tr><td><strong>AdMob / hCaptcha</strong></td><td>Gratis</td><td>AdMob = <em>ingreso</em>, no costo</td></tr>
+    <tr><td><strong>RevenueCat</strong></td><td>Gratis hasta US$2.500/mes de ingresos, luego 1%</td><td>Suscripción Pro</td></tr>
+  </table>
+
+  <h3>Storage en R2 (dimensionamiento)</h3>
+  <ul>
+    <li>Figurita ≈ <strong>~400 KB</strong> (thumb 512 + large 1600) · carátula + sobre ≈ ~700 KB.</li>
+    <li>Álbum típico de <strong>50 figuritas ≈ ~21 MB</strong> → entran <strong>~470 álbumes</strong> en los 10 GB gratis.</li>
+    <li>Álbum especial de <strong>1001 figuritas ≈ ~400 MB</strong> → ~25 de esos llenan el free tier.</li>
+    <li>Pasado 10 GB: <strong>US$0.015/GB-mes</strong> (100 GB extra = US$1.5/mes). Muy barato.</li>
+  </ul>
+
+  <h3>Qué dispara el primer gasto real (en orden probable)</h3>
+  <ol>
+    <li><strong>Egress de API de Supabase &gt; 5 GB/mes</strong> → es el techo que se toca primero. Empuja a <strong>Supabase Pro (US$25/mes)</strong> (250 GB egress + 100k MAU + 2M edge). Ya está muy optimizado (bundles + cache en disco), aguanta bastante.</li>
+    <li><strong>Storage R2 &gt; 10 GB</strong> → centavos por GB (ver arriba).</li>
+    <li><strong>Picos de emails &gt; 300/día</strong> (ej. lanzamiento viral) → plan Brevo pago (~US$9–25/mes) o subir el límite.</li>
+    <li><strong>EAS Build</strong>: el free tier alcanza para builds ocasionales (con cola). Si se buildea mucho, ~US$19–99/mes.</li>
+  </ol>
+
+  <h3>Escenarios (estimación mensual aproximada)</h3>
+  <table>
+    <tr><th>Escenario</th><th>Usuarios activos</th><th>Costo estimado</th></tr>
+    <tr><td><strong>Hoy / testing</strong></td><td>Dev + testers</td><td>US$0/mes (+ $25 Play una vez)</td></tr>
+    <tr><td><strong>Chico</strong></td><td>Cientos de MAU</td><td>US$0/mes — todo en free tier</td></tr>
+    <tr><td><strong>Creciendo</strong></td><td>~5–10k MAU</td><td>~US$25–40/mes — mayormente Supabase Pro + unos dólares de R2</td></tr>
+    <tr><td><strong>Grande</strong></td><td>~30–50k MAU</td><td>~US$50–150/mes — Supabase Pro + overages + R2 + quizás Brevo pago</td></tr>
+  </table>
+
+  <div class="callout rule">
+    <strong>Ojo con el álbum de 1001:</strong> infla el storage de R2 y, sobre todo, cada "descargar todas" del owner baja ~1001 imágenes (lecturas Class B). Sigue siendo barato, pero es el uso que más consume de golpe. El límite de 1 descarga por álbum por semana (§7) lo acota.
+  </div>
+  <div class="callout ok">
+    <strong>Los ingresos escalan antes que los costos:</strong> AdMob (rewarded en sobres + descargas) + Pro (RevenueCat) generan ingreso mientras la infra sigue en free tier un buen rato. La app está diseñada para eso.
+  </div>
+</section>
+
+</div><!-- /page-costos -->
+
 <footer>MI ÁLBUM DE FIGURITAS · DOCUMENTACIÓN TÉCNICA · 2026-09</footer>
 
 </div>
+
+<script>
+  function showPage(which) {
+    var docs = document.getElementById('page-docs');
+    var costos = document.getElementById('page-costos');
+    var isDocs = which === 'docs';
+    docs.hidden = !isDocs;
+    costos.hidden = isDocs;
+    document.getElementById('tab-docs').classList.toggle('active', isDocs);
+    document.getElementById('tab-costos').classList.toggle('active', !isDocs);
+    window.scrollTo(0, 0);
+  }
+</script>
 </body>
 </html>

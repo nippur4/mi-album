@@ -230,6 +230,19 @@ export async function publishAlbum(albumId: string) {
   return supabase.rpc('fn_publish_album', { p_album_id: albumId });
 }
 
+// Solicitar / retirar que el álbum sea público (owner de un álbum publicado).
+// El admin aprueba desde el panel (fn_set_album_public). Ver migración 0074.
+// Cast `as any` en el nombre de la RPC hasta regenerar los tipos post-migración.
+export async function requestAlbumPublic(albumId: string, note: string) {
+  return (supabase.rpc as any)('fn_request_album_public', {
+    p_album_id: albumId,
+    p_note: note,
+  });
+}
+export async function cancelAlbumPublicRequest(albumId: string) {
+  return (supabase.rpc as any)('fn_cancel_album_public_request', { p_album_id: albumId });
+}
+
 // Archivar/des-archivar como owner (setea albums.owner_hidden).
 // Los jugadores no ven diferencia — siguen abriendo sobres y pegando normal.
 export async function archiveAlbumByOwner(albumId: string) {

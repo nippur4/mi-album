@@ -46,12 +46,14 @@ export default function AlbumDetailScreen() {
   }
 
   // Bifurcación:
-  //   - Owner: vista owner por default. Con `?as=player` fuerza vista user
-  //     (para que el owner pueda jugar su propio álbum, Fase 10).
+  //   - Owner de un álbum PUBLICADO: por default lo mandamos a JUGARLO (la
+  //     versión que se colecciona), no al editor. Para editar entra explícito
+  //     con `?as=edit` (link "Editar" en el header de la vista jugador).
+  //   - Owner de un draft / pausado (read_only) / archivado: vista owner, que
+  //     es donde tiene sentido gestionarlo (un draft ni siquiera se puede jugar).
   //   - Non-owner: siempre vista user.
   const isOwner = session?.user.id === album.owner_id;
-  const asPlayer = viewAs === 'player';
-  const showOwnerView = isOwner && !asPlayer;
+  const showOwnerView = isOwner && (album.status !== 'published' || viewAs === 'edit');
   return showOwnerView ? (
     <OwnerAlbumView album={album} stickers={stickers} refetch={refetch} />
   ) : (

@@ -25,10 +25,19 @@ export function hashStr(s: string): number {
   return Math.abs(h);
 }
 
+// El seed suele ser el nombre del álbum, que viene de un RPC y PODRÍA ser
+// null/undefined (o incluso un no-string) si el payload cambia. En release NO
+// hay LogBox: un throw en render acá cerraría la app entera (pasaba en el tab
+// Sobres). Estas dos funciones corren por CADA thumbnail, así que blindan a
+// toda la app: nunca lanzan por un seed inválido.
+function safeSeed(seed: unknown): string {
+  return typeof seed === 'string' ? seed : '';
+}
+
 export function fallbackBgFor(seed: string): string {
-  return THUMB_FALLBACK_PALETTE[hashStr(seed) % THUMB_FALLBACK_PALETTE.length];
+  return THUMB_FALLBACK_PALETTE[hashStr(safeSeed(seed)) % THUMB_FALLBACK_PALETTE.length];
 }
 
 export function initialOf(seed: string): string {
-  return (seed.trim()[0] ?? '?').toUpperCase();
+  return (safeSeed(seed).trim()[0] ?? '?').toUpperCase();
 }
