@@ -70,7 +70,10 @@ export default function ManageTab() {
                     progress={pct}
                     counter={{ current, total }}
                     roleTag={archived ? 'ARCHIVADO' : undefined}
-                    onPress={() => router.push(`/album/${album.id}`)}
+                    // Gestionar = contexto de gestión: siempre al editor del
+                    // owner (?as=edit). Sin esto, un álbum publicado abriría la
+                    // vista de jugador (el default del thin router).
+                    onPress={() => router.push(`/album/${album.id}?as=edit`)}
                   />
                 </View>
               );

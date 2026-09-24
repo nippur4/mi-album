@@ -96,9 +96,22 @@ export interface AdminStatsDaily {
   active: number;   // actores distintos con login o token_refreshed (proxy DAU)
 }
 
+// Actividad reciente (ventanas móviles 24h/7d). Migración 0076.
+export interface AdminStatsRecent {
+  packs_opened_24h: number;
+  packs_opened_7d: number;
+  packs_granted_24h: number;
+  new_users_24h: number;
+  new_members_24h: number;
+  albums_created_24h: number;
+  trades_accepted_24h: number;
+}
+
 export interface AdminStats {
   totals: AdminStatsTotals;
   daily: AdminStatsDaily[];
+  // Opcional: puede faltar si el cache trae una respuesta previa a la 0076.
+  recent?: AdminStatsRecent;
 }
 
 export function useAdminStats() {

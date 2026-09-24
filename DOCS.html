@@ -250,7 +250,7 @@
 
   <h3>Backend (<code>supabase/</code>)</h3>
   <ul>
-    <li><strong>~75 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
+    <li><strong>~76 migraciones</strong> con schema + RLS + RPCs <code>SECURITY DEFINER</code>. Toda mutación de negocio pasa por una RPC <code>fn_*</code> que valida ownership, estado y límites del lado del server.</li>
     <li><strong>6 Edge Functions</strong> (Deno): <code>open_pack</code>, <code>redeem_qr</code>, <code>revenuecat_webhook</code>, <code>upload_image</code>, <code>generate_qr</code>, <code>upload_preset_image</code>. Helpers compartidos en <code>_shared/http.ts</code> (CORS, auth, respuestas) y <code>_shared/r2.ts</code> (R2 vía <code>aws4fetch</code>).</li>
     <li><code>pg_cron</code> activo para el sobre diario y limpiezas.</li>
     <li>Proyecto: <code>baexxbixcrhngbjptlkt</code> (sa-east-1). PostgREST con <code>db_max_rows = 2000</code> (el álbum especial supera las 1000 filas).</li>
@@ -307,7 +307,7 @@
     <li><strong>Ciclo de vida</strong>: archivar (reversible) · retirar (si hay jugadores: read-only, conservan colección) · eliminar (sin jugadores, confirmación con email).</li>
   </ol>
   <div class="callout">
-    <strong>Owner de un álbum publicado → abre la vista JUGADOR por default</strong> (no el editor). El thin router <code>app/album/[id].tsx</code> bifurca: publicado + owner → vista jugador (la que se colecciona); el editor se abre con el link <strong>"Editar"</strong> (<code>?as=edit</code>). Un draft o pausado siempre abre el editor (un draft no se puede jugar). El owner igual puede unirse y jugar su propio álbum (Fase 10).
+    <strong>Owner de un álbum publicado → abre la vista JUGADOR por default</strong> (no el editor). El thin router <code>app/album/[id].tsx</code> bifurca: publicado + owner → vista jugador (la que se colecciona); el editor se abre con el link <strong>"Editar"</strong> (<code>?as=edit</code>). Un draft o pausado siempre abre el editor (un draft no se puede jugar). <strong>Desde el tab Gestionar</strong> (contexto de gestión) el álbum siempre abre el editor (<code>?as=edit</code>). El owner igual puede unirse y jugar su propio álbum (Fase 10).
   </div>
 
   <h3>Moderación de contenido (admin) <span class="tag srv">0072/0075</span></h3>
@@ -315,8 +315,9 @@
   <ul>
     <li><strong>Gestionar álbumes públicos</strong> (<code>admin/public.tsx</code>): públicos en el carrusel + solicitudes pendientes con su motivo (aprobar/descartar) + orden (<code>public_rank</code>).</li>
     <li><strong>Reports</strong> (<code>admin/reports.tsx</code>): álbumes reportados agrupados (<code>fn_admin_list_album_reports</code>), con cada motivo/detalle. Acciones: ver, bloquear, eliminar, descartar reports (<code>resolved_at</code>).</li>
-    <li><strong>Moderar álbumes</strong> (<code>admin/moderate.tsx</code>): TODOS los álbumes + buscador (nombre/creador). <strong>Bloquear</strong> (reversible, <code>blocked_at</code>: sale del carrusel + <code>fn_join_album</code> rechaza con <code>P0304</code>) o <strong>eliminar</strong> (cascade, <code>fn_admin_delete_album</code>, protege los especiales). Confirmación de borrado inline de 2 toques (Alert es no-op en web y el admin se usa en desktop). Acciones compartidas en <code>components/album-mod-actions.tsx</code>.</li>
+    <li><strong>Moderar álbumes</strong> (<code>admin/moderate.tsx</code>): TODOS los álbumes + buscador (nombre/creador). <strong>Bloquear</strong> (reversible, <code>blocked_at</code>: sale del carrusel + <code>fn_join_album</code> rechaza con <code>P0304</code>) o <strong>eliminar</strong> (cascade, <code>fn_admin_delete_album</code>, protege los especiales). El borrado exige <strong>escribir la palabra «eliminar»</strong> (confirmación fuerte, no un doble-tap); los álbumes especiales curados <strong>no muestran botón Eliminar</strong> (chip 🔒 Protegido) y el server igual los rechaza (P0201). Acciones compartidas en <code>components/album-mod-actions.tsx</code>.</li>
   </ul>
+  <p>Bajo <strong>Herramientas</strong> siguen Estadísticas, Limpieza de imágenes y Plantillas. <strong>Estadísticas</strong> (<code>admin/stats.tsx</code> · <code>fn_admin_stats</code>) suma una sección <strong>"Últimas 24 horas"</strong> (sobres abiertos 24h/7d, sobres otorgados, nuevos usuarios/jugadores, álbumes creados, cambios aceptados) además de los totales y las barras diarias.</p>
 </section>
 
 <section id="flujo-jugador">
@@ -327,6 +328,7 @@
     <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo). Tap en una carta revelada → vista grande de la figurita. El álbum de dinos tiene <strong>sonidos temáticos</strong> (rugido al abrir, chillido en épica/legendaria; mapa <code>albumSfxTheme()</code> extensible a otros álbumes).</li>
     <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla.</li>
     <li><strong>Completar</strong>: al pegar todas se corta el sobre diario automáticamente. También se puede silenciar por álbum (<code>daily_muted</code>).</li>
+    <li><strong>Compartir</strong>: cualquier jugador (no solo el owner) puede invitar a otros con el link https + código (mismo <code>share_code</code>). La lista "EN TU BOLSILLO" (repes + sin pegar) pagina de a 20. También puede <strong>descargar el álbum en PDF</strong> (§7).</li>
   </ol>
   <p><strong>Vista grande de figurita</strong> (<code>sticker-view-mode</code>): carta foil + paginador prev/next. <strong>Zoom cross-platform</strong> (2026-08, <code>components/sticker-zoom-modal.tsx</code>): tap en la imagen abre un lightbox con pinch, arrastre y doble-tap para acercar (mobile táctil + web trackpad/mouse). El botón de cerrar (X) del header va con <code>zIndex</code> + <code>elevation</code> altos porque la carta tiene <code>elevation: 12</code> y en Android eso la dibujaba por encima del header. El paginador usa <code>useAlbumStickerIndex</code> (índice id+number cacheado por álbum) para no re-consultar la lista en cada navegación — clave en el álbum de 1001.</p>
 </section>
@@ -523,7 +525,9 @@
     <li><strong>Medir contenedores con onLayout</strong>, no <code>useWindowDimensions</code>, cuando hay caps de ancho (desktop). SVG en web necesita width/height en px explícitos.</li>
     <li><strong>Cap desktop sobre el contenido</strong>: <code>contentContainerStyle=[base, useDesktopCap(n)]</code>; envolver el ScrollView deja la barra de scroll flotando.</li>
     <li><strong>Queries</strong>: toda lectura hace <code>if (error) throw toAppError(error)</code>; pull-to-refresh usa <code>isRefetching</code>.</li>
-    <li><strong>Cache persistido en disco</strong> (<code>PersistQueryClientProvider</code> + AsyncStorage/localStorage): el arranque en frío pinta desde disco sin esperar la red. <code>gcTime</code> global 24h (>= <code>PERSIST_MAX_AGE</code>, si no las queries se recolectan antes de guardarse). <strong>Bumpear <code>PERSIST_BUSTER</code></strong> cuando cambie el shape de una query o se regeneren tipos con migraciones que rompan. <code>signOut()</code> limpia memoria + disco.</li>
+    <li><strong>Cache persistido en disco</strong> (<code>PersistQueryClientProvider</code> + AsyncStorage/localStorage): el arranque en frío pinta desde disco sin esperar la red. <code>gcTime</code> global 24h (>= <code>PERSIST_MAX_AGE</code>, si no las queries se recolectan antes de guardarse). <strong>Bumpear <code>PERSIST_BUSTER</code></strong> cuando cambie el shape de una query o se regeneren tipos con migraciones que rompan. <code>signOut()</code> limpia memoria + disco.
+      <div class="callout rule"><strong>GOTCHA (crash real del tab Sobres):</strong> NUNCA guardar un <code>Set</code>/<code>Map</code>/<code>Date</code> dentro del <code>data</code> de una query que se persiste — <code>JSON.stringify(new Set(...))</code> = <code>{}</code>, y al rehidratar en frío <code>.has()</code> es undefined → <em>"undefined is not a function"</em> que cierra la app en release. Cachear solo tipos JSON-safe (arrays) y reconstruir el <code>Set</code> con <code>useMemo</code> (como <code>useAdPackSummary</code> y <code>useBlockedIds</code>).</div>
+    </li>
     <li><strong>Álbum publicado = cache congelado</strong>: <code>useAlbumDetail</code> usa <code>staleTime: Infinity</code> si el álbum no es draft (contenido inmutable, decisión #11); la grilla no se re-baja al volver. Las mutaciones del owner llaman <code>refetch()</code> directo (ignora staleTime).</li>
     <li>State global compartido vía Context (<code>ProfileProvider</code>); <code>useNow()</code> singleton para countdowns.</li>
     <li>Keys cortas en DB (colores, layouts, presets) — el cliente resuelve valores; cambiar un hex no requiere migración.</li>
@@ -556,6 +560,27 @@ node client/scripts/gen-sfx.js
     <li><strong>Estadísticas</strong>: Panel admin → Estadísticas (<code>fn_admin_stats</code>, migración 0057): usuarios, activos/día y logins/día (desde <code>auth.audit_log_entries</code>, hora argentina), álbumes, figuritas, sobres, cambios.</li>
     <li><strong>Verificar la seguridad de secretos</strong>: con la anon key, <code>GET /rest/v1/albums?select=*</code> y <code>?select=*</code> sobre <code>profiles</code> deben responder <strong>200</strong> (ya no llevan columnas sensibles); <code>GET /rest/v1/album_qr_secrets?select=*</code> y <code>/profile_push_tokens</code> deben dar <strong>42501 permission denied</strong>. La CLI <code>supabase db query</code> apunta a la base LOCAL (Docker), no al remoto — usar el SQL Editor del dashboard para inspeccionar el remoto.</li>
     <li><strong>hCaptcha</strong>: activar/desactivar en Supabase → Authentication → Attack Protection (con el secret de la cuenta hCaptcha). Al activar se exige token YA. Orden seguro: deployar cliente con la site key (web + rebuild EAS) → probar con toggle OFF → activar toggle. Ver runbook en §12.</li>
+  </ul>
+
+  <h3>Builds de Android: local rápido + OTA <span class="tag srv">2026-09</span></h3>
+  <p>Dos caminos según qué cambió:</p>
+  <pre><code># Cambios de SOLO JS → OTA (EAS Update), llega en ~1 min sin rebuild ni Play
+cd client && eas update --branch production -m "fix X"
+
+# Cambios nativos / release a Play → build local (~2 min tras el 1er build)
+#   OJO: bumpeá versionCode a mano en android/app/build.gradle (EAS lo lleva remoto)
+cd client/android
+./gradlew bundleRelease     # → app/build/outputs/bundle/release/app-release.aab  (Play)
+./gradlew assembleRelease   # → app/build/outputs/apk/release/app-release.apk     (test en celu)
+
+# Build en la nube (EAS): maneja versionCode + firma solo, pero tarda ~1h
+cd client && eas build -p android --profile production
+</code></pre>
+  <ul>
+    <li><strong>Toolchain local</strong>: requiere <strong>JDK 17</strong> (con JDK 21 el build falla con <code>JvmVendorSpec … IBM_SEMERU</code>; EAS usa 17), <code>ANDROID_HOME</code>, NDK <code>27.1.12297006</code> + CMake <code>3.22.1</code>. Primer build en frío ~55 min (baja Gradle+deps+NDK), después <strong>~2 min</strong> por el cache. RN 0.85.3 usa Gradle 9.3.1. El build en frío necesita más memoria que la default (el config plugin sube <code>org.gradle.jvmargs</code> a <code>-Xmx4096m -XX:MaxMetaspaceSize=1024m</code>; con la default de 512 MB de metaspace el daemon se cae con "Gradle build daemon disappeared").</li>
+    <li><strong>Firma de Play local vía config plugin</strong> (<code>plugins/withReleaseSigning.js</code>): inyecta en cada <code>prebuild</code> el signingConfig release que lee <code>android/keystore.properties</code> (keystore de subida bajado de EAS con <code>eas credentials -p android</code> → <code>android/upload-keystore.jks</code>). No se edita a mano; sobrevive <code>prebuild --clean</code>. Verificar con <code>gradlew :app:signingReport</code> (release debe firmar con el SHA256 de la upload key). Keystore gitignoreado — con <code>--clean</code> se borra, restaurar de backup.</li>
+    <li><strong>OTA (EAS Update)</strong>: <code>expo-updates</code> + <code>updates.url</code> + <code>runtimeVersion {policy: appVersion}</code> + canales por perfil en eas.json. <strong>Se activa solo en builds que INCLUYAN expo-updates</strong> (los previos no reciben OTA). <strong>Regla: en cambios de solo JS NO bumpear <code>version</code></strong> — si cambia el <code>appVersion</code>, cambia el runtimeVersion y el update no aplica a los builds viejos.</li>
+    <li><strong>NO correr <code>expo prebuild --clean</code></strong> sin backupear <code>android/keystore.properties</code> + <code>android/upload-keystore.jks</code> (los borra; el .jks se re-baja de EAS).</li>
   </ul>
 </section>
 

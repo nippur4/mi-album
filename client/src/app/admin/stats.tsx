@@ -59,6 +59,45 @@ export default function AdminStatsScreen() {
           </View>
         ) : totals ? (
           <>
+            {stats?.recent && (
+              <>
+                <Text style={styles.sectionLabel}>ÚLTIMAS 24 HORAS</Text>
+                <View style={styles.tileGrid}>
+                  <StatTile
+                    label="SOBRES ABIERTOS"
+                    value={stats.recent.packs_opened_24h}
+                    sub={`${stats.recent.packs_opened_7d} en 7 días`}
+                  />
+                  <StatTile
+                    label="SOBRES OTORGADOS"
+                    value={stats.recent.packs_granted_24h}
+                    sub="nuevos sobres dados"
+                  />
+                  <StatTile
+                    label="NUEVOS USUARIOS"
+                    value={stats.recent.new_users_24h}
+                    sub="registrados"
+                  />
+                  <StatTile
+                    label="NUEVOS JUGADORES"
+                    value={stats.recent.new_members_24h}
+                    sub="se unieron a álbumes"
+                  />
+                  <StatTile
+                    label="ÁLBUMES CREADOS"
+                    value={stats.recent.albums_created_24h}
+                    sub="nuevos álbumes"
+                  />
+                  <StatTile
+                    label="CAMBIOS ACEPTADOS"
+                    value={stats.recent.trades_accepted_24h}
+                    sub="concretados"
+                  />
+                </View>
+              </>
+            )}
+
+            <Text style={styles.sectionLabel}>TOTALES</Text>
             <View style={styles.tileGrid}>
               <StatTile
                 label="USUARIOS"
@@ -227,6 +266,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.bodySmall,
     color: Colors.red,
     textAlign: 'center',
+  },
+  sectionLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    marginTop: Spacing.xs,
   },
   tileGrid: {
     flexDirection: 'row',

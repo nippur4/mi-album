@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +27,7 @@ import {
   albumNumberStart,
   hideAlbumByPlayer,
   joinAlbumByCode,
+  joinLinkFor,
   useIsMember,
   type Album,
   type Sticker,
@@ -229,6 +230,21 @@ export function UserAlbumView({ album, stickers }: Props) {
     setJustPastedId(stickerId);
   }
 
+  // Compartir el álbum: cualquier jugador (no solo el owner) puede invitar a
+  // otros con el link https + el código. El share_code viaja en el álbum (ya se
+  // usa para el CTA de unirse a públicos).
+  async function onShareAlbum() {
+    const link = joinLinkFor(album.share_code);
+    try {
+      await Share.share({
+        message:
+          `¡Sumate al álbum "${album.name}" en Mi Álbum de Figuritas!\n\n` +
+          `${link}\n\n` +
+          `Código: ${album.share_code}`,
+      });
+    } catch {}
+  }
+
   // Descargar el álbum como PDF. Desde la vista jugador incluimos SOLO las
   // figuritas pegadas al momento (la colección real del jugador).
   async function onDownloadPdf() {
@@ -300,7 +316,7 @@ export function UserAlbumView({ album, stickers }: Props) {
   const filteredPocket = pocketQuery
     ? toPasteList.filter((s) => cardMatches(pocketQuery, [s]))
     : toPasteList;
-  const POCKET_PAGE_SIZE = 50;
+  const POCKET_PAGE_SIZE = 20;
   const pocketPageCount = Math.max(1, Math.ceil(filteredPocket.length / POCKET_PAGE_SIZE));
   const pocketSafePage = Math.min(pocketPage, pocketPageCount - 1);
   const pagedPocket = filteredPocket.slice(
@@ -456,6 +472,10 @@ export function UserAlbumView({ album, stickers }: Props) {
             disabled={downloading}
             loading={downloading}
           />
+        )}
+
+        {isMember && (
+          <Button label="Compartir álbum" variant="outline" onPress={onShareAlbum} />
         )}
 
         {/* Silenciar el sobre diario de este álbum. Solo tiene sentido si el

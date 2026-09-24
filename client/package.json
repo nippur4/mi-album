@@ -39,6 +39,7 @@
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
+    "expo-updates": "~56.0.27",
     "expo-web-browser": "~56.0.5",
     "jimp": "^1.6.1",
     "jsqr": "^1.4.0",
@@ -67,8 +68,8 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "build:web": "expo export --platform web --clear && node scripts/postexport-web.mjs",

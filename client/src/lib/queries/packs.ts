@@ -1,5 +1,6 @@
 // Wrapper sobre la Edge Function open_pack + helpers.
 
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { callEdgeFunction } from '@/lib/edge';
@@ -73,12 +74,24 @@ export interface AdPackSummary {
   limit: number;
 }
 
+// Lo que se CACHEA: album_ids como ARRAY, no Set. Un Set NO sobrevive la
+// serialización a disco del persister (PersistQueryClientProvider): se guarda
+// como `{}` y al rehidratar en frío `albumIds.has()` queda undefined → crash
+// "undefined is not a function" en PacksTab (bug real del tab Sobres). El Set se
+// reconstruye en memoria con useMemo, nunca se persiste.
+interface AdPackSummaryCache {
+  albumIds: string[];
+  used: number;
+  remaining: number;
+  limit: number;
+}
+
 export function useAdPackSummary(enabled = true) {
   const q = useQuery({
     queryKey: ['ad-packs', 'summary'],
     enabled,
     staleTime: 60_000,
-    queryFn: async (): Promise<AdPackSummary> => {
+    queryFn: async (): Promise<AdPackSummaryCache> => {
       const { data, error } = await supabase.rpc('fn_ad_pack_summary');
       if (error) throw error;
       const raw = data as unknown as {
@@ -88,14 +101,26 @@ export function useAdPackSummary(enabled = true) {
         limit: number;
       };
       return {
-        albumIds: new Set(raw.album_ids ?? []),
+        albumIds: raw.album_ids ?? [],
         used: raw.used,
         remaining: raw.remaining,
         limit: raw.limit,
       };
     },
   });
-  return { adSummary: q.data ?? null, refetchAdSummary: q.refetch };
+  // Reconstruimos el Set desde el array cacheado. Array.isArray protege el cache
+  // viejo/roto (albumIds guardado como {}), que si no reventaría en new Set({}).
+  const adSummary = useMemo<AdPackSummary | null>(() => {
+    if (!q.data) return null;
+    const ids = Array.isArray(q.data.albumIds) ? q.data.albumIds : [];
+    return {
+      albumIds: new Set(ids),
+      used: q.data.used,
+      remaining: q.data.remaining,
+      limit: q.data.limit,
+    };
+  }, [q.data]);
+  return { adSummary, refetchAdSummary: q.refetch };
 }
 
 export async function pasteSticker(stickerId: string) {
