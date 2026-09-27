@@ -126,7 +126,7 @@ export function EditStickerView({ sticker, packConfig }: Props) {
           </View>
           {pendingKeys && (
             <Text style={styles.pendingHint}>
-              Nueva foto subida. Tocá "Guardar cambios" para aplicarla.
+              Nueva foto subida. Tocá &quot;Guardar cambios&quot; para aplicarla.
             </Text>
           )}
         </View>

@@ -27,7 +27,7 @@ interface Props {
 // atenuados con candado; el gate real está server-side en fn_update_avatar.
 export function AvatarPickerModal({ visible, currentName, currentThumbKey, onClose, onSelect }: Props) {
   const { items, isLoading: presetsLoading } = useActivePresets('avatar');
-  const { unlocks, isLoading: unlocksLoading, isError: unlocksError } = useAvatarUnlocks(visible);
+  const { unlocks, isError: unlocksError } = useAvatarUnlocks(visible);
   const [lockHint, setLockHint] = useState<string | null>(null);
 
   useEffect(() => {

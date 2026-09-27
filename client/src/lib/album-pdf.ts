@@ -15,7 +15,6 @@
 // con CSS. Ver lib/storage.ts + lib/presets.ts.
 
 import { Platform } from 'react-native';
-import * as Print from 'expo-print';
 
 import type { Album, Sticker } from '@/lib/queries/albums';
 import { RarityFrame } from '@/constants/theme';
@@ -237,6 +236,14 @@ export async function downloadAlbumPdf(opts: Options): Promise<DownloadOutcome> 
 
   const html = buildHtml(opts);
 
+  // expo-print es un módulo nativo: require perezoso (igual que expo-sharing /
+  // expo-file-system abajo) para que IMPORTAR este archivo —lo hacen
+  // album-user-view y album-owner-view al montar— nunca evalúe el nativo. Solo
+  // se toca al descargar de verdad. Si un build no lo tiene linkeado, falla acá
+  // (dentro del try/catch del caller) en vez de tirar la pantalla del álbum.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- perezoso a propósito
+  const Print = require('expo-print') as typeof import('expo-print');
+
   // Web: no hay printToFileAsync; el diálogo de impresión del browser permite
   // "Guardar como PDF". Es el equivalente a "descargar" en web.
   if (Platform.OS === 'web') {
@@ -247,8 +254,10 @@ export async function downloadAlbumPdf(opts: Options): Promise<DownloadOutcome> 
 
   // Módulos nativos (no existen en web): require perezoso para que el bundle
   // web nunca los evalúe. Solo llegamos acá en Android/iOS.
+  /* eslint-disable @typescript-eslint/no-require-imports -- requires perezosos a propósito */
   const Sharing = require('expo-sharing') as typeof import('expo-sharing');
   const { File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
+  /* eslint-enable @typescript-eslint/no-require-imports */
 
   const { uri } = await Print.printToFileAsync({ html });
 

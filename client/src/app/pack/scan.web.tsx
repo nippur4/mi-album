@@ -126,7 +126,7 @@ export default function ScanQrScreen() {
           videoRef.current.play().catch(() => {});
         }
       });
-    } catch (err: any) {
+    } catch {
       setPermission('denied');
     }
   }

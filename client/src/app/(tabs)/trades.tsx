@@ -7,7 +7,7 @@ import { HeaderAvatar } from '@/components/header-avatar';
 import { SegmentedControl } from '@/components/segmented-control';
 import { FilterChips, TradeFilterPanel } from '@/components/trade-filter-panel';
 import { TradeOfferCard } from '@/components/trade-offer-card';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useMyOffers, type TradeOffer } from '@/lib/queries/trades';
 import {
   cardMatches,

@@ -66,7 +66,10 @@ export const queryClient = new QueryClient({
 // queryFn, tipos de la DB, versión de la app con migraciones que rompan). Al
 // cambiar, el cache viejo se descarta entero en el próximo arranque en vez de
 // rehidratar datos incompatibles.
-export const PERSIST_BUSTER = 'v1';
+// v2: `usePlayerAlbumSideData` pasó a cachear `collection` como array (antes
+// era un Map que no sobrevivía la serialización → crash en frío). Descartamos
+// el cache v1 para no rehidratar el Map roto (`{}`) en dispositivos ya usados.
+export const PERSIST_BUSTER = 'v2';
 
 // Antigüedad máxima del blob persistido: si la app no se abrió en >24h, se
 // descarta y se refetchea todo fresco (evita servir datos muy viejos o de un

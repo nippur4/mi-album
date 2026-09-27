@@ -7,7 +7,7 @@
 // state de "just pasted"). Si no se pasa onDone, simplemente el efecto muere.
 
 import { useEffect } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,

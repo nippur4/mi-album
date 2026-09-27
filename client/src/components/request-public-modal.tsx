@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { TextInput } from '@/components/text-input';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { requestAlbumPublic } from '@/lib/queries/albums';
 import { errorMessage } from '@/lib/errors';
 

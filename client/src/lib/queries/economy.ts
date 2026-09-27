@@ -44,7 +44,7 @@ export const WELCOME_PRO_OPTIONS = [0, 1, 3, 5, 7, 10] as const;
 // null = sin límite. Se serializa como `limit: null` en la DB.
 export type TradeLimitPreset = null | { count: number; period: 'day' | 'week' };
 
-export const TRADE_LIMIT_OPTIONS: Array<{ key: string; label: string; value: TradeLimitPreset }> = [
+export const TRADE_LIMIT_OPTIONS: { key: string; label: string; value: TradeLimitPreset }[] = [
   { key: 'unlimited', label: 'Sin límite',        value: null },
   { key: 'd1',        label: '1 por día',         value: { count: 1, period: 'day' } },
   { key: 'd3',        label: '3 por día',         value: { count: 3, period: 'day' } },

@@ -45,7 +45,7 @@ export function cardMatches(query: string, cards: CardLike[]): boolean {
   });
 }
 
-export function userMatches(query: string, names: Array<string | null | undefined>): boolean {
+export function userMatches(query: string, names: (string | null | undefined)[]): boolean {
   const q = normalize(query);
   if (!q) return true;
   return names.some((n) => !!n && normalize(n).includes(q));

@@ -11,7 +11,7 @@ const { withAppBuildGradle, withGradleProperties } = require('@expo/config-plugi
 // El build LOCAL en frío (recompila todo) agota la metaspace default del daemon
 // de Gradle (2 GB heap / 512 MB metaspace) → "Gradle build daemon disappeared".
 // Subimos heap + metaspace. En EAS no aplica (guard abajo).
-const JVM_ARGS = '-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
+const JVM_ARGS = '-Xmx2048m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8';
 
 const LOADER = `// [withReleaseSigning] firma de release desde android/keystore.properties (si existe)
 def keystorePropsFile = rootProject.file("keystore.properties")

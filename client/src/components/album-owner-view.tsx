@@ -995,7 +995,7 @@ function PublicSection({
       </View>
       {isPublic ? (
         <Text style={pubStyles.hint}>
-          Tu álbum aparece en la sección "Álbumes públicos" del inicio, visible para
+          Tu álbum aparece en la sección &quot;Álbumes públicos&quot; del inicio, visible para
           cualquiera. Si querés sacarlo, escribinos.
         </Text>
       ) : requested ? (

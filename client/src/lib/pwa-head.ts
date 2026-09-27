@@ -7,7 +7,7 @@
 
 import { Platform } from 'react-native';
 
-const TAGS: Array<{ tag: 'link' | 'meta'; attrs: Record<string, string> }> = [
+const TAGS: { tag: 'link' | 'meta'; attrs: Record<string, string> }[] = [
   { tag: 'link', attrs: { rel: 'manifest', href: '/manifest.json' } },
   { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' } },
   { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' } },

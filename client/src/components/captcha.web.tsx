@@ -5,6 +5,9 @@
 // toma este archivo en web; en nativo usa captcha.tsx (WebView).
 
 import { forwardRef, useImperativeHandle, useRef } from 'react';
+// El paquete exporta el componente como default Y como named con el mismo
+// nombre; el default es el que queremos. La regla es un falso positivo acá.
+// eslint-disable-next-line import/no-named-as-default
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 import { env } from '@/lib/env';

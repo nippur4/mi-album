@@ -26,7 +26,9 @@ function maybeClearInterval() {
 }
 
 export function useNow(): number {
-  const [now, setNow] = useState(Date.now());
+  // Lazy initializer: Date.now() se llama una sola vez (no en cada render),
+  // así el hook es "puro" para el linter y no recomputa al pedo.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     subs.add(setNow);
     ensureInterval();

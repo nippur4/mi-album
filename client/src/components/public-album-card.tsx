@@ -11,6 +11,10 @@ import { r2Url } from '@/lib/storage';
 interface PublicCardAlbum {
   name: string;
   total_stickers: number;
+  // Preferimos el thumb (512px): la card mide ~196px, bajar el large (1600px)
+  // es ~9× el egress de R2 al pedo en la pantalla más visitada (Home). El large
+  // queda de fallback por si algún álbum viejo no tiene thumb.
+  cover_thumb_key?: string | null;
   cover_large_key: string | null;
 }
 
@@ -27,7 +31,8 @@ interface Props {
 // Gradient (o foto) + tag PÚBLICO + total gold + nombre Anton grande + barra
 // + contador "X/N · P%". Texto blanco siempre encima.
 export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props) {
-  const hasPhoto = !!r2Url(album.cover_large_key);
+  const coverKey = album.cover_thumb_key ?? album.cover_large_key;
+  const hasPhoto = !!r2Url(coverKey);
 
   const pctText = counter
     ? `${counter.current}/${counter.total} · ${Math.round((counter.current / counter.total) * 100)}%`
@@ -40,7 +45,7 @@ export function PublicAlbumCard({ album, progress = 0, counter, onPress }: Props
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <MediaBackground
-        mediaKey={album.cover_large_key}
+        mediaKey={coverKey}
         fallback={
           <LinearGradient
             colors={[Colors.red, Colors.redDark]}

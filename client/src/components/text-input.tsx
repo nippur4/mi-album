@@ -7,7 +7,7 @@ import {
 
 import { Colors, FontFamily, FontSize, Radius } from '@/constants/theme';
 
-interface Props extends RNTextInputProps {}
+type Props = RNTextInputProps;
 
 // Input recesado sobre paper2 con border hairline. La fuente body cubre
 // la mayoría de los formularios; usar el mono para códigos/share_code.

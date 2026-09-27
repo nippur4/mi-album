@@ -186,7 +186,7 @@ export function BulkStickerUploadModal({
           <Text style={styles.body}>
             Elegí varias imágenes del rollo y las asignamos a los próximos números
             libres ({freeCount} disponibles). Cada figurita se crea con nombre
-            "#NN" y rareza común — podés editarlas después desde la grilla.
+            &quot;#NN&quot; y rareza común — podés editarlas después desde la grilla.
           </Text>
 
           <View style={styles.infoRow}>

@@ -12,7 +12,7 @@ import { SegmentedControl } from '@/components/segmented-control';
 import { StickerCell } from '@/components/sticker-cell';
 import { StickerMini } from '@/components/sticker-mini';
 import { FilterChips, TradeFilterPanel } from '@/components/trade-filter-panel';
-import { Colors, FontFamily, FontSize, Layout, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAlbumDetail } from '@/lib/queries/albums';
 import { usePlayerAlbumSideData } from '@/lib/queries/player-album';
 import { setTradePrefs, useAlbumMatches, useTradeLimitStatus, type TradeLimitStatus } from '@/lib/queries/trades';
@@ -74,7 +74,7 @@ export default function TradeMatchesScreen() {
   //     pero NO es "repe" — sólo está sin pegar. Se muestra con estado to_paste.
   const tradables = useMemo(() => {
     const stickerById = new Map(stickers.map((s) => [s.id, s]));
-    const out: Array<{ sticker: any; repeCount: number; pasted: boolean }> = [];
+    const out: { sticker: any; repeCount: number; pasted: boolean }[] = [];
     for (const entry of collection.values()) {
       const sticker = stickerById.get(entry.sticker_id);
       if (!sticker) continue;
@@ -402,7 +402,7 @@ function TradePrefsSection({
 
       {isComplete && twc && !ao && (
         <Text style={styles.prefWarn}>
-          Para ayudar con tus repes necesitás también "Aceptar figuritas que ya tengo".
+          Para ayudar con tus repes necesitás también &quot;Aceptar figuritas que ya tengo&quot;.
         </Text>
       )}
     </View>

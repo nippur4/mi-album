@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontFamily, FontSize, RarityFrame, Radius } from '@/constants/theme';
+import { Colors, FontFamily, RarityFrame, Radius } from '@/constants/theme';
 import { r2Url } from '@/lib/storage';
 import type { Database } from '@/lib/database.types';
 

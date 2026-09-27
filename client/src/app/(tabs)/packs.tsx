@@ -6,7 +6,6 @@ import { Alert } from '@/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { Button } from '@/components/button';
 import { DailyAlbumRow } from '@/components/daily-album-row';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';

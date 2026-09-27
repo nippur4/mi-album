@@ -13,7 +13,7 @@ import { BottomSheet, sheetStyles } from '@/components/bottom-sheet';
 import { Button } from '@/components/button';
 import { PageTexture } from '@/components/page-texture';
 import { TextInput } from '@/components/text-input';
-import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Layout as ThemeLayout, Radius, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/errors';
 import {
   buildPages,
@@ -42,7 +42,6 @@ import {
   type PageTitleAlign,
   type PageTitleVAlign,
 } from '@/lib/page-config';
-import { Layout as ThemeLayout } from '@/constants/theme';
 
 // Largo máximo del título de hoja (límite solo de UI; el server no valida).
 const TITLE_MAX_LENGTH = 41;

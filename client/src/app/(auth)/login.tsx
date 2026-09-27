@@ -61,7 +61,7 @@ export default function Login() {
       // Si OK, supabase redirige a Google. Cuando vuelva con tokens en el
       // hash, detectSessionInUrl auto-setea la session y el _layout redirige
       // a /(tabs).
-    } catch (err: any) {
+    } catch {
       setStatus('error');
       setErrorMsg('No se pudo iniciar sesión con Google. Probá con tu mail.');
     }

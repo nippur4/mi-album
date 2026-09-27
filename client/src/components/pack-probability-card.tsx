@@ -17,7 +17,6 @@ import {
   computePackProbability,
   expectedPacksToGetSticker,
   probInPackForSticker,
-  probPerPickForSticker,
   RARITY_LABEL,
   type Rarity,
 } from '@/lib/pack-probability';

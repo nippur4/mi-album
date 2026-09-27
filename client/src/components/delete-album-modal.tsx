@@ -113,7 +113,7 @@ export function DeleteAlbumModal({
             </Text>
           </View>
           <Text style={sheetStyles.hint}>
-            Si solo querés sacarlo de tus listas, usá "Archivar álbum" — es
+            Si solo querés sacarlo de tus listas, usá &quot;Archivar álbum&quot; — es
             reversible y los jugadores no pierden nada.
           </Text>
 
