@@ -30,19 +30,14 @@ import { useTradeLimitStatus } from '@/lib/queries/trades';
 import { playSfx } from '@/lib/sfx';
 import { r2Url } from '@/lib/storage';
 import { useDesktopCap } from '@/lib/use-is-desktop';
+import { RARITY_LABEL } from '@/lib/rarity';
+import { padStickerNumber } from '@/lib/text';
 
 interface Props {
   sticker: Sticker;
   albumName: string;
   albumTotal: number;
 }
-
-const RARITY_LABEL: Record<Sticker['rarity'], string> = {
-  common: 'COMÚN',
-  rare: 'RARA',
-  epic: 'ÉPICA',
-  legendary: 'LEGENDARIA',
-};
 
 // Vista grande de figurita (handoff pantalla 03). Carta foil centrada con
 // gradient dorado para legendarias, sheen animado + bob vertical sutil.
@@ -184,9 +179,11 @@ export function ViewStickerView({ sticker, albumName, albumTotal }: Props) {
           {/* Interior crema */}
           <View style={styles.inner}>
             <View style={styles.innerHeader}>
-              <Text style={styles.innerNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
+              <Text style={styles.innerNumber}>#{padStickerNumber(sticker.number)}</Text>
               <View style={[styles.rarityBadge, { backgroundColor: borderColor }]}>
-                <Text style={styles.rarityText}>{RARITY_LABEL[sticker.rarity]}</Text>
+                <Text style={styles.rarityText}>
+                  {RARITY_LABEL[sticker.rarity].toUpperCase()}
+                </Text>
               </View>
             </View>
 

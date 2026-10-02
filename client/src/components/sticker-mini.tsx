@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Colors, FontFamily, RarityFrame, Radius } from '@/constants/theme';
 import { r2Url } from '@/lib/storage';
 import type { Database } from '@/lib/database.types';
+import { padStickerNumber } from '@/lib/text';
 
 type Rarity = Database['public']['Enums']['sticker_rarity'];
 
@@ -30,7 +31,7 @@ export function StickerMini({ thumbKey, number, name, rarity, size = 'md' }: Pro
         )}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.number}>#{String(number).padStart(3, '0')}</Text>
+        <Text style={styles.number}>#{padStickerNumber(number)}</Text>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
       </View>
     </View>

@@ -209,14 +209,6 @@ export function EditStickerView({ sticker, packConfig }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    color: Colors.red,
-    padding: Spacing.xl,
-    textAlign: 'center',
-  },
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.md,

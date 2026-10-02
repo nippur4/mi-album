@@ -5,6 +5,7 @@ import { Button } from '@/components/button';
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
 import { r2Url } from '@/lib/storage';
+import { padStickerNumber } from '@/lib/text';
 
 interface Props {
   sticker: Sticker;
@@ -47,7 +48,7 @@ export function ToPasteCard({ sticker, stock, canPaste, onPaste, onTrade, onPres
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.number}>#{String(sticker.number).padStart(3, '0')}</Text>
+        <Text style={styles.number}>#{padStickerNumber(sticker.number)}</Text>
         <Text style={styles.name} numberOfLines={2}>{sticker.name}</Text>
         <Text style={styles.extras}>
           {canPaste

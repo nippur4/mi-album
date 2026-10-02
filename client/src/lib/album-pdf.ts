@@ -22,6 +22,7 @@ import { canDownloadAlbum, recordAlbumDownload } from '@/lib/download-limit';
 import { getPreset } from '@/lib/presets';
 import { ADS_SUPPORTED, showRewardedAd } from '@/lib/rewarded-ad';
 import { isPreset, presetIdFromKey, r2Url } from '@/lib/storage';
+import { padStickerNumber, stripAccents } from '@/lib/text';
 
 interface Options {
   album: Album;
@@ -52,10 +53,10 @@ function esc(s: string | null | undefined): string {
 }
 
 // Nombre de archivo seguro para el PDF a partir del nombre del álbum.
+// stripAccents y no normalize('NFD') al hilo: si la build de Hermes no trae
+// normalize, tirar acá rompía la descarga entera por el nombre del archivo.
 function safeFileName(name: string): string {
-  const base = (name || 'album')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // saca tildes/diacríticos
+  const base = stripAccents(name || 'album')
     .replace(/[^a-zA-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
@@ -89,7 +90,7 @@ function buildHtml({ album, stickers, subtitle }: Options): string {
     .map((s) => {
       const media = mediaBackground(s.large_key ?? s.thumb_key, s.name);
       const border = RarityFrame[s.rarity] ?? RarityFrame.common;
-      const num = String(s.number).padStart(3, '0');
+      const num = padStickerNumber(s.number);
       return `
         <div class="cell">
           <div class="thumb" style="border-color:${border}">

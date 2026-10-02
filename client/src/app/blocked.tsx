@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
+import { EmptyState } from '@/components/empty-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useDesktopCap } from '@/lib/use-is-desktop';
@@ -39,13 +40,10 @@ export default function BlockedUsersScreen() {
         {isLoading ? (
           <ActivityIndicator color={Colors.red} style={{ marginTop: Spacing.xl }} />
         ) : blocks.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No bloqueaste a nadie.</Text>
-            <Text style={styles.emptyBody}>
-              Cuando bloqueás a un creador, dejás de ver sus álbumes públicos y sus
-              propuestas de intercambio.
-            </Text>
-          </View>
+          <EmptyState
+            title="No bloqueaste a nadie."
+            body="Cuando bloqueás a un creador, dejás de ver sus álbumes públicos y sus propuestas de intercambio."
+          />
         ) : (
           <>
             {error && <Text style={styles.error}>{error}</Text>}
@@ -111,23 +109,6 @@ const styles = StyleSheet.create({
     color: Colors.ink,
     fontWeight: '700',
     letterSpacing: 1,
-  },
-  empty: {
-    paddingVertical: Spacing.xxl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
   },
   error: {
     fontFamily: FontFamily.body,

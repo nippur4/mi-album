@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumModActions } from '@/components/album-mod-actions';
 import { Avatar } from '@/components/avatar';
+import { EmptyState } from '@/components/empty-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -52,10 +53,10 @@ export default function AdminReportsScreen() {
         ) : isLoading && reports.length === 0 ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
         ) : reports.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No hay reports pendientes. 🎉</Text>
-            <Text style={styles.emptyBody}>Cuando alguien reporte un álbum, aparece acá.</Text>
-          </View>
+          <EmptyState
+            title="No hay reports pendientes. 🎉"
+            body="Cuando alguien reporte un álbum, aparece acá."
+          />
         ) : (
           <View style={{ gap: Spacing.listGap }}>
             {reports.map((r) => (
@@ -139,9 +140,6 @@ const styles = StyleSheet.create({
   introText: { fontFamily: FontFamily.body, fontSize: FontSize.bodySmall, color: Colors.inkSoft, lineHeight: 18 },
   scroll: { paddingHorizontal: Spacing.screenX, paddingBottom: Spacing.xxl, gap: Spacing.md },
   center: { paddingTop: Spacing.xxl, alignItems: 'center' },
-  empty: { paddingTop: Spacing.xxl, alignItems: 'center', gap: Spacing.sm },
-  emptyTitle: { fontFamily: FontFamily.body, fontSize: FontSize.body, fontWeight: '700', color: Colors.ink },
-  emptyBody: { fontFamily: FontFamily.body, fontSize: FontSize.bodySmall, color: Colors.inkSoft, textAlign: 'center', paddingHorizontal: Spacing.xl },
   errorText: { fontFamily: FontFamily.body, fontSize: FontSize.body, color: Colors.red, textAlign: 'center' },
   card: {
     backgroundColor: Colors.paper2,

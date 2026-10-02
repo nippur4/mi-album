@@ -282,6 +282,12 @@ export interface PageOverride {
   orientation?: PageOrientation;
 }
 
+// Identidad estable para "este álbum no tiene overrides". `?? []` al hilo en
+// un render devuelve un array nuevo cada vez, lo que invalidaba los useMemo
+// que dependen de los overrides y hacía re-ejecutar buildPages (hasta 84
+// hojas) en cada render de la vista del álbum.
+export const NO_PAGE_OVERRIDES: PageOverride[] = [];
+
 export interface BuiltPage {
   index: number;
   layout: PageLayout;

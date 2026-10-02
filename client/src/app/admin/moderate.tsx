@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlbumModActions } from '@/components/album-mod-actions';
 import { Avatar } from '@/components/avatar';
 import { CardSearchField } from '@/components/card-search-field';
+import { EmptyState } from '@/components/empty-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -19,16 +20,7 @@ import { useAdminAlbums, type AdminAlbumRow } from '@/lib/queries/admin';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
-
-// Normaliza para buscar sin tildes / mayúsculas (con fallback si Hermes no
-// soporta normalize).
-function norm(s: string): string {
-  try {
-    return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  } catch {
-    return s.toLowerCase();
-  }
-}
+import { normalize } from '@/lib/text';
 
 // Todos los álbumes con buscador (nombre u owner) + acciones de moderación.
 export default function AdminModerateScreen() {
@@ -38,9 +30,9 @@ export default function AdminModerateScreen() {
 
   useFocusRefetchStale(['admin', 'albums']);
 
-  const q = norm(query.trim());
+  const q = normalize(query);
   const filtered = q
-    ? albums.filter((a) => norm(a.name).includes(q) || norm(a.owner_name).includes(q))
+    ? albums.filter((a) => normalize(a.name).includes(q) || normalize(a.owner_name).includes(q))
     : albums;
 
   return (
@@ -69,11 +61,9 @@ export default function AdminModerateScreen() {
         ) : isLoading && albums.length === 0 ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
         ) : filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {albums.length === 0 ? 'No hay álbumes.' : 'Nada coincide con la búsqueda.'}
-            </Text>
-          </View>
+          <EmptyState
+            title={albums.length === 0 ? 'No hay álbumes.' : 'Nada coincide con la búsqueda.'}
+          />
         ) : (
           <View style={{ gap: Spacing.listGap }}>
             {filtered.map((a) => (
@@ -115,8 +105,6 @@ const styles = StyleSheet.create({
   introText: { fontFamily: FontFamily.body, fontSize: FontSize.bodySmall, color: Colors.inkSoft, lineHeight: 18 },
   scroll: { paddingHorizontal: Spacing.screenX, paddingBottom: Spacing.xxl, gap: Spacing.md },
   center: { paddingTop: Spacing.xxl, alignItems: 'center' },
-  empty: { paddingTop: Spacing.xxl, alignItems: 'center', gap: Spacing.sm },
-  emptyTitle: { fontFamily: FontFamily.body, fontSize: FontSize.body, fontWeight: '700', color: Colors.ink },
   errorText: { fontFamily: FontFamily.body, fontSize: FontSize.body, color: Colors.red, textAlign: 'center' },
   card: {
     backgroundColor: Colors.paper2,

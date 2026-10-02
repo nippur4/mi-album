@@ -70,6 +70,7 @@ export type Database = {
           id: string
           reason: string
           reporter_id: string
+          resolved_at: string | null
         }
         Insert: {
           album_id: string
@@ -78,6 +79,7 @@ export type Database = {
           id?: string
           reason: string
           reporter_id: string
+          resolved_at?: string | null
         }
         Update: {
           album_id?: string
@@ -86,6 +88,7 @@ export type Database = {
           id?: string
           reason?: string
           reporter_id?: string
+          resolved_at?: string | null
         }
         Relationships: [
           {
@@ -106,6 +109,7 @@ export type Database = {
       }
       albums: {
         Row: {
+          blocked_at: string | null
           cover_large_key: string | null
           cover_thumb_key: string | null
           created_at: string
@@ -124,6 +128,8 @@ export type Database = {
           page_overrides: Json
           page_texture: string
           public_rank: number
+          public_request_note: string | null
+          public_requested_at: string | null
           published_at: string | null
           retired_at: string | null
           share_code: string
@@ -132,6 +138,7 @@ export type Database = {
           trade_config: Json
         }
         Insert: {
+          blocked_at?: string | null
           cover_large_key?: string | null
           cover_thumb_key?: string | null
           created_at?: string
@@ -150,6 +157,8 @@ export type Database = {
           page_overrides?: Json
           page_texture?: string
           public_rank?: number
+          public_request_note?: string | null
+          public_requested_at?: string | null
           published_at?: string | null
           retired_at?: string | null
           share_code: string
@@ -158,6 +167,7 @@ export type Database = {
           trade_config?: Json
         }
         Update: {
+          blocked_at?: string | null
           cover_large_key?: string | null
           cover_thumb_key?: string | null
           created_at?: string
@@ -176,6 +186,8 @@ export type Database = {
           page_overrides?: Json
           page_texture?: string
           public_rank?: number
+          public_request_note?: string | null
+          public_requested_at?: string | null
           published_at?: string | null
           retired_at?: string | null
           share_code?: string
@@ -718,6 +730,7 @@ export type Database = {
         }
         Returns: string
       }
+      fn_admin_block_album: { Args: { p_album_id: string }; Returns: undefined }
       fn_admin_create_preset: {
         Args: {
           p_id: string
@@ -746,10 +759,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_admin_delete_album: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_admin_delete_preset: { Args: { p_id: string }; Returns: undefined }
+      fn_admin_list_album_reports: {
+        Args: never
+        Returns: {
+          album_id: string
+          album_name: string
+          blocked_at: string
+          is_public: boolean
+          last_reported_at: string
+          owner_id: string
+          owner_name: string
+          report_count: number
+          reports: Json
+          status: Database["public"]["Enums"]["album_status"]
+        }[]
+      }
       fn_admin_list_albums: {
         Args: never
         Returns: {
+          blocked_at: string
           created_at: string
           id: string
           is_public: boolean
@@ -758,7 +791,10 @@ export type Database = {
           owner_id: string
           owner_name: string
           public_rank: number
+          public_request_note: string
+          public_requested_at: string
           published_at: string
+          report_count: number
           status: Database["public"]["Enums"]["album_status"]
           total_stickers: number
         }[]
@@ -784,7 +820,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fn_admin_resolve_album_reports: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_admin_stats: { Args: never; Returns: Json }
+      fn_admin_unblock_album: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_admin_update_preset: {
         Args: {
           p_active?: boolean
@@ -855,6 +899,7 @@ export type Database = {
       fn_assert_owner: {
         Args: { p_album_id: string }
         Returns: {
+          blocked_at: string | null
           cover_large_key: string | null
           cover_thumb_key: string | null
           created_at: string
@@ -873,6 +918,8 @@ export type Database = {
           page_overrides: Json
           page_texture: string
           public_rank: number
+          public_request_note: string | null
+          public_requested_at: string | null
           published_at: string | null
           retired_at: string | null
           share_code: string
@@ -888,6 +935,10 @@ export type Database = {
         }
       }
       fn_block_user: { Args: { p_blocked: string }; Returns: undefined }
+      fn_cancel_album_public_request: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_claim_ad_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_claim_daily_pack: { Args: { p_album_id: string }; Returns: Json }
       fn_count_active_albums: { Args: { p_owner: string }; Returns: number }
@@ -951,16 +1002,6 @@ export type Database = {
           display_name: string
         }[]
       }
-      fn_my_daily_status: {
-        Args: { p_album_ids: string[] }
-        Returns: {
-          album_id: string
-          cooldown_hours: number
-          count: number
-          enabled: boolean
-          next_available_at: string
-        }[]
-      }
       fn_my_offer_flags: {
         Args: never
         Returns: {
@@ -983,8 +1024,16 @@ export type Database = {
       fn_player_album_sidedata: { Args: { p_album_id: string }; Returns: Json }
       fn_publish_album: { Args: { p_album_id: string }; Returns: undefined }
       fn_register_push_token: { Args: { p_token: string }; Returns: undefined }
+      fn_reject_album_public_request: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_report_album: {
         Args: { p_album: string; p_details?: string; p_reason: string }
+        Returns: undefined
+      }
+      fn_request_album_public: {
+        Args: { p_album_id: string; p_note: string }
         Returns: undefined
       }
       fn_resolve_trade_offer: {

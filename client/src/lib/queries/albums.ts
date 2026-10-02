@@ -8,7 +8,7 @@
 // resultados entre callers del mismo queryKey (dedup), cache con staleTime,
 // refetch on window focus, e invalidación selectiva desde mutations.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/lib/auth';
@@ -20,10 +20,9 @@ export type Album = Database['public']['Tables']['albums']['Row'];
 export type Sticker = Database['public']['Tables']['stickers']['Row'];
 
 // Primer número de figurita del álbum. Casi siempre 1; el álbum especial de
-// 1001 figuritas usa 0 (números 0..1000) — ver migración 0041. Cast defensivo
-// hasta regenerar tipos.
+// 1001 figuritas usa 0 (números 0..1000) — ver migración 0041.
 export function albumNumberStart(album: Album): number {
-  return ((album as any).number_start as number | null) ?? 1;
+  return album.number_start ?? 1;
 }
 
 export interface AlbumProgress {
@@ -189,11 +188,10 @@ export function useAlbumRow(id: string | undefined) {
 // Mutations
 // ============================================================================
 //
-// Los helpers `createAlbum`/`updateAlbumContent`/etc quedaron como funciones
-// sueltas (sin hook) para que los callers en formularios sigan usando el
-// mismo await pattern. La invalidación fina la hacen los callers via
-// `useInvalidateAlbums()` — más flexible que un `useMutation` para casos
-// como updateAlbumContent que puede impactar owned Y detail.
+// Los helpers `createAlbum`/`updateAlbumContent`/etc son funciones sueltas
+// (sin hook) para que los callers en formularios usen el mismo await pattern.
+// Después de mutar, cada caller refresca lo que le toca: `refetch()` del
+// detalle (ignora staleTime) o `qc.invalidateQueries` del listado que cambió.
 
 export async function createAlbum(name: string, totalStickers: number) {
   return supabase.rpc('fn_create_album', {
@@ -232,15 +230,14 @@ export async function publishAlbum(albumId: string) {
 
 // Solicitar / retirar que el álbum sea público (owner de un álbum publicado).
 // El admin aprueba desde el panel (fn_set_album_public). Ver migración 0074.
-// Cast `as any` en el nombre de la RPC hasta regenerar los tipos post-migración.
 export async function requestAlbumPublic(albumId: string, note: string) {
-  return (supabase.rpc as any)('fn_request_album_public', {
+  return supabase.rpc('fn_request_album_public', {
     p_album_id: albumId,
     p_note: note,
   });
 }
 export async function cancelAlbumPublicRequest(albumId: string) {
-  return (supabase.rpc as any)('fn_cancel_album_public_request', { p_album_id: albumId });
+  return supabase.rpc('fn_cancel_album_public_request', { p_album_id: albumId });
 }
 
 // Archivar/des-archivar como owner (setea albums.owner_hidden).
@@ -316,33 +313,3 @@ function extractShareCode(input: string): string | null {
   return null;
 }
 
-// Helper para invalidar caches de álbum desde formularios/mutations.
-// Uso típico:
-//   const invalidate = useInvalidateAlbums();
-//   await updateAlbumContent(id, patch);
-//   invalidate.detail(id);      // el detail cambió
-//   invalidate.owned();         // el listado de owner también (por si nombre/cover cambiaron)
-export function useInvalidateAlbums() {
-  const qc = useQueryClient();
-  return {
-    detail: (id: string) => qc.invalidateQueries({ queryKey: qk.albums.detail(id) }),
-    owned: () => qc.invalidateQueries({ queryKey: ['albums', 'owned'] }),
-    // Los listados del Home (joined + públicos) viven en el bundle.
-    home: () => qc.invalidateQueries({ queryKey: ['home-bundle'] }),
-    progress: () => qc.invalidateQueries({ queryKey: ['albums', 'progress'] }),
-    all: () => qc.invalidateQueries({ queryKey: ['albums'] }),
-  };
-}
-
-// Wrapper de useMutation para RPCs con invalidación por default.
-// Uso: const { mutateAsync } = usePublishAlbum();
-export function usePublishAlbum() {
-  const invalidate = useInvalidateAlbums();
-  return useMutation({
-    mutationFn: (albumId: string) => publishAlbum(albumId),
-    onSuccess: (_data, albumId) => {
-      invalidate.detail(albumId);
-      invalidate.owned();
-    },
-  });
-}

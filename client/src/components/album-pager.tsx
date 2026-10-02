@@ -19,6 +19,7 @@ import {
   DEFAULT_PAGE_COLOR,
   DEFAULT_PAGE_LAYOUT,
   DEFAULT_PAGE_TEXTURE,
+  NO_PAGE_OVERRIDES,
   resolveCellAspect,
   resolveColor,
   resolveTitleColor,
@@ -69,7 +70,9 @@ export function AlbumPager({
   pageTexture = DEFAULT_PAGE_TEXTURE,
   pageCellAspect = DEFAULT_CELL_ASPECT,
   pageLayout = DEFAULT_PAGE_LAYOUT,
-  pageOverrides = [],
+  // Constante y no `[]` inline: un default literal crea un array nuevo en cada
+  // render, lo que invalidaba el useMemo de buildPages.
+  pageOverrides = NO_PAGE_OVERRIDES,
   onEditPage,
 }: Props) {
   const { width: screenWidth } = useWindowDimensions();

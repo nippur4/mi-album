@@ -1,12 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/screen-header';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useSession } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { useAlbumRow } from '@/lib/queries/albums';
+import type { PackConfig } from '@/lib/queries/economy';
 import { useSticker } from '@/lib/queries/stickers';
 
 import { EditStickerView } from '@/components/sticker-edit-mode';
@@ -18,26 +18,14 @@ export default function StickerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useSession();
   const { sticker, isLoading } = useSticker(id);
+  // useAlbumRow y no una query suelta: reusa como initialData el detalle del
+  // álbum si ya está en cache (venís de la grilla → cero fetch) y cachea el
+  // resultado para las siguientes figuritas que abras del mismo álbum.
+  const { album, isLoading: albumLoading } = useAlbumRow(sticker?.album_id);
 
-  const [album, setAlbum] = useState<{
-    owner_id: string;
-    status: string;
-    name: string;
-    total_stickers: number;
-    pack_config: any;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!sticker) return;
-    supabase
-      .from('albums')
-      .select('owner_id, status, name, total_stickers, pack_config')
-      .eq('id', sticker.album_id)
-      .maybeSingle()
-      .then(({ data }) => setAlbum(data as any));
-  }, [sticker]);
-
-  if (isLoading && !sticker) {
+  // El álbum también cuenta como "cargando": antes, mientras bajaba su fila,
+  // la pantalla mostraba el error de "no encontramos la figurita" por un frame.
+  if ((isLoading && !sticker) || (!!sticker && albumLoading && !album)) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScreenHeader title="Figurita" back />
@@ -61,7 +49,10 @@ export default function StickerDetailScreen() {
     session?.user.id === album.owner_id && album.status === 'draft';
 
   return isOwnerDraft ? (
-    <EditStickerView sticker={sticker} packConfig={album.pack_config} />
+    <EditStickerView
+      sticker={sticker}
+      packConfig={album.pack_config as PackConfig | null}
+    />
   ) : (
     <ViewStickerView
       sticker={sticker}

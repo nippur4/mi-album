@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
 import { Button } from '@/components/button';
+import { EmptyState } from '@/components/empty-state';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import { useAlbumsProgress, useMyOwnedAlbums } from '@/lib/queries/albums';
@@ -43,18 +44,17 @@ export default function ManageTab() {
         </View>
 
         {owned.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {showArchived
-                ? 'No hay álbumes archivados.'
-                : 'Todavía no creaste ningún álbum.'}
-            </Text>
-            {!showArchived && (
-              <Text style={styles.emptyBody}>
-                Creá uno y vas a poder cargar las figuritas, publicarlo y compartirlo.
-              </Text>
-            )}
-          </View>
+          <EmptyState
+            style={styles.empty}
+            title={
+              showArchived ? 'No hay álbumes archivados.' : 'Todavía no creaste ningún álbum.'
+            }
+            body={
+              showArchived
+                ? undefined
+                : 'Creá uno y vas a poder cargar las figuritas, publicarlo y compartirlo.'
+            }
+          />
         ) : (
           <View style={[styles.cardList, isDesktop && styles.cardGrid]}>
             {owned.map((album) => {
@@ -62,7 +62,7 @@ export default function ManageTab() {
               const current = p?.stickers_loaded ?? 0;
               const total = p?.total_stickers ?? album.total_stickers;
               const pct = total > 0 ? current / total : 0;
-              const archived = (album as any).owner_hidden === true;
+              const archived = album.owner_hidden === true;
               return (
                 <View key={album.id} style={isDesktop ? styles.gridItem : undefined}>
                   <AlbumCard
@@ -154,24 +154,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  empty: {
-    paddingTop: Spacing.lg,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
+  // El vacío va debajo del header del tab, no al tope de la pantalla.
+  empty: { paddingTop: Spacing.lg },
   archivedToggle: {
     flexDirection: 'row',
     alignItems: 'center',

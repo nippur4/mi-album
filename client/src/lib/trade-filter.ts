@@ -1,5 +1,8 @@
 // Helpers de búsqueda/filtrado para las pantallas de intercambio. card = nombre
 // o número de figurita; user = nombre de usuario.
+
+import { normalize } from '@/lib/text';
+
 export interface TradeSearch {
   card: string;
   user: string;
@@ -14,19 +17,6 @@ export function hasSearch(s: TradeSearch): boolean {
 // Tope de resultados mostrados tras filtrar; se paginan de a PAGE_SIZE.
 export const RESULTS_CAP = 50;
 export const PAGE_SIZE = 10;
-
-// Hermes moderno soporta normalize; si no, degradamos a comparación directa.
-function stripAccents(s: string): string {
-  try {
-    return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
-  } catch {
-    return s;
-  }
-}
-
-export function normalize(s: string): string {
-  return stripAccents(s.toLowerCase()).trim();
-}
 
 type CardLike = { name: string; number: number } | null | undefined;
 

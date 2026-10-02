@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
 import { Button } from '@/components/button';
+import { EmptyState } from '@/components/empty-state';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { JoinCodeInput } from '@/components/join-code-input';
 import { PublicAlbumCard } from '@/components/public-album-card';
@@ -161,7 +162,7 @@ export default function HomeTab() {
             const total = p?.total_stickers ?? album.total_stickers;
             const counter = { current: p?.my_pasted_count ?? 0, total };
             const progress = p && total > 0 ? p.my_pasted_count / total : 0;
-            const isHidden = (album as any).__hidden === true;
+            const isHidden = album.__hidden === true;
             const isOwn = ownedIds.has(album.id);
             // Href explícito: typed routes no acepta el template string con
             // query (`?as=player`) — el shape objeto sí tipa.
@@ -222,12 +223,11 @@ export default function HomeTab() {
               )}
 
               {inProgress.length === 0 && completed.length === 0 && !showHidden && (
-                <View style={styles.empty}>
-                  <Text style={styles.emptyTitle}>Todavía no estás jugando ningún álbum.</Text>
-                  <Text style={styles.emptyBody}>
-                    Unite con un código abajo o explorá los álbumes públicos.
-                  </Text>
-                </View>
+                <EmptyState
+                  style={styles.empty}
+                  title="Todavía no estás jugando ningún álbum."
+                  body="Unite con un código abajo o explorá los álbumes públicos."
+                />
               )}
             </>
           );
@@ -357,22 +357,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  empty: {
-    paddingVertical: Spacing.xl,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-  },
+  // Entre secciones del Home: menos aire y más junto que el vacío full-screen.
+  empty: { paddingTop: Spacing.xl, paddingBottom: Spacing.xl, gap: Spacing.xs },
   hiddenToggle: {
     flexDirection: 'row',
     alignItems: 'center',

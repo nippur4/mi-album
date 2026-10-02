@@ -5,6 +5,7 @@ import { PixelRatio, Pressable, StyleSheet, Text, View, type StyleProp, type Vie
 import { Colors, FontFamily, FontSize, Layout, RarityFrame, Radius } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
 import { r2Url } from '@/lib/storage';
+import { padStickerNumber } from '@/lib/text';
 
 interface Props {
   sticker: Sticker;
@@ -45,7 +46,7 @@ export function StickerCell({ sticker, state = 'pasted', extraCount = 0, onPress
         <Image source={{ uri: url }} style={StyleSheet.absoluteFill} contentFit="cover" />
       )}
       <View style={styles.numberBadge}>
-        <Text style={styles.number}>{String(sticker.number).padStart(3, '0')}</Text>
+        <Text style={styles.number}>{padStickerNumber(sticker.number)}</Text>
       </View>
       {state === 'to_paste' ? (
         <View style={styles.toPasteBadge}>
@@ -72,7 +73,7 @@ interface EmptyCellProps {
 export function StickerCellEmpty({ number, showPlus, onPress, style }: EmptyCellProps) {
   return (
     <Pressable onPress={onPress} style={[styles.cellEmpty, style]}>
-      <Text style={styles.emptyNumber}>{String(number).padStart(3, '0')}</Text>
+      <Text style={styles.emptyNumber}>{padStickerNumber(number)}</Text>
       {showPlus && <Text style={styles.plus}>+</Text>}
     </Pressable>
   );
@@ -87,7 +88,7 @@ interface MissingCellProps {
 export function StickerCellMissing({ number, onPress, style }: MissingCellProps) {
   return (
     <Pressable onPress={onPress} style={[styles.cellMissing, style]}>
-      <Text style={styles.missingNumber}>{String(number).padStart(3, '0')}</Text>
+      <Text style={styles.missingNumber}>{padStickerNumber(number)}</Text>
       <View style={styles.silhouette} />
     </Pressable>
   );

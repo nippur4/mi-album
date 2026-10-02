@@ -5,21 +5,18 @@
 // es intencional: mostrar en la UI los mismos números que el backend calcula.
 
 import type { Sticker } from '@/lib/queries/albums';
+import type { Rarity } from '@/lib/queries/stickers';
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+// Re-exportado por comodidad de los callers de este módulo. El tipo sale del
+// enum generado de la DB (antes acá había una unión escrita a mano que podía
+// desincronizarse si el enum sumaba una rareza).
+export type { Rarity };
 
 export const STICKER_WEIGHTS: Record<Rarity, number> = {
   common: 40,
   rare: 25,
   epic: 18,
   legendary: 12,
-};
-
-export const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Común',
-  rare: 'Rara',
-  epic: 'Épica',
-  legendary: 'Legendaria',
 };
 
 export interface RarityBreakdown {

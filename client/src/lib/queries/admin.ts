@@ -149,9 +149,8 @@ export async function setAlbumPublicRank(albumId: string, rank: number) {
 }
 
 // Descarta la solicitud de público de un owner (sin hacerlo público).
-// Cast `as any` hasta regenerar los tipos post-migración 0074.
 export async function rejectAlbumPublicRequest(albumId: string) {
-  return (supabase.rpc as any)('fn_reject_album_public_request', {
+  return supabase.rpc('fn_reject_album_public_request', {
     p_album_id: albumId,
   });
 }
@@ -164,7 +163,7 @@ export function useAdminReports() {
     queryKey: ['admin', 'reports'] as const,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('fn_admin_list_album_reports');
+      const { data, error } = await supabase.rpc('fn_admin_list_album_reports');
       if (error) throw error;
       return ((data ?? []) as any[]) as AdminReportRow[];
     },
@@ -180,18 +179,18 @@ export function useAdminReports() {
 
 // Bloquear (reversible) / desbloquear un álbum: lo saca del carrusel y frena joins.
 export async function blockAlbum(albumId: string) {
-  return (supabase.rpc as any)('fn_admin_block_album', { p_album_id: albumId });
+  return supabase.rpc('fn_admin_block_album', { p_album_id: albumId });
 }
 export async function unblockAlbum(albumId: string) {
-  return (supabase.rpc as any)('fn_admin_unblock_album', { p_album_id: albumId });
+  return supabase.rpc('fn_admin_unblock_album', { p_album_id: albumId });
 }
 
 // Borrar un álbum definitivo (cascade). Protege los especiales curados server-side.
 export async function adminDeleteAlbum(albumId: string) {
-  return (supabase.rpc as any)('fn_admin_delete_album', { p_album_id: albumId });
+  return supabase.rpc('fn_admin_delete_album', { p_album_id: albumId });
 }
 
 // Marca resueltos todos los reports de un álbum (los saca del listado).
 export async function resolveAlbumReports(albumId: string) {
-  return (supabase.rpc as any)('fn_admin_resolve_album_reports', { p_album_id: albumId });
+  return supabase.rpc('fn_admin_resolve_album_reports', { p_album_id: albumId });
 }

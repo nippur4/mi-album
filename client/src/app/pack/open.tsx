@@ -30,6 +30,7 @@ import {
 } from '@/lib/queries/packs';
 import { isPreset, r2Url, thumbFromLargeKey } from '@/lib/storage';
 import { albumSfxTheme, initSfx, playSfx } from '@/lib/sfx';
+import { padStickerNumber } from '@/lib/text';
 
 type Phase = 'idle' | 'opening' | 'revealed';
 
@@ -423,7 +424,7 @@ function RevealedCard({
         )}
         {!hideLabels && (
           <View style={styles.revealedFooter}>
-            <Text style={styles.revealedNumber}>#{String(sticker.number).padStart(3, '0')}</Text>
+            <Text style={styles.revealedNumber}>#{padStickerNumber(sticker.number)}</Text>
             <Text style={styles.revealedName} numberOfLines={2}>{sticker.name}</Text>
           </View>
         )}

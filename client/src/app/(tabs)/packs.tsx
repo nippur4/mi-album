@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { DailyAlbumRow } from '@/components/daily-album-row';
+import { EmptyState } from '@/components/empty-state';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { MediaThumb } from '@/components/media-thumb';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -83,12 +84,11 @@ export default function PacksTab() {
 
         {/* Sobres pendientes (sin abrir) por álbum */}
         {pending.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No tenés sobres pendientes.</Text>
-            <Text style={styles.emptyBody}>
-              Reclamá tu sobre diario o escaneá el QR de un álbum.
-            </Text>
-          </View>
+          <EmptyState
+            style={styles.empty}
+            title="No tenés sobres pendientes."
+            body="Reclamá tu sobre diario o escaneá el QR de un álbum."
+          />
         ) : (
           <View style={[styles.rowList, isDesktop && styles.rowGrid]}>
             {pending.map((row) => (
@@ -201,24 +201,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     maxWidth: 540,
   },
-  empty: {
-    paddingTop: Spacing.lg,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
+  // Va entre secciones del tab, no al tope de la pantalla.
+  empty: { paddingTop: Spacing.lg },
   pendingRow: {
     flexDirection: 'row',
     alignItems: 'center',

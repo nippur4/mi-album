@@ -278,13 +278,16 @@
 │  │  ├─ (auth)/ (tabs)/ album/ sticker/ join/ pack/ trade/ admin/
 │  ├─ src/
 │  │  ├─ components/        # UI compartida (BottomSheet, AlbumPager, modales…)
+│  │  │                     # + EmptyState, LayoutPreviewGrid, AlbumPickerSheet
 │  │  ├─ constants/theme.ts # design tokens
 │  │  └─ lib/
 │  │     ├─ queries/        # hooks React Query por dominio
 │  │     ├─ page-config.ts  # paletas, layouts, texturas y títulos de hojas
 │  │     ├─ alert.ts        # shim de Alert que funciona en web
 │  │     ├─ edge.ts         # callEdgeFunction()
-│  │     └─ errors.ts       # mapeo de errcodes Pxxxx a copy
+│  │     ├─ errors.ts       # mapeo de errcodes Pxxxx a copy
+│  │     ├─ text.ts         # normalize/stripAccents + padStickerNumber
+│  │     └─ rarity.ts       # RARITY_ORDER + RARITY_LABEL (etiquetas en es)
 │  ├─ scripts/gen-sfx.js    # generador de efectos de sonido (WAV sintético)
 │  └─ assets/               # fuentes, sonidos
 └─ supabase/
@@ -337,7 +340,7 @@
   <h2>5 · Economía de sobres</h2>
   <table>
     <tr><th>Mecanismo</th><th>Cómo funciona</th><th>Gate</th></tr>
-    <tr><td><strong>Sobre diario</strong></td><td>Cooldown nominal 24h/168h con margen de −1h efectivo. Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
+    <tr><td><strong>Sobre diario</strong></td><td>Cooldown rodante desde el último claim: nominal 24h/168h con margen de <strong>−2h</strong> efectivo (22h / 166h, migración 0077). Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
     <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret en la tabla aparte <code>album_qr_secrets</code>, sin acceso público). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
     <tr><td><strong>Bienvenida</strong></td><td>Sobres extra configurables al unirse.</td><td>—</td></tr>
     <tr><td><strong>Publicidad</strong></td><td>Rewarded ad (AdMob) → 1 sobre. Solo en los 3 álbumes especiales, tope 2/día por usuario, solo Android. Ver abajo.</td><td>Android</td></tr>
@@ -406,6 +409,8 @@
   <ul>
     <li><strong>Matches por álbum</strong>: <code>fn_album_matches</code> cruza tus faltantes con repes de otros (cap de 5 pares por contraparte). "Para cambiar" incluye repes reales (badge REPE) y sin pegar (badge PEGAR).</li>
     <li><strong>Ofertas 1:1</strong>: elegís qué das y qué recibís; la contraparte acepta o rechaza. Push + badge en el tab Cambios.</li>
+    <li><strong>Dos puertas de entrada a proponer</strong>: (a) desde el álbum → Cambios → Coincidencias; (b) desde el tab Cambios, botón <strong>"Proponer cambio"</strong> → <code>AlbumPickerSheet</code> (álbumes de <code>useHomeBundle().joined</code>, los únicos donde podés cambiar) → <code>/trade/matches?albumId=X&amp;tab=matches</code>, que abre directo en Coincidencias. El param <code>tab=matches</code> existe para eso (antes solo se abría ahí con <code>give=&lt;stickerId&gt;</code>).</li>
+    <li><strong><code>trade/new.tsx</code> no consulta nada</strong>: las dos figuritas salen del cache de <code>useAlbumDetail</code> — que siempre está caliente, porque a esa pantalla solo se llega desde Coincidencias, que usa el mismo hook, y un álbum publicado tiene <code>staleTime: Infinity</code> — y el nombre de la contraparte viaja por el link (<code>toName</code>). Antes eran 3 queries sin cachear (2 × <code>select('*')</code> de sticker + el perfil) en cada tap de "Ofrecer".</li>
     <li><strong>Reglas del owner</strong>: intercambios on/off y límite por día/semana/mes. El límite se chequea <strong>al aceptar</strong>; <code>fn_trade_limit_status</code> alimenta el banner informativo del jugador.</li>
     <li><strong>Búsqueda + paginado (2026-08)</strong>: todo filtrado <strong>client-side</strong> sobre datos ya cargados (los matches ya vienen capeados por par; las ofertas son las tuyas), con tope de <strong>50 resultados</strong> mostrados y paginado de a 10. Helpers en <code>lib/trade-filter.ts</code> (<code>cardMatches</code> por nombre o número sin tildes, <code>userMatches</code>); UI en <code>components/trade-filter-panel.tsx</code> (<code>TradeFilterPanel</code> colapsable "Buscar" + <code>FilterChips</code>).
       <ul>
@@ -466,6 +471,17 @@
     <li><strong>Grilla de hojas</strong>: previews en 3 columnas (FlatList virtualizada), punto dorado = personalizada.</li>
     <li><strong>Editor de hoja</strong>: overrides individuales, navegación entre hojas con flechas.</li>
   </ol>
+
+  <h3>Dónde se entra a configurar</h3>
+  <ul>
+    <li><strong>Edición (vista owner)</strong>: card <code>PagesDesignCard</code> con miniatura real de la hoja (color + textura + grilla con la proporción elegida) y resumen ("12 hojas de 3 × 4 · Blanco · Sin textura · figurita Clásica · 2 personalizadas"). Va al nivel de la card de economía. Antes era una pill de 12px perdida entre otras cuatro en la sección FIGURITAS. <strong>Solo se muestra en draft/published</strong>: en <code>read_only</code> el server rechaza el guardado con <code>P0040</code> (la pill vieja se mostraba igual y reventaba al guardar).</li>
+    <li><strong>Creación (<code>album/new.tsx</code>)</strong>: sección "Diseño y distribución de las hojas" con preview vivo + composición, tamaño de figurita y color. Se eligen acá y no después porque <strong>el tamaño de figurita define el crop con el que se suben las imágenes</strong> — decidirlo antes de cargar las figuritas evita recargarlas. Texturas, títulos y overrides por hoja quedan solo en el editor (cambiarlos después no cuesta nada). Al crear se dispara un <code>fn_update_album_pages</code> extra <strong>solo si algo difiere del default</strong>; si falla no corta la creación (el álbum ya existe y la card muestra el estado real).</li>
+    <li>El owner además tiene el <strong>lápiz por hoja</strong> en el pager, que abre el editor de esa hoja (<code>initialPage</code>).</li>
+  </ul>
+
+  <div class="callout rule">
+    <strong>Identidad estable de los overrides:</strong> pasar <code>album.page_overrides ?? []</code> inline crea un array nuevo en cada render → invalida el <code>useMemo</code> de <code>buildPages</code> y recalcula hasta 84 hojas por render. Usar la constante <code>NO_PAGE_OVERRIDES</code> de <code>page-config.ts</code> (también es el default del prop en <code>AlbumPager</code>).
+  </div>
 </section>
 
 <section id="imagenes">
@@ -519,12 +535,23 @@
     <strong>Regla de oro web:</strong> <code>Alert.alert</code> de react-native es <strong>no-op en react-native-web</strong>. Importar siempre <code>{ Alert }</code> de <code>@/lib/alert</code> (shim: en web usa <code>window.alert</code>/<code>window.confirm</code>). Para confirms ricos, BottomSheet in-app.
   </div>
   <ul>
-    <li><strong>Modales nuevos</strong>: sobre <code>BottomSheet</code> (base común con backdrop, footer sticky, avoidKeyboard). ScrollView interno con <code>flexShrink: 1</code> — nunca <code>maxHeight: '100%'</code> (rompe el scroll en web).</li>
+    <li><strong>Modales nuevos</strong>: sobre <code>BottomSheet</code> (base común con backdrop, footer sticky, avoidKeyboard). ScrollView interno con <code>flexShrink: 1</code> — nunca <code>maxHeight: '100%'</code> (rompe el scroll en web). Para editar <strong>un</strong> campo de texto, <code>TextFieldSheet</code> (los modales concretos son wrappers de ~29 líneas que solo fijan copy y RPC).</li>
+    <li><strong>Antes de escribir un helper, buscarlo</strong>: estas piezas ya son compartidas y tuvieron 3+ copias divergiendo.
+      <ul>
+        <li><code>components/empty-state.tsx</code> — <code>&lt;EmptyState title body style&gt;</code> para el vacío de una lista. El <code>style</code> solo ajusta el espaciado del contenedor.</li>
+        <li><code>lib/text.ts</code> — <code>normalize</code> / <code>stripAccents</code> (búsquedas sin tildes, con fallback si la build de Hermes no trae <code>String.prototype.normalize</code>) y <code>padStickerNumber</code> (<code>7</code> → <code>'007'</code>; el <code>#</code> lo pone el caller).</li>
+        <li><code>lib/rarity.ts</code> — <code>RARITY_ORDER</code> + <code>RARITY_LABEL</code>. Los <strong>pesos</strong> del sorteo NO van acá: viven en <code>lib/pack-probability.ts</code> porque tienen que espejar los de la Edge Function <code>open_pack</code>.</li>
+        <li><code>components/layout-preview-grid.tsx</code> — mini grilla M×N de una hoja (editor, card de diseño, pantalla de álbum nuevo).</li>
+      </ul>
+    </li>
+    <li><strong>Un tipo, una fuente</strong>: <code>Rarity</code> sale del enum generado (<code>lib/queries/stickers.ts</code>) y <code>pack-probability</code> lo re-exporta. No volver a escribir la unión a mano: si el enum suma una rareza, la copia queda desincronizada en silencio.</li>
+    <li><strong>Derivaciones sobre la colección van memoizadas</strong>: las vistas de álbum manejan hasta 1001 figuritas y re-renderizan con cada tecla del buscador en vivo del bolsillo. Armar un <code>Map</code> o hacer <code>filter().sort()</code> al hilo en el render se paga en cada pulsación. <code>collection</code> viene con identidad estable de <code>usePlayerAlbumSideData</code>, así que sirve como dep.</li>
     <li><strong>Edge Functions desde el cliente</strong>: siempre vía <code>callEdgeFunction()</code> (token, headers, timeout, parseo de errores).</li>
     <li><strong>Gestos + scroll en web</strong>: todo <code>GestureDetector</code> que conviva con scroll vertical lleva <code>touchAction="pan-y"</code> (RNGH pone <code>touch-action: none</code> y mata el scroll táctil).</li>
     <li><strong>Medir contenedores con onLayout</strong>, no <code>useWindowDimensions</code>, cuando hay caps de ancho (desktop). SVG en web necesita width/height en px explícitos.</li>
     <li><strong>Cap desktop sobre el contenido</strong>: <code>contentContainerStyle=[base, useDesktopCap(n)]</code>; envolver el ScrollView deja la barra de scroll flotando.</li>
     <li><strong>Queries</strong>: toda lectura hace <code>if (error) throw toAppError(error)</code>; pull-to-refresh usa <code>isRefetching</code>.</li>
+    <li><strong>Nunca una query cruda en un <code>useEffect</code>+<code>useState</code></strong>: queda fuera del cache y sale en cada mount. Antes de escribir una, buscar el hook — <code>useAlbumRow(id)</code> (fila del álbum, reusa el detalle cacheado como <code>initialData</code>), <code>useIsMember(albumId)</code>, <code>useAlbumDetail(id)</code>. Las tres pantallas que tenían su propia copia (<code>sticker/[id]</code>, <code>album-owner-view</code>, <code>trade/new</code>) ya migraron.</li>
     <li><strong>Cache persistido en disco</strong> (<code>PersistQueryClientProvider</code> + AsyncStorage/localStorage): el arranque en frío pinta desde disco sin esperar la red. <code>gcTime</code> global 24h (>= <code>PERSIST_MAX_AGE</code>, si no las queries se recolectan antes de guardarse). <strong>Bumpear <code>PERSIST_BUSTER</code></strong> cuando cambie el shape de una query o se regeneren tipos con migraciones que rompan. <code>signOut()</code> limpia memoria + disco.
       <div class="callout rule"><strong>GOTCHA (crash real del tab Sobres):</strong> NUNCA guardar un <code>Set</code>/<code>Map</code>/<code>Date</code> dentro del <code>data</code> de una query que se persiste — <code>JSON.stringify(new Set(...))</code> = <code>{}</code>, y al rehidratar en frío <code>.has()</code> es undefined → <em>"undefined is not a function"</em> que cierra la app en release. Cachear solo tipos JSON-safe (arrays) y reconstruir el <code>Set</code> con <code>useMemo</code> (como <code>useAdPackSummary</code> y <code>useBlockedIds</code>).</div>
     </li>

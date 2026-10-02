@@ -1,15 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontFamily, FontSize, RarityFrame, Radius, Spacing } from '@/constants/theme';
+import { RARITY_LABEL, RARITY_ORDER } from '@/lib/rarity';
 import type { Rarity } from '@/lib/queries/stickers';
-
-const ORDER: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
-const LABEL: Record<Rarity, string> = {
-  common: 'Común',
-  rare: 'Rara',
-  epic: 'Épica',
-  legendary: 'Legendaria',
-};
 
 interface Props {
   value: Rarity;
@@ -19,7 +12,7 @@ interface Props {
 export function RarityPills({ value, onChange }: Props) {
   return (
     <View style={styles.row}>
-      {ORDER.map((r) => {
+      {RARITY_ORDER.map((r) => {
         const selected = value === r;
         return (
           <Pressable
@@ -32,7 +25,7 @@ export function RarityPills({ value, onChange }: Props) {
             ]}
           >
             <Text style={[styles.text, selected && styles.textSelected]}>
-              {LABEL[r]}
+              {RARITY_LABEL[r]}
             </Text>
           </Pressable>
         );

@@ -132,7 +132,7 @@ export default function NewStickerScreen() {
               largeKey={keys?.large_key ?? null}
               label="Foto"
               // El crop del picker sigue la proporción de figurita del álbum.
-              aspect={cellAspectCrop((album as any)?.page_cell_aspect)}
+              aspect={cellAspectCrop(album?.page_cell_aspect)}
               onPicked={onPicked}
               busy={uploading}
             />

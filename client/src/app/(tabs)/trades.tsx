@@ -1,13 +1,17 @@
 import Feather from '@expo/vector-icons/Feather';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AlbumPickerSheet } from '@/components/album-picker-sheet';
+import { EmptyState } from '@/components/empty-state';
 import { HeaderAvatar } from '@/components/header-avatar';
 import { SegmentedControl } from '@/components/segmented-control';
 import { FilterChips, TradeFilterPanel } from '@/components/trade-filter-panel';
 import { TradeOfferCard } from '@/components/trade-offer-card';
-import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
+import { Colors, FontFamily, FontSize, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useHomeBundle } from '@/lib/queries/home';
 import { useMyOffers, type TradeOffer } from '@/lib/queries/trades';
 import {
   cardMatches,
@@ -38,14 +42,19 @@ const SECTION_EMPTY: Record<Section, string> = {
 };
 
 export default function TradesTab() {
+  const router = useRouter();
   const isDesktop = useIsDesktop();
   const desktopCap = useDesktopCap(1080);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('received');
   const [section, setSection] = useState<Section>('open');
   const [page, setPage] = useState(0);
   const [albumFilter, setAlbumFilter] = useState<string | null>(null);
   const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
   const { received, sent, isLoading, isRefetching, refetch } = useMyOffers();
+  // Álbumes que juego: son los únicos donde puedo proponer un cambio. El
+  // bundle del Home ya está cacheado casi siempre (mismo queryKey).
+  const { joined, isLoading: albumsLoading } = useHomeBundle();
 
   useFocusRefetchStale(['trades', 'offers']);
 
@@ -120,6 +129,16 @@ export default function TradesTab() {
           <HeaderAvatar size={44} />
         </View>
 
+        {/* Arrancar un cambio sin pasar por el álbum: elegís el álbum acá y
+            caés en sus Coincidencias, donde se propone la oferta. */}
+        <Pressable
+          onPress={() => setPickerOpen(true)}
+          style={({ pressed }) => [styles.proposeBtn, pressed && styles.proposePressed]}
+        >
+          <Feather name="repeat" size={16} color={Colors.paper} />
+          <Text style={styles.proposeLabel}>Proponer cambio</Text>
+        </Pressable>
+
         <SegmentedControl
           options={[
             { key: 'received', label: 'Recibidas', count: receivedPending || received.length },
@@ -155,24 +174,24 @@ export default function TradesTab() {
         {isLoading && tabList.length === 0 ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
         ) : tabList.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {tab === 'received' ? 'No tenés ofertas recibidas.' : 'Todavía no enviaste ninguna.'}
-            </Text>
-            <Text style={styles.emptyBody}>
-              {tab === 'received'
+          <EmptyState
+            title={
+              tab === 'received' ? 'No tenés ofertas recibidas.' : 'Todavía no enviaste ninguna.'
+            }
+            body={
+              tab === 'received'
                 ? 'Cuando alguien quiera intercambiar te aparecen acá.'
-                : 'Entrá a un álbum, mirá las coincidencias y proponé un cambio.'}
-            </Text>
-          </View>
+                : 'Tocá "Proponer cambio", elegí el álbum y mirá las coincidencias.'
+            }
+          />
         ) : filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {albumFilter || search.card || search.user
+          <EmptyState
+            title={
+              albumFilter || search.card || search.user
                 ? 'Nada coincide con el filtro.'
-                : SECTION_EMPTY[section]}
-            </Text>
-          </View>
+                : SECTION_EMPTY[section]
+            }
+          />
         ) : (
           <>
             {overflowed && (
@@ -214,6 +233,15 @@ export default function TradesTab() {
           </>
         )}
       </ScrollView>
+
+      <AlbumPickerSheet
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        albums={joined}
+        isLoading={albumsLoading}
+        title="¿En qué álbum querés cambiar?"
+        onSelect={(albumId) => router.push(`/trade/matches?albumId=${albumId}&tab=matches`)}
+      />
     </SafeAreaView>
   );
 }
@@ -232,6 +260,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerText: { gap: Spacing.xs, flex: 1 },
+  proposeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    minHeight: 46,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.button,
+    backgroundColor: Colors.red,
+    ...Shadow.cta(Colors.redShadow),
+  },
+  proposePressed: {
+    transform: [{ translateY: 5 }],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  proposeLabel: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.body,
+    fontWeight: '800',
+    color: Colors.paper,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   cardList: {
     gap: Spacing.listGap,
   },
@@ -292,23 +344,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   center: { paddingVertical: Spacing.xxl, alignItems: 'center' },
-  empty: {
-    paddingTop: Spacing.xxl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
 });

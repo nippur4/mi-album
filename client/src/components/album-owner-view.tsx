@@ -1,7 +1,7 @@
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Pressable,
@@ -24,7 +24,9 @@ import { Checklist, type ChecklistItem } from '@/components/checklist';
 import { EditEconomyModal } from '@/components/edit-economy-modal';
 import { EditTotalModal } from '@/components/edit-total-modal';
 import { ImageUploadCard } from '@/components/image-upload-card';
+import { LayoutPreviewGrid } from '@/components/layout-preview-grid';
 import { PackProbabilityCard } from '@/components/pack-probability-card';
+import { PageTexture } from '@/components/page-texture';
 import { PresetPickerModal } from '@/components/preset-picker-modal';
 import { ProgressCard } from '@/components/progress-card';
 import { QrPosterModal } from '@/components/qr-poster-modal';
@@ -44,19 +46,28 @@ import {
   publishAlbum,
   unarchiveAlbumByOwner,
   updateAlbumContent,
+  useIsMember,
   type Album,
   type Sticker,
 } from '@/lib/queries/albums';
-import { supabase } from '@/lib/supabase';
 import { downloadAlbumPdf } from '@/lib/album-pdf';
 import { nextDownloadLabel } from '@/lib/download-limit';
 import { useSession } from '@/lib/auth';
 import { DEFAULT_PACK_CONFIG, DEFAULT_TRADE_CONFIG, modeFromConfig, type PackConfig, type TradeConfig } from '@/lib/queries/economy';
 import { proFeatureHint } from '@/lib/upsell-copy';
 import {
+  buildPages,
+  CELL_ASPECTS,
   DEFAULT_CELL_ASPECT,
   DEFAULT_PAGE_COLOR,
+  DEFAULT_PAGE_LAYOUT,
   DEFAULT_PAGE_TEXTURE,
+  NO_PAGE_OVERRIDES,
+  PAGE_COLORS,
+  PAGE_TEXTURES,
+  resolveCellAspect,
+  resolveColor,
+  resolveLayout,
   type PageOverride,
 } from '@/lib/page-config';
 import { useIsPro } from '@/lib/queries/subscriptions';
@@ -65,6 +76,7 @@ import { useDesktopCap } from '@/lib/use-is-desktop';
 import { uploadImage } from '@/lib/queries/uploads';
 import { enableQrForAlbum } from '@/lib/queries/qr';
 import { errorMessage } from '@/lib/errors';
+import { padStickerNumber } from '@/lib/text';
 
 interface Props {
   album: Album;
@@ -113,8 +125,6 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [publicBusy, setPublicBusy] = useState(false);
   const [requestingPublic, setRequestingPublic] = useState(false);
-  // Estado "yo me joineé como jugador a mi propio álbum" (Fase 10).
-  const [isJoinedAsPlayer, setIsJoinedAsPlayer] = useState<boolean | null>(null);
   const [joiningToPlay, setJoiningToPlay] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [deletingAlbum, setDeletingAlbum] = useState(false);
@@ -123,16 +133,10 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
   const [playerCount, setPlayerCount] = useState(0);
   const isProtected = PROTECTED_ALBUM_IDS.has(album.id);
 
-  // Chequeamos membership: null = cargando; true/false = respuesta del backend.
-  useEffect(() => {
-    if (!session?.user.id) return;
-    supabase
-      .from('user_album_membership')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
-      .eq('album_id', album.id)
-      .then(({ count }) => setIsJoinedAsPlayer((count ?? 0) > 0));
-  }, [session?.user.id, album.id]);
+  // "Yo me joineé como jugador a mi propio álbum" (Fase 10). Usa el mismo hook
+  // que la vista jugador: la query queda cacheada y compartida en vez de salir
+  // sin cache en cada entrada al álbum.
+  const { isMember: isJoinedAsPlayer, refetch: refetchMembership } = useIsMember(album.id);
 
   async function onPlayAlbum() {
     setJoiningToPlay(true);
@@ -144,7 +148,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
       Alert.alert('No se pudo empezar a jugar', errorMessage(error));
       return;
     }
-    setIsJoinedAsPlayer(true);
+    refetchMembership();
     router.push(`/album/${album.id}?as=player`);
   }
 
@@ -283,7 +287,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     }
   }
 
-  const isArchived = (album as any).owner_hidden === true;
+  const isArchived = album.owner_hidden === true;
 
   function onArchivePress() {
     if (isArchived) {
@@ -321,7 +325,13 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
     }
   }
 
-  const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
+  // Memoizado: esta vista re-renderiza seguido (modo reordenar, modales, el
+  // timer de "¡Copiado!" cada 2s) y rearmar el Map de hasta 1001 figuritas en
+  // cada render no tenía sentido.
+  const stickerByNumber = useMemo(
+    () => new Map<number, Sticker>(stickers.map((s) => [s.number, s])),
+    [stickers],
+  );
   // Primer número del álbum (1 salvo el especial 0..1000 — migración 0041).
   const numberStart = albumNumberStart(album);
 
@@ -452,7 +462,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         {album.status === 'published' && (
           <PublicSection
             isPublic={album.is_public === true}
-            requested={!!(album as any).public_requested_at}
+            requested={!!album.public_requested_at}
             busy={publicBusy}
             onRequest={() => setRequestingPublic(true)}
             onCancel={onCancelPublicRequest}
@@ -538,6 +548,26 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           />
         )}
 
+        {/* Diseño de hojas: card de entrada con preview real de la hoja.
+            Antes era una pill chiquita perdida entre las herramientas de la
+            grilla y casi nadie la encontraba. Solo en draft/published: en
+            read_only el server rechaza el guardado (P0040). */}
+        {(isDraft || album.status === 'published') && (
+          <PagesDesignCard
+            totalStickers={album.total_stickers}
+            numberStart={numberStart}
+            bgColor={album.page_bg_color ?? DEFAULT_PAGE_COLOR}
+            texture={album.page_texture ?? DEFAULT_PAGE_TEXTURE}
+            cellAspect={album.page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+            layout={album.page_layout ?? DEFAULT_PAGE_LAYOUT}
+            overrides={((album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES)}
+            onPress={() => {
+              setEditPagesInitial(null);
+              setEditingPages(true);
+            }}
+          />
+        )}
+
         {isDraft && (
           <>
             <View style={styles.section}>
@@ -608,17 +638,6 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 </Pressable>
               </>
             )}
-            <Pressable
-              onPress={() => {
-                setEditPagesInitial(null);
-                setEditingPages(true);
-              }}
-              style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
-              hitSlop={6}
-            >
-              <Feather name="layers" size={12} color={Colors.ink} />
-              <Text style={styles.editPillText}>Editar hojas</Text>
-            </Pressable>
             {isDraft && stickers.length >= 1 && (
               <Pressable
                 onPress={toggleReorder}
@@ -661,7 +680,7 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                   ? 'Moviendo…'
                   : reorderFrom === null
                     ? 'Tocá la figurita que querés mover.'
-                    : `#${String(reorderFrom).padStart(3, '0')} → tocá el casillero destino.`)}
+                    : `#${padStickerNumber(reorderFrom)} → tocá el casillero destino.`)}
             </Text>
           )}
 
@@ -717,11 +736,11 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               <AlbumPager
                 totalStickers={album.total_stickers}
                 numberStart={numberStart}
-                pageBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
-                pageTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
-                pageCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
-                pageLayout={(album as any).page_layout ?? undefined}
-                pageOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
+                pageBgColor={album.page_bg_color ?? DEFAULT_PAGE_COLOR}
+                pageTexture={album.page_texture ?? DEFAULT_PAGE_TEXTURE}
+                pageCellAspect={album.page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+                pageLayout={album.page_layout ?? undefined}
+                pageOverrides={((album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES)}
                 onEditPage={(i) => {
                   setEditPagesInitial(i);
                   setEditingPages(true);
@@ -862,11 +881,11 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         albumId={album.id}
         totalStickers={album.total_stickers}
         numberStart={numberStart}
-        currentBgColor={(album as any).page_bg_color ?? DEFAULT_PAGE_COLOR}
-        currentTexture={(album as any).page_texture ?? DEFAULT_PAGE_TEXTURE}
-        currentCellAspect={(album as any).page_cell_aspect ?? DEFAULT_CELL_ASPECT}
-        currentLayout={(album as any).page_layout ?? undefined}
-        currentOverrides={((album as any).page_overrides ?? []) as PageOverride[]}
+        currentBgColor={album.page_bg_color ?? DEFAULT_PAGE_COLOR}
+        currentTexture={album.page_texture ?? DEFAULT_PAGE_TEXTURE}
+        currentCellAspect={album.page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+        currentLayout={album.page_layout ?? undefined}
+        currentOverrides={((album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES)}
         onClose={() => setEditingPages(false)}
         onSaved={refetch}
       />
@@ -1158,6 +1177,136 @@ const qrStyles = StyleSheet.create({
   },
 });
 
+// Card de entrada al editor de hojas. Muestra una miniatura de la hoja real
+// (color + textura + grilla) y el resumen de la configuración, para que el
+// owner vea de un saque cómo va a quedar su álbum y qué está por tocar.
+function PagesDesignCard({
+  totalStickers,
+  numberStart,
+  bgColor,
+  texture,
+  cellAspect,
+  layout,
+  overrides,
+  onPress,
+}: {
+  totalStickers: number;
+  numberStart: number;
+  bgColor: string;
+  texture: string;
+  cellAspect: string;
+  layout: string;
+  overrides: PageOverride[];
+  onPress: () => void;
+}) {
+  // buildPages es la única forma correcta de contar hojas (los overrides
+  // cambian la capacidad hoja por hoja). Memoizado porque esta vista
+  // re-renderiza seguido y un álbum de 1001 figus son ~84 hojas.
+  const pages = useMemo(
+    () => buildPages(totalStickers, bgColor, texture, overrides, numberStart, cellAspect, layout),
+    [totalStickers, bgColor, texture, overrides, numberStart, cellAspect, layout],
+  );
+  const resolvedLayout = resolveLayout(layout);
+  const colorName = PAGE_COLORS.find((c) => c.key === bgColor)?.name ?? 'Blanco';
+  const textureName = PAGE_TEXTURES.find((t) => t.key === texture)?.name ?? 'Sin textura';
+  const aspectName = CELL_ASPECTS.find((a) => a.key === cellAspect)?.name ?? 'Clásica';
+  // Solo contamos overrides con algo configurado: un objeto vacío quedó de
+  // alguna edición cancelada y no es una hoja "personalizada".
+  const customCount = overrides.filter(
+    (o) => o.color || o.layout || o.texture || o.orientation || o.cellAspect || o.title,
+  ).length;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [pagesStyles.card, pressed && pagesStyles.cardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel="Configurar el diseño y la distribución de las hojas"
+    >
+      {/* Miniatura de la primera hoja, con el color, la textura y la grilla
+          que están aplicados ahora mismo. */}
+      <View style={[pagesStyles.preview, { backgroundColor: resolveColor(bgColor) }]}>
+        <PageTexture texture={texture} opacity={0.22} />
+        <LayoutPreviewGrid
+          cols={resolvedLayout.cols}
+          rows={resolvedLayout.rows}
+          cellColor="rgba(42,30,22,0.18)"
+          cellAspect={resolveCellAspect(cellAspect)}
+        />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={pagesStyles.label}>DISEÑO Y DISTRIBUCIÓN DE LAS HOJAS</Text>
+        <Text style={pagesStyles.value}>
+          {pages.length} {pages.length === 1 ? 'hoja' : 'hojas'} de {resolvedLayout.name}
+        </Text>
+        <Text style={pagesStyles.detail} numberOfLines={2}>
+          {colorName} · {textureName} · figurita {aspectName}
+          {customCount > 0
+            ? ` · ${customCount} personalizada${customCount === 1 ? '' : 's'}`
+            : ''}
+        </Text>
+        <Text style={pagesStyles.action}>Tocá para editar →</Text>
+      </View>
+
+      <Feather name="chevron-right" size={20} color={Colors.muted} />
+    </Pressable>
+  );
+}
+
+const pagesStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.cardLg,
+    borderWidth: 2,
+    borderColor: Colors.borderStrong,
+    padding: Spacing.lg,
+  },
+  cardPressed: { opacity: 0.85 },
+  // Proporción de hoja (la misma de los previews del editor) para que la
+  // miniatura lea como una hoja del álbum y no como un cuadradito genérico.
+  preview: {
+    width: 56,
+    aspectRatio: 0.78,
+    borderRadius: 6,
+    overflow: 'hidden',
+    padding: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  label: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  value: {
+    fontFamily: FontFamily.display,
+    fontSize: 20,
+    color: Colors.ink,
+    letterSpacing: 0.3,
+    lineHeight: 24,
+  },
+  detail: {
+    fontFamily: FontFamily.body,
+    fontSize: FontSize.caption,
+    color: Colors.inkSoft,
+    marginTop: 2,
+  },
+  action: {
+    fontFamily: FontFamily.mono,
+    fontSize: FontSize.monoLabelSmall,
+    color: Colors.muted,
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+});
+
 const styles = StyleSheet.create({
   // Fila de herramientas de edición debajo del contador de figuritas.
   toolsRow: {
@@ -1323,14 +1472,6 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     letterSpacing: 1.5,
   },
-  linkText: {
-    fontFamily: FontFamily.mono,
-    fontSize: FontSize.monoLabelSmall,
-    color: Colors.red,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    textDecorationLine: 'underline',
-  },
   // Pill compacto pero notorio: chip blanco con borde + icono + label.
   editPill: {
     flexDirection: 'row',
@@ -1376,16 +1517,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     textDecorationLine: 'underline',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.gridGap,
-  },
-  gridCell: {
-    flexBasis: '31.5%',
-    flexGrow: 0,
-    flexShrink: 0,
   },
   emptyHero: {
     position: 'relative',

@@ -17,16 +17,15 @@ import {
   computePackProbability,
   expectedPacksToGetSticker,
   probInPackForSticker,
-  RARITY_LABEL,
   type Rarity,
 } from '@/lib/pack-probability';
+import { RARITY_LABEL, RARITY_ORDER } from '@/lib/rarity';
+import { padStickerNumber } from '@/lib/text';
 
 interface Props {
   stickers: Sticker[];
   packSize: number;
 }
-
-const RARITY_ORDER: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
 
 export function PackProbabilityCard({ stickers, packSize }: Props) {
   const [detailOpen, setDetailOpen] = useState(false);
@@ -135,7 +134,7 @@ function DetailModal({
                     <View style={[styles.rarityDot, { backgroundColor: RarityFrame[rarity] }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.stickerName} numberOfLines={1}>
-                        #{String(item.number).padStart(3, '0')} {item.name}
+                        #{padStickerNumber(item.number)} {item.name}
                       </Text>
                       <Text style={styles.stickerRarity}>{RARITY_LABEL[rarity]}</Text>
                     </View>

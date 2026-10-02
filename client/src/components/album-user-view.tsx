@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
@@ -40,6 +40,7 @@ import { useDesktopCap, useIsDesktop } from '@/lib/use-is-desktop';
 import { useFocusRefetchStale } from '@/lib/use-focus-refetch';
 import { errorMessage } from '@/lib/errors';
 import { cardMatches } from '@/lib/trade-filter';
+import { NO_PAGE_OVERRIDES, type PageOverride } from '@/lib/page-config';
 import { ReportAlbumModal } from '@/components/report-album-modal';
 import { useBlockActions } from '@/lib/queries/moderation';
 
@@ -277,15 +278,23 @@ export function UserAlbumView({ album, stickers }: Props) {
     }
   }
 
-  let myPastedCount = 0;
-  let repesCount = 0;
-  let toPasteCount = 0;
-  for (const entry of collection.values()) {
-    if (entry.pasted) myPastedCount += 1;
-    else toPasteCount += 1;
-    const extras = entry.quantity - 1;
-    if (extras > 0) repesCount += extras;
-  }
+  // Conteos de la colección. Memoizados junto con el resto de las derivaciones
+  // pesadas de abajo: esta pantalla re-renderiza en cada tecla del buscador
+  // del bolsillo y en cada cambio de página, y recorrer la colección entera
+  // (hasta 1001 entradas) en cada render era puro desperdicio.
+  const { myPastedCount, repesCount, toPasteCount } = useMemo(() => {
+    let pastedN = 0;
+    let repesN = 0;
+    let toPasteN = 0;
+    for (const entry of collection.values()) {
+      if (entry.pasted) pastedN += 1;
+      else toPasteN += 1;
+      const extras = entry.quantity - 1;
+      if (extras > 0) repesN += extras;
+    }
+    return { myPastedCount: pastedN, repesCount: repesN, toPasteCount: toPasteN };
+  }, [collection]);
+
   const missingCount = album.total_stickers - myPastedCount - toPasteCount;
   // Solo miembros: un visitante con colección vacía NO es "recién unido".
   const isWelcome = isMember && myPastedCount === 0 && toPasteCount === 0 && collection.size === 0;
@@ -297,25 +306,33 @@ export function UserAlbumView({ album, stickers }: Props) {
   const showAdCta =
     isMember && ADS_SUPPORTED && !!adStatus?.enabled && (adStatus?.remaining ?? 0) > 0 && !isCompleted;
 
-  const stickerByNumber = new Map<number, Sticker>(stickers.map((s) => [s.number, s]));
+  const stickerByNumber = useMemo(
+    () => new Map<number, Sticker>(stickers.map((s) => [s.number, s])),
+    [stickers],
+  );
 
   // Listado de figuritas en el "bolsillo": cualquiera con stock disponible.
   // Incluye:
   //   - las que tiene sin pegar (pasted=false): la primera podría ir al álbum
   //   - las repes de las pegadas (pasted=true, quantity>1): solo para cambiar
   // El stock disponible es quantity - (pasted ? 1 : 0).
-  const toPasteList = stickers
-    .filter((s) => {
-      const e = collection.get(s.id);
-      if (!e) return false;
-      const stock = e.quantity - (e.pasted ? 1 : 0);
-      return stock > 0;
-    })
-    .sort((a, b) => a.number - b.number);
+  const toPasteList = useMemo(
+    () =>
+      stickers
+        .filter((s) => {
+          const e = collection.get(s.id);
+          if (!e) return false;
+          const stock = e.quantity - (e.pasted ? 1 : 0);
+          return stock > 0;
+        })
+        .sort((a, b) => a.number - b.number),
+    [stickers, collection],
+  );
 
-  const filteredPocket = pocketQuery
-    ? toPasteList.filter((s) => cardMatches(pocketQuery, [s]))
-    : toPasteList;
+  const filteredPocket = useMemo(
+    () => (pocketQuery ? toPasteList.filter((s) => cardMatches(pocketQuery, [s])) : toPasteList),
+    [toPasteList, pocketQuery],
+  );
   const POCKET_PAGE_SIZE = 20;
   const pocketPageCount = Math.max(1, Math.ceil(filteredPocket.length / POCKET_PAGE_SIZE));
   const pocketSafePage = Math.min(pocketPage, pocketPageCount - 1);
@@ -374,11 +391,11 @@ export function UserAlbumView({ album, stickers }: Props) {
           <AlbumPager
             totalStickers={album.total_stickers}
             numberStart={albumNumberStart(album)}
-            pageBgColor={(album as any).page_bg_color}
-            pageTexture={(album as any).page_texture}
-            pageCellAspect={(album as any).page_cell_aspect ?? undefined}
-            pageLayout={(album as any).page_layout ?? undefined}
-            pageOverrides={(album as any).page_overrides ?? []}
+            pageBgColor={album.page_bg_color}
+            pageTexture={album.page_texture}
+            pageCellAspect={album.page_cell_aspect ?? undefined}
+            pageLayout={album.page_layout ?? undefined}
+            pageOverrides={(album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES}
             renderCell={(n, cellStyle) => {
               const s = stickerByNumber.get(n);
               if (!s) return <StickerCellMissing number={n} style={cellStyle} />;
@@ -743,16 +760,6 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     marginBottom: Spacing.xs,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.gridGap,
-  },
-  gridCell: {
-    flexBasis: '31.5%',
-    flexGrow: 0,
-    flexShrink: 0,
-  },
   welcomeBanner: {
     backgroundColor: Colors.red,
     borderRadius: Radius.cardLg,
@@ -789,28 +796,6 @@ const styles = StyleSheet.create({
     color: Colors.paper,
     lineHeight: 32,
     letterSpacing: 1,
-  },
-  toPasteBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.amberWarnBg,
-    borderRadius: Radius.card,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.gold,
-    gap: Spacing.sm,
-  },
-  toPasteBannerTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  toPasteBannerSub: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.caption,
-    color: Colors.inkSoft,
   },
   // Desktop: los flotantes absolutos se centran y se capean al mismo ancho
   // que el contenido (760 menos el padding lateral). marginHorizontal 'auto'

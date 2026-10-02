@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { CardSearchField } from '@/components/card-search-field';
+import { EmptyState } from '@/components/empty-state';
 import { Pager } from '@/components/pager';
 import { ScreenHeader } from '@/components/screen-header';
 import { SegmentedControl } from '@/components/segmented-control';
@@ -31,10 +32,16 @@ type Tab = 'repes' | 'matches';
 export default function TradeMatchesScreen() {
   // give=<stickerId>: al entrar desde una figurita, abrimos Coincidencias ya
   // filtrando por esa figurita.
-  const { albumId, give } = useLocalSearchParams<{ albumId: string; give?: string }>();
+  // tab=matches: lo usa "Proponer cambio" del tab Cambios, que entra acá
+  // justamente para elegir a quién ofrecerle.
+  const { albumId, give, tab: tabParam } = useLocalSearchParams<{
+    albumId: string;
+    give?: string;
+    tab?: string;
+  }>();
   const router = useRouter();
   const desktopCap = useDesktopCap(720);
-  const [tab, setTab] = useState<Tab>(give ? 'matches' : 'repes');
+  const [tab, setTab] = useState<Tab>(give || tabParam === 'matches' ? 'matches' : 'repes');
   const [giveFilter, setGiveFilter] = useState<string | null>(give ?? null);
   const [search, setSearch] = useState<TradeSearch>(EMPTY_SEARCH);
   const [page, setPage] = useState(0);
@@ -183,12 +190,10 @@ export default function TradeMatchesScreen() {
         <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
           {tab === 'repes' ? (
             tradables.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>Aún no tenés figuritas para cambiar.</Text>
-                <Text style={styles.emptyBody}>
-                  Cuando te sobren repetidas o tengas figuritas sin pegar las vas a poder cambiar.
-                </Text>
-              </View>
+              <EmptyState
+                title="Aún no tenés figuritas para cambiar."
+                body="Cuando te sobren repetidas o tengas figuritas sin pegar las vas a poder cambiar."
+              />
             ) : (
               <View style={{ gap: Spacing.md }}>
                 {tradables.length > 12 && (
@@ -201,9 +206,7 @@ export default function TradeMatchesScreen() {
                   />
                 )}
                 {filteredTradables.length === 0 ? (
-                  <View style={styles.empty}>
-                    <Text style={styles.emptyTitle}>Nada coincide con la búsqueda.</Text>
-                  </View>
+                  <EmptyState title="Nada coincide con la búsqueda." />
                 ) : (
                   <>
                     <View style={styles.repesGrid}>
@@ -229,12 +232,10 @@ export default function TradeMatchesScreen() {
               </View>
             )
           ) : matches.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Todavía no hay coincidencias.</Text>
-              <Text style={styles.emptyBody}>
-                Cuando otros usuarios tengan lo que te falta y vos lo que ellos buscan, aparecen acá.
-              </Text>
-            </View>
+            <EmptyState
+              title="Todavía no hay coincidencias."
+              body="Cuando otros usuarios tengan lo que te falta y vos lo que ellos buscan, aparecen acá."
+            />
           ) : (
             <View style={{ gap: Spacing.md }}>
               {giveOptions.length > 1 && (
@@ -252,9 +253,7 @@ export default function TradeMatchesScreen() {
               />
 
               {filteredMatches.length === 0 ? (
-                <View style={styles.empty}>
-                  <Text style={styles.emptyTitle}>Nada coincide con el filtro.</Text>
-                </View>
+                <EmptyState title="Nada coincide con el filtro." />
               ) : (
                 <>
                   {matchesOverflowed && (
@@ -272,8 +271,11 @@ export default function TradeMatchesScreen() {
                         !canOffer && styles.matchDisabled,
                       ]}
                       onPress={() =>
+                        // toName viaja en el link (la pantalla de ofrecer ya no
+                        // tiene que consultar el perfil). Una sola template
+                        // literal: concatenar con + rompe el tipado de rutas.
                         router.push(
-                          `/trade/new?albumId=${albumId}&toUser=${m.other_user_id}&offered=${m.i_give_sticker_id}&requested=${m.they_give_sticker_id}`,
+                          `/trade/new?albumId=${albumId}&toUser=${m.other_user_id}&offered=${m.i_give_sticker_id}&requested=${m.they_give_sticker_id}&toName=${encodeURIComponent(m.other_user_name ?? '')}`,
                         )
                       }
                     >
@@ -533,25 +535,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
     gap: Spacing.md,
-  },
-  empty: {
-    paddingTop: Spacing.xxl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  emptyTitle: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.body,
-    fontWeight: '700',
-    color: Colors.ink,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontFamily: FontFamily.body,
-    fontSize: FontSize.bodySmall,
-    color: Colors.inkSoft,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xl,
   },
   repesGrid: {
     flexDirection: 'row',

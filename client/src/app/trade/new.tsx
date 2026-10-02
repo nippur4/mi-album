@@ -1,51 +1,58 @@
 import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { EmptyState } from '@/components/empty-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { StickerMini } from '@/components/sticker-mini';
 import { Colors, FontFamily, FontSize, Radius, Spacing } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
 import { createTradeOffer, useTradeLimitStatus } from '@/lib/queries/trades';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
-import type { Sticker } from '@/lib/queries/albums';
+import { useAlbumDetail } from '@/lib/queries/albums';
+import { padStickerNumber } from '@/lib/text';
 
 export default function NewTradeOfferScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(720);
-  const { albumId, toUser, offered, requested } = useLocalSearchParams<{
+  // toName lo manda Coincidencias, que ya tiene el nombre de la contraparte:
+  // así no hace falta consultar el perfil de nuevo.
+  const { albumId, toUser, offered, requested, toName } = useLocalSearchParams<{
     albumId: string;
     toUser: string;
     offered: string;
     requested: string;
+    toName?: string;
   }>();
 
-  const [offeredSticker, setOfferedSticker] = useState<Sticker | null>(null);
-  const [requestedSticker, setRequestedSticker] = useState<Sticker | null>(null);
-  const [toUserName, setToUserName] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const [o, r, u] = await Promise.all([
-        supabase.from('stickers').select('*').eq('id', offered).maybeSingle(),
-        supabase.from('stickers').select('*').eq('id', requested).maybeSingle(),
-        supabase.from('profiles').select('display_name').eq('id', toUser).maybeSingle(),
-      ]);
-      setOfferedSticker((o.data ?? null) as Sticker | null);
-      setRequestedSticker((r.data ?? null) as Sticker | null);
-      setToUserName((u.data?.display_name as string) ?? '');
-    })();
-  }, [offered, requested, toUser]);
+  // Las dos figuritas salen del detalle del álbum, que SIEMPRE está cacheado
+  // acá (a esta pantalla se llega desde Coincidencias, que usa el mismo hook,
+  // y el detalle de un álbum publicado tiene staleTime Infinity). Antes esto
+  // eran 3 queries sueltas sin cache (2 × select('*') de sticker + el perfil)
+  // que salían cada vez que abrías "Ofrecer".
+  const { stickers, isLoading } = useAlbumDetail(albumId);
+  const offeredSticker = useMemo(
+    () => stickers.find((s) => s.id === offered) ?? null,
+    [stickers, offered],
+  );
+  const requestedSticker = useMemo(
+    () => stickers.find((s) => s.id === requested) ?? null,
+    [stickers, requested],
+  );
+  const toUserName = toName ?? '';
 
-  const loading = !offeredSticker || !requestedSticker;
+  const loading = isLoading && stickers.length === 0;
+  // Ya cargó el álbum pero alguna figurita no está (link viejo / figurita
+  // borrada): antes quedaba un spinner eterno.
+  const notFound = !loading && (!offeredSticker || !requestedSticker);
 
   // Con el cupo de la ventana agotado no se pueden crear ofertas (el server
   // también lo rechaza con P0113 desde 0060; esto evita el viaje).
@@ -87,6 +94,11 @@ export default function NewTradeOfferScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={Colors.red} /></View>
+        ) : notFound ? (
+          <EmptyState
+            title="No encontramos las figuritas del cambio."
+            body="Puede que la oferta ya no esté disponible. Volvé a Coincidencias y probá de nuevo."
+          />
         ) : (
           <>
             {/* Vos das */}
@@ -101,7 +113,7 @@ export default function NewTradeOfferScreen() {
                 />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardStickerName}>{offeredSticker!.name.toUpperCase()}</Text>
-                  <Text style={styles.cardStickerNumber}>#{String(offeredSticker!.number).padStart(3, '0')}</Text>
+                  <Text style={styles.cardStickerNumber}>#{padStickerNumber(offeredSticker!.number)}</Text>
                 </View>
               </View>
             </View>
@@ -125,7 +137,7 @@ export default function NewTradeOfferScreen() {
                 />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardStickerName}>{requestedSticker!.name.toUpperCase()}</Text>
-                  <Text style={styles.cardStickerNumber}>#{String(requestedSticker!.number).padStart(3, '0')}</Text>
+                  <Text style={styles.cardStickerNumber}>#{padStickerNumber(requestedSticker!.number)}</Text>
                 </View>
               </View>
             </View>
@@ -149,7 +161,7 @@ export default function NewTradeOfferScreen() {
                 : 'Enviar oferta'
           }
           onPress={onSubmit}
-          disabled={loading || submitting || limitReached}
+          disabled={loading || notFound || submitting || limitReached}
           loading={submitting}
         />
         <Text style={styles.fineprint}>
