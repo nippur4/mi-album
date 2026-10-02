@@ -2,7 +2,7 @@
 
 ## Estado del proyecto
 
-Última actualización: 2026-10-02. Migraciones aplicadas hasta la **0077** (margen del cooldown diario a −2h + drop de `fn_my_daily_status`). Tipos regenerados. Web 1.7.0 deployada; `.aab` 1.7.0 / versionCode 13 en `client/builds/` pendiente de subir a Play. Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
+Última actualización: 2026-10-02. Migraciones aplicadas hasta la **0077** (margen del cooldown diario a −2h + drop de `fn_my_daily_status`). Tipos regenerados. **Release 1.7.0 cerrado**: commit `c167d7f` en master, web deployada y **versionCode 13 SUBIDO a Play** → el próximo build local necesita **versionCode ≥ 14** (vive en `client/android/app/build.gradle`, que está gitignoreado, así que no viaja en el repo). Hay documentación técnica navegable en `DOCS.html` (raíz del repo) — mantenerla al día con los cambios grandes.
 
 > **Regenerar los tipos después de CADA `db push`.** El 2026-10-02 se descubrió que estaban sin regenerar desde la 0073: faltaban las columnas de 0074 (`public_requested_at`, `public_request_note`, `blocked_at`) y las 6 RPCs de 0074/0075. Eso había dejado **deuda de `as any`** repartida: 8 casts `(supabase.rpc as any)` y 25 `(album as any)` puestos "hasta regenerar tipos" que ya no hacían falta. Todos eliminados (son cambios puramente de tipos — emiten el mismo JS).
 
