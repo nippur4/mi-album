@@ -44,6 +44,10 @@ export interface TradeOffer {
   // (fn_my_offer_flags). En Recibidas esas ofertas se filtran (no se pueden
   // aceptar); en Enviadas se muestran con la nota "el otro no la ve".
   sender_blocked?: boolean;
+  // Copias que YO tengo de la figurita que recibiría con este cambio (0 = me
+  // falta). null = desconocido: solo viene para las pending (fn_my_offer_flags)
+  // o si los flags fallaron. La card no muestra el chip cuando es null.
+  incoming_qty?: number | null;
 }
 
 export interface AlbumMatch {
@@ -77,9 +81,10 @@ export function useMyOffers() {
     enabled: !!uid,
     staleTime: 15_000,
     queryFn: async () => {
-      // Flags de visibilidad en paralelo: qué ofertas pending tienen a su
-      // emisor bloqueado por el tope de cambios (solo computable server-side:
-      // el conteo mira trades del emisor, invisibles por RLS para el otro).
+      // Flags de las ofertas pending en paralelo: (a) si su emisor está
+      // bloqueado por el tope de cambios (solo computable server-side: el
+      // conteo mira trades del emisor, invisibles por RLS para el otro) y
+      // (b) cuántas copias tengo YA de la figurita que recibiría (0079).
       const [offersRes, flagsRes] = await Promise.all([
         supabase
           .from('trade_offers')
@@ -99,32 +104,36 @@ export function useMyOffers() {
       const { data: rows, error } = offersRes;
       if (error) throw toAppError(error);
       // Best-effort: si los flags fallan, mostramos todo (peor caso: el
-      // receptor choca con el error al aceptar, como antes de 0060).
-      const blockedByOffer = new Map<string, boolean>(
-        ((flagsRes.data ?? []) as { offer_id: string; sender_blocked: boolean }[]).map(
-          (f) => [f.offer_id, f.sender_blocked],
-        ),
+      // receptor choca con el error al aceptar, como antes de 0060) y sin chip
+      // de "ya la tenés" (incoming_qty queda null = desconocido).
+      type OfferFlags = { offer_id: string; sender_blocked: boolean; incoming_qty: number | null };
+      const flagsByOffer = new Map<string, OfferFlags>(
+        ((flagsRes.data ?? []) as OfferFlags[]).map((f) => [f.offer_id, f]),
       );
 
-      const enriched: TradeOffer[] = ((rows ?? []) as any[]).map((o) => ({
-        id: o.id,
-        album_id: o.album_id,
-        album_name: o.album?.name ?? '',
-        from_user: o.from_user,
-        from_user_name: o.from_profile?.display_name ?? '',
-        from_user_avatar_url: o.from_profile?.avatar_url ?? null,
-        to_user: o.to_user,
-        to_user_name: o.to_profile?.display_name ?? '',
-        to_user_avatar_url: o.to_profile?.avatar_url ?? null,
-        offered_sticker_id: o.offered_sticker_id,
-        offered_sticker: (o.offered as TradeSticker | null) ?? null,
-        requested_sticker_id: o.requested_sticker_id,
-        requested_sticker: (o.requested as TradeSticker | null) ?? null,
-        status: o.status,
-        created_at: o.created_at,
-        resolved_at: o.resolved_at,
-        sender_blocked: blockedByOffer.get(o.id) ?? false,
-      }));
+      const enriched: TradeOffer[] = ((rows ?? []) as any[]).map((o) => {
+        const flags = flagsByOffer.get(o.id);
+        return {
+          id: o.id,
+          album_id: o.album_id,
+          album_name: o.album?.name ?? '',
+          from_user: o.from_user,
+          from_user_name: o.from_profile?.display_name ?? '',
+          from_user_avatar_url: o.from_profile?.avatar_url ?? null,
+          to_user: o.to_user,
+          to_user_name: o.to_profile?.display_name ?? '',
+          to_user_avatar_url: o.to_profile?.avatar_url ?? null,
+          offered_sticker_id: o.offered_sticker_id,
+          offered_sticker: (o.offered as TradeSticker | null) ?? null,
+          requested_sticker_id: o.requested_sticker_id,
+          requested_sticker: (o.requested as TradeSticker | null) ?? null,
+          status: o.status,
+          created_at: o.created_at,
+          resolved_at: o.resolved_at,
+          sender_blocked: flags?.sender_blocked ?? false,
+          incoming_qty: flags?.incoming_qty ?? null,
+        };
+      });
 
       return {
         // Recibidas: ocultamos las pending cuyo emisor agotó su tope (quedaron

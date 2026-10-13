@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
@@ -316,6 +316,11 @@ export function UserAlbumView({ album, stickers }: Props) {
   //   - las que tiene sin pegar (pasted=false): la primera podría ir al álbum
   //   - las repes de las pegadas (pasted=true, quantity>1): solo para cambiar
   // El stock disponible es quantity - (pasted ? 1 : 0).
+  //
+  // Orden: PRIMERO las sin pegar, después las repes (y por número dentro de
+  // cada grupo). Las sin pegar son las accionables —hay algo que hacer con
+  // ellas en el álbum— y de otra forma quedaban perdidas entre decenas de
+  // repes; con el paginado de a 20 podían caer directamente en la página 3.
   const toPasteList = useMemo(
     () =>
       stickers
@@ -325,7 +330,12 @@ export function UserAlbumView({ album, stickers }: Props) {
           const stock = e.quantity - (e.pasted ? 1 : 0);
           return stock > 0;
         })
-        .sort((a, b) => a.number - b.number),
+        .sort((a, b) => {
+          const aPasted = !!collection.get(a.id)?.pasted;
+          const bPasted = !!collection.get(b.id)?.pasted;
+          if (aPasted !== bPasted) return aPasted ? 1 : -1;
+          return a.number - b.number;
+        }),
     [stickers, collection],
   );
 
@@ -333,6 +343,19 @@ export function UserAlbumView({ album, stickers }: Props) {
     () => (pocketQuery ? toPasteList.filter((s) => cardMatches(pocketQuery, [s])) : toPasteList),
     [toPasteList, pocketQuery],
   );
+
+  // Cuántas cards hay de cada grupo en lo que se está mostrando (con el
+  // buscador aplicado): alimenta los títulos de grupo de la lista.
+  const pocketGroupCounts = useMemo(() => {
+    let sinPegar = 0;
+    let repes = 0;
+    for (const s of filteredPocket) {
+      if (collection.get(s.id)?.pasted) repes += 1;
+      else sinPegar += 1;
+    }
+    return { sinPegar, repes };
+  }, [filteredPocket, collection]);
+
   const POCKET_PAGE_SIZE = 20;
   const pocketPageCount = Math.max(1, Math.ceil(filteredPocket.length / POCKET_PAGE_SIZE));
   const pocketSafePage = Math.min(pocketPage, pocketPageCount - 1);
@@ -379,7 +402,15 @@ export function UserAlbumView({ album, stickers }: Props) {
           current={myPastedCount}
           total={album.total_stickers}
           caption="PEGADAS"
-          rightStat={`${repesCount} repetidas · ${missingCount} faltan`}
+          // "Sin pegar" primero y solo si hay: es lo accionable del resumen
+          // (tenés la figurita, te falta el gesto de pegarla).
+          rightStat={[
+            toPasteCount > 0 ? `${toPasteCount} sin pegar` : null,
+            `${repesCount} repetidas`,
+            `${missingCount} faltan`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         />
 
         {/* El álbum: solo pegadas + huecos. Las "por pegar" viven en la sección
@@ -448,22 +479,35 @@ export function UserAlbumView({ album, stickers }: Props) {
             ) : (
               <>
                 <View style={{ gap: Spacing.sm }}>
-                  {pagedPocket.map((s) => {
+                  {pagedPocket.map((s, i) => {
                     const entry = collection.get(s.id)!;
                     const stock = entry.quantity - (entry.pasted ? 1 : 0);
+                    // Título del grupo: en el primer item de la página (así
+                    // cada página dice en qué grupo estás) y en el salto de
+                    // "sin pegar" a repes, que con este orden pasa una sola vez.
+                    const prev = i > 0 ? collection.get(pagedPocket[i - 1].id) : undefined;
+                    const showGroup = i === 0 || !!prev?.pasted !== !!entry.pasted;
                     return (
-                      <ToPasteCard
-                        key={s.id}
-                        sticker={s}
-                        stock={stock}
-                        canPaste={!entry.pasted}
-                        busy={pastingId === s.id}
-                        onPaste={() => onPaste(s.id)}
-                        onTrade={() =>
-                          router.push(`/trade/matches?albumId=${album.id}&stickerId=${s.id}`)
-                        }
-                        onPress={() => router.push(`/sticker/${s.id}`)}
-                      />
+                      <Fragment key={s.id}>
+                        {showGroup && (
+                          <Text style={[styles.groupLabel, i > 0 && styles.groupLabelAfter]}>
+                            {entry.pasted
+                              ? `REPETIDAS · ${pocketGroupCounts.repes}`
+                              : `SIN PEGAR · ${pocketGroupCounts.sinPegar}`}
+                          </Text>
+                        )}
+                        <ToPasteCard
+                          sticker={s}
+                          stock={stock}
+                          canPaste={!entry.pasted}
+                          busy={pastingId === s.id}
+                          onPaste={() => onPaste(s.id)}
+                          onTrade={() =>
+                            router.push(`/trade/matches?albumId=${album.id}&stickerId=${s.id}`)
+                          }
+                          onPress={() => router.push(`/sticker/${s.id}`)}
+                        />
+                      </Fragment>
                     );
                   })}
                 </View>
@@ -760,6 +804,17 @@ const styles = StyleSheet.create({
     color: Colors.inkSoft,
     marginBottom: Spacing.xs,
   },
+  // Separador de grupo dentro del bolsillo (SIN PEGAR / REPETIDAS). Un punto
+  // abajo en la jerarquía que sectionLabel: mismo mono, más chico y con tinta
+  // más fuerte para que corte la lista de cards.
+  groupLabel: {
+    fontFamily: FontFamily.mono,
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.inkSoft,
+    letterSpacing: 1.6,
+  },
+  groupLabelAfter: { marginTop: Spacing.sm },
   welcomeBanner: {
     backgroundColor: Colors.red,
     borderRadius: Radius.cardLg,

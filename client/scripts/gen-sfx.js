@@ -4,8 +4,14 @@
 // Reproducible: `node scripts/gen-sfx.js` reescribe assets/sounds/*.wav.
 // Los archivos son REEMPLAZABLES por sonidos curados con el mismo nombre.
 //
+// Uso: `node scripts/gen-sfx.js` reescribe TODOS; con argumentos escribe solo
+// los que matcheen (`node scripts/gen-sfx.js pack-tear`). El filtro existe
+// porque el ruido usa Math.random(): regenerar todo cambia bytes de WAVs que
+// ya están bien y ensucia el repo sin necesidad.
+//
 // Sonidos:
 //   pack-shake  rustle suave al tocar el sobre
+//   pack-tear   rasgado del papel mientras se abre la tapa
 //   pack-open   whoosh + shimmer del momento de apertura (el "wow")
 //   card-pop    pop sutil por cada figurita que aterriza
 //   sparkle     chime brillante para figuritas nuevas (rara+)
@@ -102,6 +108,32 @@ function packShake() {
     s[i] += n[i] * env * 0.7;
   }
   return fadeEdges(normalize(s, 0.55));
+}
+
+// Rasgado de papel: granos de ruido en banda media-alta con amplitud errática
+// (el papel no cede parejo) que crece durante el tirón y corta seco con un
+// pop. Suena mientras la tapa del sobre se abre.
+function packTear() {
+  const dur = 0.5;
+  const s = buf(dur), n = buf(dur);
+  addNoise(n, 0, dur, 0.9, 3.0); // decay lento: el cuerpo lo pone el crackle
+  highpass(n, 1400); lowpass(n, 7000);
+  let g = 0, glen = 0, gain = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (g >= glen) {
+      glen = Math.floor((0.003 + Math.random() * 0.007) * SR);
+      gain = 0.2 + Math.random() * 0.8;
+      g = 0;
+    }
+    const t = i / SR;
+    const swell = Math.min(1, 0.4 + t / (dur * 0.7));
+    const tail = Math.exp(-Math.max(0, t - dur * 0.76) / 0.045);
+    s[i] += n[i] * gain * swell * tail;
+    g++;
+  }
+  // Pop final: el sobre cede.
+  addNoise(s, dur * 0.76, 0.025, 0.3, 0.3);
+  return fadeEdges(normalize(s, 0.7));
 }
 
 function packOpen() {
@@ -231,7 +263,12 @@ function dinoScreech() {
 
 // --- WAV -------------------------------------------------------------------
 
-function writeWav(name, samples) {
+// Sin argumentos escribe todos; con argumentos, solo los que matcheen.
+const only = process.argv.slice(2);
+
+function writeWav(name, make) {
+  if (only.length && !only.some((a) => name.includes(a))) return;
+  const samples = make();
   const n = samples.length, b = Buffer.alloc(44 + n * 2);
   b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVE', 8);
   b.write('fmt ', 12); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
@@ -248,11 +285,12 @@ function writeWav(name, samples) {
 
 fs.mkdirSync(OUT, { recursive: true });
 console.log('Generando SFX en assets/sounds/:');
-writeWav('pack-shake.wav', packShake());
-writeWav('pack-open.wav', packOpen());
-writeWav('card-pop.wav', cardPop());
-writeWav('sparkle.wav', sparkle());
-writeWav('legendary.wav', legendary());
-writeWav('paste.wav', paste());
-writeWav('dino-screech.wav', dinoScreech());
+writeWav('pack-shake.wav', packShake);
+writeWav('pack-tear.wav', packTear);
+writeWav('pack-open.wav', packOpen);
+writeWav('card-pop.wav', cardPop);
+writeWav('sparkle.wav', sparkle);
+writeWav('legendary.wav', legendary);
+writeWav('paste.wav', paste);
+writeWav('dino-screech.wav', dinoScreech);
 console.log('Listo.');

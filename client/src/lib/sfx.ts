@@ -12,6 +12,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 
 const SOURCES = {
   shake: require('../../assets/sounds/pack-shake.wav'),
+  tear: require('../../assets/sounds/pack-tear.wav'),
   open: require('../../assets/sounds/pack-open.wav'),
   card: require('../../assets/sounds/card-pop.wav'),
   sparkle: require('../../assets/sounds/sparkle.wav'),

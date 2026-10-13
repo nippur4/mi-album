@@ -328,8 +328,14 @@
   <ol>
     <li><strong>Unirse</strong> por código, deep link o botón en álbumes públicos.</li>
     <li><strong>Conseguir figuritas</strong>: sobre periódico, QR del owner, o intercambios.</li>
-    <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo). Tap en una carta revelada → vista grande de la figurita. El álbum de dinos tiene <strong>sonidos temáticos</strong> (rugido al abrir, chillido en épica/legendaria; mapa <code>albumSfxTheme()</code> extensible a otros álbumes).</li>
-    <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla.</li>
+    <li><strong>Abrir sobres</strong> (<code>pack/open</code>): animación con sacudida, reveal escalonado, ribbons NUEVA/REPE y SFX sintéticos (<code>lib/sfx.ts</code> — respeta el switch de silencio, degrada sin el módulo nativo). Tap en una carta revelada → vista grande de la figurita. El álbum de dinos tiene <strong>sonidos temáticos</strong> (rugido al abrir, chillido en épica/legendaria; mapa <code>albumSfxTheme()</code> extensible a otros álbumes).
+      <ul>
+        <li><strong>Timeline de la apertura (2026-10)</strong>: la parte <strong>local</strong> arranca con el tap y no espera a la red — sacudida (280ms) → la tapa gira hacia atrás sobre su borde superior con sonido de rasgado (<code>pack-tear</code>) → luz saliendo de la boca → 3 figuritas asomando en abanico (~980ms en total). El <strong>clímax</strong> (zoom del sobre + fogonazo + corte a la reveal, 480ms) se dispara <strong>cuando llegan las figuritas</strong>: los 300ms de build-up de <code>pack-open.wav</code> hacen que su impacto caiga exacto con el fogonazo, y si la red tarda el sobre queda abierto esperando en vez de cortar al vacío.</li>
+        <li><strong>Festejo de la reveal</strong>: fogonazo que continúa el de la pantalla anterior (el corte entre árboles no se ve), encabezado con rebote, esquirlas doradas radiales (<code>Burst</code>) y banner "¡SALIÓ UNA LEGENDARIA/ÉPICA!" si hay una <em>nueva</em> épica+ (las repes no cuentan). El burst es más denso y largo en ese caso.</li>
+        <li><strong>Orden de dibujo</strong>: el sobre clipea su media (<code>overflow:hidden</code>) y vive dentro de un wrapper SIN clipping; la tapa va <strong>fuera</strong> del sobre (si no se recortaría al girar) con <code>elevation</code> mayor, y la luz + las figuritas asomando van <strong>antes en el árbol</strong> con elevation menor, así su mitad inferior queda tapada por el sobre y se lee como que salen de adentro. <code>transformOrigin</code> ('center top' / 'center bottom') hace el giro de la tapa y el crecimiento de la luz.</li>
+      </ul>
+    </li>
+    <li><strong>Pegar</strong>: las recibidas entran <code>pasted=false</code> (borde gold, badge PEGAR); tap para pegar en la grilla. En "EN TU BOLSILLO" van <strong>primero las sin pegar y después las repes</strong> (por número dentro de cada grupo), con título de grupo "SIN PEGAR · N" / "REPETIDAS · N" — se repite arriba de cada página del paginado, así siempre se sabe en qué grupo estás. Antes el orden era solo por número y una sin pegar podía caer en la página 3 entre decenas de repes. El resumen de arriba (<code>ProgressCard</code>) también abre con "N sin pegar" cuando hay.</li>
     <li><strong>Completar</strong>: al pegar todas se corta el sobre diario automáticamente. También se puede silenciar por álbum (<code>daily_muted</code>).</li>
     <li><strong>Compartir</strong>: cualquier jugador (no solo el owner) puede invitar a otros con el link https + código (mismo <code>share_code</code>). La lista "EN TU BOLSILLO" (repes + sin pegar) pagina de a 20. También puede <strong>descargar el álbum en PDF</strong> (§7).</li>
   </ol>
@@ -340,7 +346,7 @@
   <h2>5 · Economía de sobres</h2>
   <table>
     <tr><th>Mecanismo</th><th>Cómo funciona</th><th>Gate</th></tr>
-    <tr><td><strong>Sobre diario</strong></td><td>Cooldown rodante desde el último claim: nominal 24h/168h con margen de <strong>−2h</strong> efectivo (22h / 166h, migración 0077). Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
+    <tr><td><strong>Sobre diario</strong></td><td>Cooldown rodante desde el último claim: nominal 24h/168h con margen de <strong>−3h</strong> efectivo (21h / 165h, migración 0078). Claim manual desde el álbum o el tab Sobres.</td><td>Semanal y &gt;1 sobre: PRO</td></tr>
     <tr><td><strong>QR</strong></td><td>Póster con token HMAC (secret en la tabla aparte <code>album_qr_secrets</code>, sin acceso público). Escaneo → <code>redeem_qr</code>, cooldown por usuario.</td><td>PRO</td></tr>
     <tr><td><strong>Bienvenida</strong></td><td>Sobres extra configurables al unirse.</td><td>—</td></tr>
     <tr><td><strong>Publicidad</strong></td><td>Rewarded ad (AdMob) → 1 sobre. Solo en los 3 álbumes especiales, tope 2/día por usuario, solo Android. Ver abajo.</td><td>Android</td></tr>
@@ -409,6 +415,7 @@
   <ul>
     <li><strong>Matches por álbum</strong>: <code>fn_album_matches</code> cruza tus faltantes con repes de otros (cap de 5 pares por contraparte). "Para cambiar" incluye repes reales (badge REPE) y sin pegar (badge PEGAR).</li>
     <li><strong>Ofertas 1:1</strong>: elegís qué das y qué recibís; la contraparte acepta o rechaza. Push + badge en el tab Cambios.</li>
+    <li><strong>"TE FALTA" / "YA LA TENÉS" (0079)</strong>: la card de oferta muestra un chip bajo la figurita que <strong>recibís</strong>. Pasa seguido: con <code>accept_owned</code> en true el server permite ofrecerte algo que ya tenés, y además una oferta pending envejece (la conseguiste por un sobre después de que te la ofrecieran). En Enviadas avisa que tu propia oferta quedó al vacío. Sale de <code>fn_my_offer_flags()</code>, que <code>useMyOffers</code> ya pedía en el mismo <code>Promise.all</code> → <strong>cero round trips nuevos</strong> (se descartó un <code>.in(sticker_id)</code> a <code>user_collection</code> desde el cliente). Solo para las <strong>pending</strong>: en una aceptada el dato es obvio y en una rechazada es ruido. Sin el flag (RPC caída o cache viejo) no se muestra chip.</li>
     <li><strong>Dos puertas de entrada a proponer</strong>: (a) desde el álbum → Cambios → Coincidencias; (b) desde el tab Cambios, botón <strong>"Proponer cambio"</strong> → <code>AlbumPickerSheet</code> (álbumes de <code>useHomeBundle().joined</code>, los únicos donde podés cambiar) → <code>/trade/matches?albumId=X&amp;tab=matches</code>, que abre directo en Coincidencias. El param <code>tab=matches</code> existe para eso (antes solo se abría ahí con <code>give=&lt;stickerId&gt;</code>).</li>
     <li><strong><code>trade/new.tsx</code> no consulta nada</strong>: las dos figuritas salen del cache de <code>useAlbumDetail</code> — que siempre está caliente, porque a esa pantalla solo se llega desde Coincidencias, que usa el mismo hook, y un álbum publicado tiene <code>staleTime: Infinity</code> — y el nombre de la contraparte viaja por el link (<code>toName</code>). Antes eran 3 queries sin cachear (2 × <code>select('*')</code> de sticker + el perfil) en cada tap de "Ofrecer".</li>
     <li><strong>Reglas del owner</strong>: intercambios on/off y límite por día/semana/mes. El límite se chequea <strong>al aceptar</strong>; <code>fn_trade_limit_status</code> alimenta el banner informativo del jugador.</li>
@@ -576,8 +583,10 @@ supabase functions deploy &lt;name&gt;
 # Regenerar tipos tras migraciones (OJO: Out-File utf8, NO '>' que mete BOM UTF-16)
 supabase gen types typescript --linked | Out-File -Encoding utf8 client/src/lib/database.types.ts
 
-# Regenerar efectos de sonido
+# Regenerar efectos de sonido (sin args: TODOS. Con args: solo los que matcheen,
+# para no reescribir con otro ruido random los WAV que ya están bien)
 node client/scripts/gen-sfx.js
+node client/scripts/gen-sfx.js pack-tear
 </code></pre>
   <ul>
     <li>Si una migración cambia la firma de una RPC granteada: <code>drop function</code> + <code>create</code> + <strong>re-grant</strong>.</li>

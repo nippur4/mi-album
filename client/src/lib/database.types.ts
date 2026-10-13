@@ -1005,6 +1005,7 @@ export type Database = {
       fn_my_offer_flags: {
         Args: never
         Returns: {
+          incoming_qty: number
           offer_id: string
           sender_blocked: boolean
         }[]

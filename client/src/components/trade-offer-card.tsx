@@ -37,6 +37,12 @@ export function TradeOfferCard({ offer, side, onResolved }: Props) {
   const iGive = side === 'received' ? offer.requested_sticker : offer.offered_sticker;
   const iGet = side === 'received' ? offer.offered_sticker : offer.requested_sticker;
 
+  // ¿La que recibo ya la tengo? Solo viene en las pending (fn_my_offer_flags);
+  // null/undefined = desconocido (flags caídos, o cache viejo rehidratado) →
+  // no mostramos nada en vez de mentir.
+  const incomingQty = offer.status === 'pending' ? offer.incoming_qty : null;
+  const showIncoming = typeof incomingQty === 'number';
+
   const isAccepted = offer.status === 'accepted';
   const isRejected = offer.status === 'rejected' || offer.status === 'cancelled' || offer.status === 'expired';
 
@@ -80,6 +86,7 @@ export function TradeOfferCard({ offer, side, onResolved }: Props) {
               size="sm"
             />
           ) : <Placeholder />}
+          {showIncoming && <OwnedChip qty={incomingQty} />}
         </View>
         <View style={styles.swap}>
           <Feather name="repeat" size={16} color={Colors.paper} />
@@ -95,6 +102,9 @@ export function TradeOfferCard({ offer, side, onResolved }: Props) {
               size="sm"
             />
           ) : <Placeholder />}
+          {/* Hueco espejo del chip: la fila está centrada verticalmente, así
+              que sin esto las dos minis quedan desalineadas. */}
+          {showIncoming && <View style={styles.chipSlot} />}
         </View>
       </View>
 
@@ -163,6 +173,25 @@ function headlineFor(side: 'received' | 'sent', status: TradeOffer['status'], na
 
 function Placeholder() {
   return <View style={styles.placeholder} />;
+}
+
+// Chip bajo la figurita que RECIBÍS: te falta (verde, el cambio te suma) o ya
+// la tenés (ámbar — es legal, pasa con "aceptar figuritas que ya tengo" o
+// porque la conseguiste después de que te la ofrecieran, pero querés verlo).
+function OwnedChip({ qty }: { qty: number }) {
+  const owned = qty > 0;
+  return (
+    <View style={[styles.chipSlot, owned ? styles.chipOwned : styles.chipMissing]}>
+      <Feather
+        name={owned ? 'copy' : 'plus-circle'}
+        size={10}
+        color={owned ? Colors.amberWarn : Colors.greenTextSoft}
+      />
+      <Text style={[styles.chipText, { color: owned ? Colors.amberWarn : Colors.greenTextSoft }]}>
+        {owned ? 'YA LA TENÉS' : 'TE FALTA'}
+      </Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -242,6 +271,25 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: Radius.cell,
     backgroundColor: Colors.paper3,
+  },
+  // Alto fijo: la columna DAS renderiza este mismo slot vacío para que las dos
+  // minis queden a la misma altura.
+  chipSlot: {
+    height: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    borderRadius: Radius.pill,
+  },
+  chipMissing: { backgroundColor: Colors.greenLight },
+  chipOwned: { backgroundColor: Colors.amberWarnBg },
+  chipText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   actions: {
     flexDirection: 'row',

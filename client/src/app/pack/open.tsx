@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '@/lib/alert';
 import Animated, {
@@ -33,6 +33,21 @@ import { albumSfxTheme, initSfx, playSfx } from '@/lib/sfx';
 import { padStickerNumber } from '@/lib/text';
 
 type Phase = 'idle' | 'opening' | 'revealed';
+
+// --- Timeline de la apertura (ms) -------------------------------------------
+// La parte LOCAL (sacudida → tapa que se abre → figuritas asomando) arranca con
+// el tap y no espera a la red. El CLÍMAX (zoom + fogonazo + corte a la reveal)
+// se dispara cuando llegan las figuritas, así el momento "wow" nunca cae en el
+// vacío: si la red tarda, el sobre queda abierto esperando en vez de cortar
+// antes de tiempo.
+const T_SHAKE = 280;   // sacudida fuerte
+const T_FLAP = 400;    // la tapa gira hacia atrás
+const T_CARDS = 360;   // las figuritas asoman por la boca
+const T_LOCAL = T_SHAKE + T_FLAP + T_CARDS - 60; // solapadas: ~980
+// El clímax dura lo que el build-up de pack-open.wav (su impacto está a 300ms
+// del inicio del archivo) para que el golpe caiga EXACTO con el fogonazo.
+const T_SWELL = 300;
+const T_FLASH = 180;
 
 export default function OpenPackScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
@@ -82,8 +97,35 @@ export default function OpenPackScreen() {
     });
   }, [albumId, router]);
 
-  // Animación del sobre temblando en idle
-  const shake = useSharedValue(0);
+  // --- Animación del sobre -------------------------------------------------
+  const shake = useSharedValue(0);      // tilt: breathing en idle, sacudida al abrir
+  const flap = useSharedValue(0);       // 0 tapa cerrada → 1 abierta hacia atrás
+  const glow = useSharedValue(0);       // luz que se escapa por la boca
+  const peek = useSharedValue(0);       // figuritas asomando desde adentro
+  const zoom = useSharedValue(0);       // el sobre se viene encima en el clímax
+  const flash = useSharedValue(0);      // fogonazo que tapa el corte a la reveal
+
+  // Timers de la apertura: hay que poder cancelarlos si el open falla o si el
+  // usuario se va de la pantalla a mitad de la animación.
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+  const later = useCallback((fn: () => void, ms: number) => {
+    timers.current.push(setTimeout(fn, ms));
+  }, []);
+  useEffect(() => clearTimers, [clearTimers]);
+
+  const resetOpenAnim = useCallback(() => {
+    clearTimers();
+    flap.value = 0;
+    glow.value = 0;
+    peek.value = 0;
+    zoom.value = 0;
+    flash.value = 0;
+  }, [clearTimers, flap, glow, peek, zoom, flash]);
+
   useEffect(() => {
     if (phase !== 'idle') return;
     // Tap → shake. Cuando entramos en idle inicia un breathing sutil
@@ -98,8 +140,37 @@ export default function OpenPackScreen() {
   }, [phase, shake]);
 
   const envelopeStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${shake.value}deg` }],
+    transform: [
+      { rotate: `${shake.value}deg` },
+      // Clímax: el sobre se eleva y se viene encima mientras se desvanece.
+      { translateY: -26 * zoom.value },
+      { scale: 1 + 0.5 * zoom.value },
+    ],
+    opacity: 1 - zoom.value * 0.9,
+    // El aura dorada se intensifica a medida que se abre (iOS/web; en Android
+    // la sombra no toma radius animado, el glow de abajo cubre el efecto).
+    shadowOpacity: 0.5 + glow.value * 0.5,
+    shadowRadius: 24 + glow.value * 26,
   }));
+
+  // La tapa gira hacia atrás sobre su borde superior. Pasado el 90° se ve su
+  // dorso (backfaceVisibility default) — justo lo que queremos: el interior.
+  const flapStyle = useAnimatedStyle(() => ({
+    transform: [
+      { perspective: 600 },
+      { rotateX: `${-165 * flap.value}deg` },
+      { translateY: -26 * zoom.value },
+      { scale: 1 + 0.5 * zoom.value },
+    ],
+    opacity: 1 - zoom.value * 0.9,
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glow.value * (1 - zoom.value * 0.4),
+    transform: [{ scaleY: 0.35 + glow.value * 0.75 }, { scaleX: 0.7 + glow.value * 0.45 }],
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
   async function handleOpen() {
     if (!packId || phase !== 'idle') return;
@@ -108,21 +179,37 @@ export default function OpenPackScreen() {
     // audio del navegador.
     playSfx('shake', 0.6);
 
-    // Sacudida fuerte y luego open
+    // Sacudida fuerte...
     shake.value = withSequence(
-      withTiming(-12, { duration: 80 }),
-      withTiming(12, { duration: 80 }),
-      withTiming(-10, { duration: 80 }),
-      withTiming(10, { duration: 80 }),
-      withTiming(0, { duration: 80 }),
+      withTiming(-12, { duration: 70 }),
+      withTiming(12, { duration: 70 }),
+      withTiming(-9, { duration: 50 }),
+      withTiming(9, { duration: 50 }),
+      withTiming(0, { duration: 40 }),
     );
+    // ...y arranca la apertura: tapa → luz → figuritas asomando.
+    flap.value = withDelay(
+      T_SHAKE,
+      // Rebote chico: con uno grande el rotateX pasa de −180° y la tapa
+      // "vuelve" espejada (se ve raro).
+      withTiming(1, { duration: T_FLAP, easing: Easing.bezier(0.25, 1.1, 0.35, 1) }),
+    );
+    glow.value = withDelay(
+      T_SHAKE + 120,
+      withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) }),
+    );
+    peek.value = withDelay(
+      T_SHAKE + T_FLAP - 120,
+      withTiming(1, { duration: T_CARDS, easing: Easing.out(Easing.cubic) }),
+    );
+    later(() => playSfx('tear', 0.85), T_SHAKE);
 
     setPhase('opening');
+    const t0 = Date.now();
     try {
       const result = await openPack(packId);
-      setStickers(result);
       // Precargar los thumbs de las figuritas mientras corre la animación de
-      // apertura (~500ms), para que la reveal no tenga que esperar la descarga.
+      // apertura (~1s), para que la reveal no tenga que esperar la descarga.
       // Muchas ya estarán en cache (grilla del álbum), esto cubre las nuevas.
       const urls = result
         .map((s) => r2Url(thumbFromLargeKey(s.large_key)))
@@ -137,14 +224,23 @@ export default function OpenPackScreen() {
       qc.invalidateQueries({ queryKey: ['ad-packs'] });
       // Logro "abriste N sobres": el conteo cambió.
       qc.invalidateQueries({ queryKey: ['achievements'] });
-      setTimeout(() => {
-        // El "wow": whoosh + shimmer justo cuando aparecen las figuritas.
-        // En el álbum de dinos, un rugido encima le pone el tema.
+
+      // Clímax: espera a que termine la parte local (si la red fue más lenta,
+      // arranca ya) y recién ahí el golpe de sonido + zoom + fogonazo.
+      later(() => {
+        // El "wow": build-up + impacto + shimmer. En el álbum de dinos, un
+        // rugido encima le pone el tema.
         playSfx('open', sfxTheme === 'dino' ? 0.7 : 0.95);
         if (sfxTheme === 'dino') playSfx('dinoRoar', 0.95);
-        setPhase('revealed');
-      }, 500);
+        zoom.value = withTiming(1, { duration: T_SWELL + T_FLASH, easing: Easing.in(Easing.quad) });
+        flash.value = withDelay(T_SWELL, withTiming(1, { duration: T_FLASH }));
+        later(() => {
+          setStickers(result);
+          setPhase('revealed');
+        }, T_SWELL + T_FLASH);
+      }, Math.max(0, T_LOCAL - (Date.now() - t0)));
     } catch (err: any) {
+      resetOpenAnim();
       Alert.alert('No se pudo abrir', errorMessage(err));
       setPhase('idle');
     }
@@ -212,6 +308,9 @@ export default function OpenPackScreen() {
       router.back();
       return;
     }
+    // Los shared values sobreviven al cambio de fase (es el mismo componente):
+    // sin reset el sobre nuevo aparecería ya abierto y desvanecido.
+    resetOpenAnim();
     setPackId(nextId);
     setPhase('idle');
     setStickers([]);
@@ -221,16 +320,26 @@ export default function OpenPackScreen() {
   if (phase === 'revealed') {
     const newCount = stickers.filter((s) => s.was_new).length;
     const repeCount = stickers.length - newCount;
+    // Rareza máxima entre las NUEVAS: define el festejo extra (banner + burst
+    // más denso). Las repes no cuentan: ya las tenías.
+    const bigRarity = stickers.some((s) => s.was_new && s.rarity === 'legendary')
+      ? 'legendary'
+      : stickers.some((s) => s.was_new && s.rarity === 'epic')
+        ? 'epic'
+        : null;
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScreenHeader title=" " close tint="light" />
         <ScrollView
           contentContainerStyle={[styles.revealScroll, { paddingBottom: 200 + insets.bottom }]}
         >
-          <Text style={styles.revealKicker}>¡{stickers.length} FIGURITAS!</Text>
-          <Text style={styles.revealSub}>
-            {newCount} nueva{newCount !== 1 ? 's' : ''} · {repeCount} repetida{repeCount !== 1 ? 's' : ''}
-          </Text>
+          <RevealHeader
+            count={stickers.length}
+            newCount={newCount}
+            repeCount={repeCount}
+            big={bigRarity}
+            bannerDelay={stickers.length * 110 + 220}
+          />
 
           <View style={styles.cardsGrid}>
             {stickers.map((s, i) => (
@@ -270,6 +379,11 @@ export default function OpenPackScreen() {
           {pasted && <Text style={styles.pastedDone}>¡Listo, pegadas!</Text>}
           <Button label="Abrir otro sobre" onPress={handleOpenAnother} />
         </View>
+
+        {/* Festejo: esquirlas doradas saliendo del centro + el fogonazo que
+            viene de la pantalla anterior desvaneciéndose (tapa el corte). */}
+        <Burst big={!!bigRarity} />
+        <RevealFlash />
       </SafeAreaView>
     );
   }
@@ -287,40 +401,72 @@ export default function OpenPackScreen() {
       <View style={styles.idleBody}>
         <Text style={styles.idleKicker}>SOBRE DISPONIBLE</Text>
         <Pressable onPress={handleOpen} disabled={phase !== 'idle' || !packId}>
-          <Animated.View style={[styles.envelope, envelopeStyle]}>
-            <MediaBackground
-              mediaKey={packKey}
-              fallback={
-                <LinearGradient
-                  colors={[Colors.red, Colors.redDark]}
-                  style={StyleSheet.absoluteFill}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                />
-              }
-            />
-            {/* Scrim para que los textos se lean sobre foto/preset */}
-            {hasPackMedia && (
+          {/* Wrapper SIN overflow hidden: la tapa gira hacia afuera del sobre y
+              las figuritas asoman por arriba del borde. El sobre en sí sigue
+              clipeando su media. */}
+          <View style={styles.envelopeWrap}>
+            {/* Luz que se escapa por la boca. Va primero (debajo de todo): lo
+                que queda sobre el sobre lo tapa el sobre, lo que sale por
+                arriba del borde se ve. */}
+            <Animated.View style={[styles.mouthGlow, glowStyle]} pointerEvents="none">
               <LinearGradient
-                colors={['rgba(0,0,0,0.40)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.60)']}
+                colors={['rgba(255,245,214,0)', 'rgba(255,238,190,0.75)', 'rgba(232,178,74,0.95)']}
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
               />
-            )}
-            <View style={styles.envelopeStripe} />
-            <Text style={styles.envelopeBrand}>SOBRE</Text>
-            <Text style={styles.envelopeSubBrand}>OFICIAL</Text>
-            <Text
-              style={[styles.envelopeBig, { fontSize: nameSize, lineHeight: nameSize + 3 }]}
-              numberOfLines={3}
-            >
-              {albumName}
-            </Text>
-            <Text style={styles.envelopeFigs}>
-              {packSize} FIGURITA{packSize === 1 ? '' : 'S'}
-            </Text>
-          </Animated.View>
+            </Animated.View>
+            {/* Las figuritas asomando: la parte de abajo queda detrás del sobre
+                (va antes en el árbol y el sobre tiene elevation mayor). */}
+            {PEEK_CARDS.map((p, i) => (
+              <PeekCard key={i} progress={peek} zoom={zoom} spec={p} />
+            ))}
+            <Animated.View style={[styles.envelope, envelopeStyle]}>
+              <MediaBackground
+                mediaKey={packKey}
+                fallback={
+                  <LinearGradient
+                    colors={[Colors.red, Colors.redDark]}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                  />
+                }
+              />
+              {/* Scrim para que los textos se lean sobre foto/preset */}
+              {hasPackMedia && (
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.40)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.60)']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                />
+              )}
+              <Text style={styles.envelopeBrand}>SOBRE</Text>
+              <Text style={styles.envelopeSubBrand}>OFICIAL</Text>
+              <Text
+                style={[styles.envelopeBig, { fontSize: nameSize, lineHeight: nameSize + 3 }]}
+                numberOfLines={3}
+              >
+                {albumName}
+              </Text>
+              <Text style={styles.envelopeFigs}>
+                {packSize} FIGURITA{packSize === 1 ? '' : 'S'}
+              </Text>
+            </Animated.View>
+            {/* La tapa: en idle es la franja dorada de siempre; al abrir gira
+                hacia atrás sobre su borde superior. Fuera del sobre (si no, el
+                overflow:hidden la recortaría) y con elevation mayor para que en
+                Android no la tape la media del sobre. */}
+            <Animated.View style={[styles.flap, flapStyle]} pointerEvents="none">
+              <LinearGradient
+                colors={[Colors.gold, Colors.goldDark]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+            </Animated.View>
+          </View>
         </Pressable>
         <View style={styles.idleHint}>
           <View style={styles.hintDot} />
@@ -329,7 +475,192 @@ export default function OpenPackScreen() {
           </Text>
         </View>
       </View>
+      {/* Fogonazo que tapa el corte a la reveal (la reveal monta su propio
+          fogonazo desvaneciéndose, así el cambio de pantalla no se ve). */}
+      <Animated.View
+        style={[styles.flash, flashStyle]}
+        pointerEvents="none"
+      />
     </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Figuritas asomando por la boca del sobre durante la apertura
+// ---------------------------------------------------------------------------
+
+// Abanico fijo (no random: así no cambia entre renders). dx/rot = posición
+// final del abanico; delay escalona la salida.
+const PEEK_CARDS = [
+  { dx: -34, rot: -13, rise: 104, delay: 0.00 },
+  { dx: 0, rot: 2, rise: 128, delay: 0.14 },
+  { dx: 34, rot: 14, rise: 100, delay: 0.26 },
+] as const;
+
+function PeekCard({
+  progress,
+  zoom,
+  spec,
+}: {
+  progress: { value: number };
+  // El clímax: las figuritas se van con el sobre (mismo zoom + fade), si no
+  // asomarían enteras al transparentarse el sobre.
+  zoom: { value: number };
+  spec: (typeof PEEK_CARDS)[number];
+}) {
+  const style = useAnimatedStyle(() => {
+    // Reescalado del progreso para el delay propio de cada carta.
+    const p = Math.max(0, Math.min(1, (progress.value - spec.delay) / (1 - spec.delay)));
+    return {
+      opacity: p > 0 ? 1 - zoom.value * 0.9 : 0,
+      transform: [
+        { translateY: -spec.rise * p - 26 * zoom.value },
+        { translateX: spec.dx * p },
+        { rotate: `${spec.rot * p}deg` },
+        { scale: 1 + 0.5 * zoom.value },
+      ],
+    };
+  });
+  return (
+    <Animated.View style={[styles.peekCard, style]} pointerEvents="none">
+      <LinearGradient
+        colors={[Colors.paper, Colors.paper3]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+    </Animated.View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Festejo de la reveal: fogonazo, encabezado con rebote y esquirlas doradas
+// ---------------------------------------------------------------------------
+
+// Arranca en 1 (continúa el fogonazo de la pantalla de apertura) y se va.
+function RevealFlash() {
+  const v = useSharedValue(1);
+  useEffect(() => {
+    v.value = withTiming(0, { duration: 460, easing: Easing.out(Easing.quad) });
+  }, [v]);
+  const style = useAnimatedStyle(() => ({ opacity: v.value }));
+  return <Animated.View style={[styles.flash, style]} pointerEvents="none" />;
+}
+
+function RevealHeader({
+  count,
+  newCount,
+  repeCount,
+  big,
+  bannerDelay,
+}: {
+  count: number;
+  newCount: number;
+  repeCount: number;
+  big: 'epic' | 'legendary' | null;
+  bannerDelay: number;
+}) {
+  const pop = useSharedValue(0);
+  const banner = useSharedValue(0);
+  useEffect(() => {
+    pop.value = withTiming(1, { duration: 480, easing: Easing.bezier(0.2, 1.6, 0.4, 1) });
+    if (big) {
+      banner.value = withDelay(
+        bannerDelay,
+        withTiming(1, { duration: 420, easing: Easing.bezier(0.2, 1.7, 0.4, 1) }),
+      );
+    }
+  }, [pop, banner, big, bannerDelay]);
+
+  const popStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, pop.value * 2),
+    transform: [{ scale: 0.72 + 0.28 * pop.value }],
+  }));
+  // Los bezier con rebote pasan de 1 a mitad de camino: clampeamos la opacidad.
+  const bannerStyle = useAnimatedStyle(() => ({
+    opacity: Math.min(1, banner.value),
+    transform: [{ scale: 0.8 + 0.2 * banner.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.revealHead, popStyle]}>
+      <Text style={styles.revealKicker}>¡{count} FIGURITAS!</Text>
+      <Text style={styles.revealSub}>
+        {newCount} nueva{newCount !== 1 ? 's' : ''} · {repeCount} repetida{repeCount !== 1 ? 's' : ''}
+      </Text>
+      {big && (
+        <Animated.View style={[styles.bigBanner, bannerStyle]}>
+          <Text style={styles.bigBannerText}>
+            ✦ ¡SALIÓ UNA {big === 'legendary' ? 'LEGENDARIA' : 'ÉPICA'}! ✦
+          </Text>
+        </Animated.View>
+      )}
+    </Animated.View>
+  );
+}
+
+// Esquirlas doradas que salen disparadas del centro al revelar. Abanico fijo
+// (sin random: estable entre renders) con largos alternados para que no quede
+// una corona pareja.
+const SHARDS = Array.from({ length: 18 }, (_, i) => ({
+  deg: (360 / 18) * i + (i % 2 ? 8 : 0),
+  dist: i % 3 === 0 ? 210 : i % 3 === 1 ? 155 : 112,
+  w: i % 2 ? 4 : 6,
+  h: i % 3 === 0 ? 20 : 13,
+  gold: i % 4 !== 0,
+}));
+
+function Burst({ big }: { big: boolean }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withTiming(1, { duration: big ? 1100 : 850, easing: Easing.out(Easing.cubic) });
+  }, [p, big]);
+  // Con épica/legendaria nueva salen todas; si no, la mitad (festejo más sobrio).
+  const shards = big ? SHARDS : SHARDS.filter((_, i) => i % 2 === 0);
+  return (
+    <View style={styles.burst} pointerEvents="none">
+      {shards.map((s, i) => (
+        <Shard key={i} spec={s} progress={p} big={big} />
+      ))}
+    </View>
+  );
+}
+
+function Shard({
+  spec,
+  progress,
+  big,
+}: {
+  spec: (typeof SHARDS)[number];
+  progress: { value: number };
+  big: boolean;
+}) {
+  const style = useAnimatedStyle(() => {
+    const v = progress.value;
+    // Entra de golpe y se apaga en el último 70% del recorrido.
+    const opacity = v < 0.12 ? v / 0.12 : Math.max(0, 1 - (v - 0.12) / 0.88);
+    return {
+      opacity,
+      transform: [
+        { rotate: `${spec.deg}deg` },
+        { translateY: -spec.dist * (big ? 1.15 : 1) * v },
+        { scale: 0.6 + 0.6 * (1 - v) },
+      ],
+    };
+  });
+  return (
+    <Animated.View
+      style={[
+        styles.shard,
+        {
+          width: spec.w,
+          height: spec.h,
+          marginLeft: -spec.w / 2,
+          backgroundColor: spec.gold ? Colors.gold : Colors.paper,
+        },
+        style,
+      ]}
+    />
   );
 }
 
@@ -501,12 +832,21 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
     fontWeight: '700',
   },
+  // Contenedor sin clipping: aloja la tapa que gira hacia afuera, la luz y las
+  // figuritas asomando. Mide exactamente lo que el sobre.
+  envelopeWrap: {
+    width: 200,
+    height: 270,
+  },
   envelope: {
     width: 200,
     height: 270,
     borderRadius: Radius.cardLg,
     overflow: 'hidden',
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    // Deja respirar la franja/tapa dorada de arriba (antes era un View interno).
+    paddingTop: Spacing.lg + 8,
     alignItems: 'center',
     justifyContent: 'space-between',
     shadowColor: Colors.gold,
@@ -515,13 +855,53 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 12,
   },
-  envelopeStripe: {
+  // La tapa del sobre. elevation > la del sobre: en Android el orden de dibujo
+  // lo manda el elevation, no el árbol (lección de sticker-view-mode).
+  flap: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 12,
-    backgroundColor: Colors.gold,
+    height: 20,
+    borderTopLeftRadius: Radius.cardLg,
+    borderTopRightRadius: Radius.cardLg,
+    overflow: 'hidden',
+    transformOrigin: 'center top',
+    zIndex: 3,
+    elevation: 14,
+  },
+  // Pluma de luz anclada en la boca del sobre: la mitad de abajo queda tapada
+  // por el sobre, lo que sale por arriba del borde es lo que se ve.
+  mouthGlow: {
+    position: 'absolute',
+    top: -70,
+    left: -20,
+    right: -20,
+    height: 150,
+    borderRadius: 75,
+    overflow: 'hidden',
+    transformOrigin: 'center bottom',
+  },
+  // Figurita asomando (dorso genérico: la de verdad se ve en la reveal).
+  peekCard: {
+    position: 'absolute',
+    top: 46,
+    left: 64,
+    width: 72,
+    height: 96,
+    borderRadius: Radius.cell,
+    borderWidth: 2,
+    borderColor: Colors.gold,
+    overflow: 'hidden',
+  },
+  flash: {
+    position: 'absolute',
+    top: -80,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFF6E0',
+    zIndex: 20,
   },
   envelopeBrand: {
     marginTop: Spacing.md,
@@ -575,12 +955,47 @@ const styles = StyleSheet.create({
     paddingBottom: 200,
     gap: Spacing.lg,
   },
+  revealHead: {
+    gap: Spacing.sm,
+    alignItems: 'center',
+  },
   revealKicker: {
     fontFamily: FontFamily.display,
     fontSize: 32,
     color: Colors.paper,
     textAlign: 'center',
     letterSpacing: 1,
+  },
+  bigBanner: {
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    backgroundColor: 'rgba(232,178,74,0.16)',
+  },
+  bigBannerText: {
+    fontFamily: FontFamily.mono,
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.gold,
+    letterSpacing: 1.6,
+  },
+  // Capa del festejo: las esquirlas salen del centro del área de cartas.
+  burst: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 15,
+  },
+  shard: {
+    position: 'absolute',
+    top: 190,
+    left: '50%',
+    borderRadius: 3,
   },
   revealSub: {
     fontFamily: FontFamily.mono,
