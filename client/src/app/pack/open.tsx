@@ -35,15 +35,20 @@ import { padStickerNumber } from '@/lib/text';
 type Phase = 'idle' | 'opening' | 'revealed';
 
 // --- Timeline de la apertura (ms) -------------------------------------------
-// La parte LOCAL (sacudida → tapa que se abre → figuritas asomando) arranca con
+// La parte LOCAL (sacudida → luz por la boca + figuritas asomando) arranca con
 // el tap y no espera a la red. El CLÍMAX (zoom + fogonazo + corte a la reveal)
 // se dispara cuando llegan las figuritas, así el momento "wow" nunca cae en el
 // vacío: si la red tarda, el sobre queda abierto esperando en vez de cortar
 // antes de tiempo.
+//
+// Hubo una tapa que giraba hacia atrás entre la sacudida y las figuritas
+// (2026-10-13): se descartó por decisión de diseño, no gustó ni el elemento ni
+// el giro. Al sacarla la parte local se acortó —no tiene sentido dejar el
+// hueco de 400ms— pero el tramo se sigue cubriendo con el sonido de rasgado.
 const T_SHAKE = 280;   // sacudida fuerte
-const T_FLAP = 400;    // la tapa gira hacia atrás
-const T_CARDS = 360;   // las figuritas asoman por la boca
-const T_LOCAL = T_SHAKE + T_FLAP + T_CARDS - 60; // solapadas: ~980
+const T_CARDS = 380;   // las figuritas asoman por la boca
+const T_PEEK_IN = 100; // aire entre el final de la sacudida y la salida
+const T_LOCAL = T_SHAKE + T_PEEK_IN + T_CARDS; // ~760
 // El clímax dura lo que el build-up de pack-open.wav (su impacto está a 300ms
 // del inicio del archivo) para que el golpe caiga EXACTO con el fogonazo.
 const T_SWELL = 300;
@@ -99,7 +104,6 @@ export default function OpenPackScreen() {
 
   // --- Animación del sobre -------------------------------------------------
   const shake = useSharedValue(0);      // tilt: breathing en idle, sacudida al abrir
-  const flap = useSharedValue(0);       // 0 tapa cerrada → 1 abierta hacia atrás
   const glow = useSharedValue(0);       // luz que se escapa por la boca
   const peek = useSharedValue(0);       // figuritas asomando desde adentro
   const zoom = useSharedValue(0);       // el sobre se viene encima en el clímax
@@ -119,12 +123,11 @@ export default function OpenPackScreen() {
 
   const resetOpenAnim = useCallback(() => {
     clearTimers();
-    flap.value = 0;
     glow.value = 0;
     peek.value = 0;
     zoom.value = 0;
     flash.value = 0;
-  }, [clearTimers, flap, glow, peek, zoom, flash]);
+  }, [clearTimers, glow, peek, zoom, flash]);
 
   useEffect(() => {
     if (phase !== 'idle') return;
@@ -153,18 +156,6 @@ export default function OpenPackScreen() {
     shadowRadius: 24 + glow.value * 26,
   }));
 
-  // La tapa gira hacia atrás sobre su borde superior. Pasado el 90° se ve su
-  // dorso (backfaceVisibility default) — justo lo que queremos: el interior.
-  const flapStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 600 },
-      { rotateX: `${-165 * flap.value}deg` },
-      { translateY: -26 * zoom.value },
-      { scale: 1 + 0.5 * zoom.value },
-    ],
-    opacity: 1 - zoom.value * 0.9,
-  }));
-
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glow.value * (1 - zoom.value * 0.4),
     transform: [{ scaleY: 0.35 + glow.value * 0.75 }, { scaleX: 0.7 + glow.value * 0.45 }],
@@ -187,19 +178,13 @@ export default function OpenPackScreen() {
       withTiming(9, { duration: 50 }),
       withTiming(0, { duration: 40 }),
     );
-    // ...y arranca la apertura: tapa → luz → figuritas asomando.
-    flap.value = withDelay(
-      T_SHAKE,
-      // Rebote chico: con uno grande el rotateX pasa de −180° y la tapa
-      // "vuelve" espejada (se ve raro).
-      withTiming(1, { duration: T_FLAP, easing: Easing.bezier(0.25, 1.1, 0.35, 1) }),
-    );
+    // ...y arranca la apertura: luz por la boca + figuritas asomando.
     glow.value = withDelay(
-      T_SHAKE + 120,
-      withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) }),
+      T_SHAKE,
+      withTiming(1, { duration: T_CARDS + 120, easing: Easing.out(Easing.quad) }),
     );
     peek.value = withDelay(
-      T_SHAKE + T_FLAP - 120,
+      T_SHAKE + T_PEEK_IN,
       withTiming(1, { duration: T_CARDS, easing: Easing.out(Easing.cubic) }),
     );
     later(() => playSfx('tear', 0.85), T_SHAKE);
@@ -401,9 +386,9 @@ export default function OpenPackScreen() {
       <View style={styles.idleBody}>
         <Text style={styles.idleKicker}>SOBRE DISPONIBLE</Text>
         <Pressable onPress={handleOpen} disabled={phase !== 'idle' || !packId}>
-          {/* Wrapper SIN overflow hidden: la tapa gira hacia afuera del sobre y
-              las figuritas asoman por arriba del borde. El sobre en sí sigue
-              clipeando su media. */}
+          {/* Wrapper SIN overflow hidden: la luz y las figuritas asoman por
+              arriba del borde del sobre. El sobre en sí sigue clipeando su
+              media. */}
           <View style={styles.envelopeWrap}>
             {/* Luz que se escapa por la boca. Va primero (debajo de todo): lo
                 que queda sobre el sobre lo tapa el sobre, lo que sale por
@@ -442,6 +427,7 @@ export default function OpenPackScreen() {
                   end={{ x: 0.5, y: 1 }}
                 />
               )}
+              <View style={styles.envelopeStripe} />
               <Text style={styles.envelopeBrand}>SOBRE</Text>
               <Text style={styles.envelopeSubBrand}>OFICIAL</Text>
               <Text
@@ -453,18 +439,6 @@ export default function OpenPackScreen() {
               <Text style={styles.envelopeFigs}>
                 {packSize} FIGURITA{packSize === 1 ? '' : 'S'}
               </Text>
-            </Animated.View>
-            {/* La tapa: en idle es la franja dorada de siempre; al abrir gira
-                hacia atrás sobre su borde superior. Fuera del sobre (si no, el
-                overflow:hidden la recortaría) y con elevation mayor para que en
-                Android no la tape la media del sobre. */}
-            <Animated.View style={[styles.flap, flapStyle]} pointerEvents="none">
-              <LinearGradient
-                colors={[Colors.gold, Colors.goldDark]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-              />
             </Animated.View>
           </View>
         </Pressable>
@@ -832,8 +806,8 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
     fontWeight: '700',
   },
-  // Contenedor sin clipping: aloja la tapa que gira hacia afuera, la luz y las
-  // figuritas asomando. Mide exactamente lo que el sobre.
+  // Contenedor sin clipping: aloja la luz y las figuritas asomando, que salen
+  // por arriba del borde del sobre. Mide exactamente lo que el sobre.
   envelopeWrap: {
     width: 200,
     height: 270,
@@ -843,10 +817,7 @@ const styles = StyleSheet.create({
     height: 270,
     borderRadius: Radius.cardLg,
     overflow: 'hidden',
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-    // Deja respirar la franja/tapa dorada de arriba (antes era un View interno).
-    paddingTop: Spacing.lg + 8,
+    padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'space-between',
     shadowColor: Colors.gold,
@@ -855,20 +826,13 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 12,
   },
-  // La tapa del sobre. elevation > la del sobre: en Android el orden de dibujo
-  // lo manda el elevation, no el árbol (lección de sticker-view-mode).
-  flap: {
+  envelopeStripe: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 20,
-    borderTopLeftRadius: Radius.cardLg,
-    borderTopRightRadius: Radius.cardLg,
-    overflow: 'hidden',
-    transformOrigin: 'center top',
-    zIndex: 3,
-    elevation: 14,
+    height: 12,
+    backgroundColor: Colors.gold,
   },
   // Pluma de luz anclada en la boca del sobre: la mitad de abajo queda tapada
   // por el sobre, lo que sale por arriba del borde es lo que se ve.
