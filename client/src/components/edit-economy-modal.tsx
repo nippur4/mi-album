@@ -161,7 +161,11 @@ export function EditEconomyModal({
       visible={visible}
       onClose={onClose}
       title="Cómo se consiguen las figuritas"
-      maxHeight="92%"
+      // height (y no maxHeight): el contenido siempre pasa de pantalla, y con
+      // alto fijo el ScrollView recibe un viewport exacto en vez de depender
+      // de que el shrink se propague. Sin esto el sheet quedaba clipeado sin
+      // scroll y la mitad de las opciones eran ineditables.
+      height="90%"
       avoidKeyboard="ios"
       footer={
         <View style={sheetStyles.actions}>
@@ -446,10 +450,10 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
-  // flexShrink:1 le permite al ScrollView comprimirse cuando el sheet llega
-  // al maxHeight, dejando espacio fijo para las actions de abajo. Sin esto
-  // el contenido empuja a las actions fuera del viewport y no se ve Guardar.
-  scroll: { flexShrink: 1 },
+  // El sheet tiene alto fijo y su slot de contenido también, así que acá
+  // flex:1 ocupa exactamente el hueco entre el título y las actions.
+  // minHeight:0 rompe el piso min-content del flexbox de web.
+  scroll: { flex: 1, minHeight: 0 },
   scrollContent: { paddingBottom: Spacing.md },
   label: {
     fontFamily: FontFamily.mono,

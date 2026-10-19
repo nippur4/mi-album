@@ -7,10 +7,10 @@
 //
 // Dos layouts posibles:
 //   - Sin footer: todo el contenido va dentro del SafeAreaView (edges bottom).
-//   - Con footer: children quedan libres (típicamente un ScrollView con
-//     flexShrink:1) y el footer va en su propio SafeAreaView al fondo. Esto
-//     mantiene el fix del modal de economía: el scroll se comprime al llegar
-//     al maxHeight y las acciones nunca quedan fuera del viewport.
+//   - Con footer: children van en un slot que se comprime (flexShrink/minHeight
+//     0, o flex:1 si el sheet tiene `height` fijo) y el footer va en su propio
+//     SafeAreaView al fondo. Así el scroll de adentro siempre recibe una altura
+//     acotada y las acciones nunca quedan fuera del viewport.
 
 import { type ReactNode } from 'react';
 import {
@@ -36,6 +36,11 @@ interface Props {
   footer?: ReactNode;
   // Limita la altura del sheet (ej. '92%'). Sin esto, el sheet crece según contenido.
   maxHeight?: DimensionValue;
+  // Altura FIJA del sheet (ej. '90%'). Para modales largos que siempre llenan
+  // la pantalla: con altura definida el slot de children puede usar flex:1 y
+  // el ScrollView de adentro queda acotado sí o sí (con maxHeight el alto es
+  // auto y el scroll depende de que el shrink se propague bien).
+  height?: DimensionValue;
   // 'both': padding en iOS + height en Android (modales con TextInput).
   // 'ios': padding solo en iOS; Android se apoya en el resize nativo de la window.
   avoidKeyboard?: 'both' | 'ios';
@@ -52,22 +57,39 @@ export function BottomSheet({
   children,
   footer,
   maxHeight,
+  height,
   avoidKeyboard,
   dismissable = true,
   onRequestClose,
 }: Props) {
   const body = (
-    <Pressable style={styles.backdrop} onPress={dismissable ? onClose : undefined}>
+    // El backdrop es un View y el área tappable es un Pressable absoluto DETRÁS
+    // del sheet: así el sheet no queda envuelto en un Pressable y no hay
+    // negociación de responder entre ese Pressable y el scroll de adentro.
+    <View style={styles.backdrop}>
       <Pressable
-        style={[styles.sheet, maxHeight != null && { maxHeight, overflow: 'hidden' }]}
-        onPress={(e) => e.stopPropagation()}
+        style={StyleSheet.absoluteFill}
+        onPress={dismissable ? onClose : undefined}
+        accessible={false}
+      />
+      <View
+        style={[
+          styles.sheet,
+          maxHeight != null && { maxHeight, overflow: 'hidden' },
+          height != null && { height, overflow: 'hidden' },
+        ]}
       >
         <View style={styles.handle} />
         {title != null && <Text style={styles.title}>{title}</Text>}
 
         {footer != null ? (
           <>
-            {children}
+            {/* Slot que se comprime para que el scroll de children reciba una
+                altura acotada. Con `height` fijo puede crecer (flex:1) y así el
+                footer queda pegado abajo; con maxHeight solo se encoge. */}
+            <View style={height != null ? styles.footerBodyFixed : styles.footerBody}>
+              {children}
+            </View>
             <SafeAreaView edges={['bottom']}>{footer}</SafeAreaView>
           </>
         ) : (
@@ -80,8 +102,8 @@ export function BottomSheet({
             {children}
           </SafeAreaView>
         )}
-      </Pressable>
-    </Pressable>
+      </View>
+    </View>
   );
 
   return (
@@ -124,6 +146,19 @@ const styles = StyleSheet.create({
   noFooterBody: {
     width: '100%',
     flexShrink: 1,
+    minHeight: 0,
+  },
+  // Mismo criterio que noFooterBody, pero para el layout con footer.
+  footerBody: {
+    width: '100%',
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  // Sheet de altura fija: el slot ocupa todo lo que sobra entre el título y el
+  // footer, así el ScrollView de adentro tiene un viewport exacto.
+  footerBodyFixed: {
+    width: '100%',
+    flex: 1,
     minHeight: 0,
   },
   handle: {

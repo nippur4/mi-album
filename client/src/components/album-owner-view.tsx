@@ -500,74 +500,6 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
           </Pressable>
         )}
 
-        {/* Economía: visible siempre, editable en draft y published */}
-        <Pressable
-          onPress={() => setEditingEconomy(true)}
-          style={({ pressed }) => [
-            styles.economyCard,
-            economyMode === 'none' && styles.economyCardWarn,
-            pressed && styles.economyCardPressed,
-          ]}
-        >
-          <View
-            style={[
-              styles.economyIcon,
-              economyMode === 'none' && styles.economyIconWarn,
-            ]}
-          >
-            <Feather
-              name={economyMode === 'none' ? 'alert-circle' : 'package'}
-              size={26}
-              color={economyMode === 'none' ? Colors.paper : Colors.paper}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.economyLabel}>CÓMO SE CONSIGUEN LAS FIGURITAS</Text>
-            <Text
-              style={[
-                styles.economyValue,
-                economyMode === 'none' && styles.economyValueWarn,
-              ]}
-              numberOfLines={2}
-            >
-              {economyDescription(packConfig, tradeConfig)}
-            </Text>
-            <Text style={styles.economyAction}>
-              {economyMode === 'none' ? 'Tocá para configurar →' : 'Tocá para editar →'}
-            </Text>
-          </View>
-        </Pressable>
-
-        {/* Desglose de probabilidades por rareza. Se muestra solo si hay
-            figuritas cargadas y la economía tiene sobres (daily o qr) —
-            sino no tiene sentido calcular nada. */}
-        {stickers.length > 0 && economyMode !== 'none' && (
-          <PackProbabilityCard
-            stickers={stickers}
-            packSize={packConfig.pack_size ?? 5}
-          />
-        )}
-
-        {/* Diseño de hojas: card de entrada con preview real de la hoja.
-            Antes era una pill chiquita perdida entre las herramientas de la
-            grilla y casi nadie la encontraba. Solo en draft/published: en
-            read_only el server rechaza el guardado (P0040). */}
-        {(isDraft || album.status === 'published') && (
-          <PagesDesignCard
-            totalStickers={album.total_stickers}
-            numberStart={numberStart}
-            bgColor={album.page_bg_color ?? DEFAULT_PAGE_COLOR}
-            texture={album.page_texture ?? DEFAULT_PAGE_TEXTURE}
-            cellAspect={album.page_cell_aspect ?? DEFAULT_CELL_ASPECT}
-            layout={album.page_layout ?? DEFAULT_PAGE_LAYOUT}
-            overrides={((album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES)}
-            onPress={() => {
-              setEditPagesInitial(null);
-              setEditingPages(true);
-            }}
-          />
-        )}
-
         {isDraft && (
           <>
             <View style={styles.section}>
@@ -609,6 +541,27 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
               </View>
             </View>
           </>
+        )}
+
+        {/* Diseño de hojas: card de entrada con preview real de la hoja. Va
+            JUSTO ARRIBA de las figuritas porque la composición y la proporción
+            definen con qué recorte se cargan — conviene resolverlo antes de
+            subir imágenes. Solo en draft/published: en read_only el server
+            rechaza el guardado (P0040). */}
+        {(isDraft || album.status === 'published') && (
+          <PagesDesignCard
+            totalStickers={album.total_stickers}
+            numberStart={numberStart}
+            bgColor={album.page_bg_color ?? DEFAULT_PAGE_COLOR}
+            texture={album.page_texture ?? DEFAULT_PAGE_TEXTURE}
+            cellAspect={album.page_cell_aspect ?? DEFAULT_CELL_ASPECT}
+            layout={album.page_layout ?? DEFAULT_PAGE_LAYOUT}
+            overrides={((album.page_overrides as PageOverride[] | null) ?? NO_PAGE_OVERRIDES)}
+            onPress={() => {
+              setEditPagesInitial(null);
+              setEditingPages(true);
+            }}
+          />
         )}
 
         <View style={styles.section}>
@@ -656,6 +609,19 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
                 <Text style={[styles.editPillText, reorderMode && styles.editPillTextActive]}>
                   {reorderMode ? 'Listo, terminé' : 'Reordenar figuritas'}
                 </Text>
+              </Pressable>
+            )}
+            {/* Carga masiva también acá: con la grilla ya poblada el botón de
+                abajo queda a varios scrolls y parecía haber desaparecido
+                después de cargar la primera figurita. */}
+            {isDraft && stickers.length > 0 && stickers.length < album.total_stickers && (
+              <Pressable
+                onPress={() => setBulkUpload(true)}
+                hitSlop={6}
+                style={({ pressed }) => [styles.editPill, pressed && styles.editPillPressed]}
+              >
+                <Feather name="upload" size={12} color={Colors.ink} />
+                <Text style={styles.editPillText}>Carga masiva</Text>
               </Pressable>
             )}
             {stickers.length > 0 && (
@@ -796,6 +762,61 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
             </>
           )}
         </View>
+
+        {/* Economía al final: se define DESPUÉS de cargar las figuritas, que es
+            el orden en que se piensa el álbum (primero qué hay adentro, después
+            cómo se reparte). El checklist de arriba lo marca como último paso. */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            {isDraft ? 'PARA TERMINAR' : 'ECONOMÍA DEL ÁLBUM'}
+          </Text>
+          <Pressable
+            onPress={() => setEditingEconomy(true)}
+            style={({ pressed }) => [
+              styles.economyCard,
+              economyMode === 'none' && styles.economyCardWarn,
+              pressed && styles.economyCardPressed,
+            ]}
+          >
+            <View
+              style={[
+                styles.economyIcon,
+                economyMode === 'none' && styles.economyIconWarn,
+              ]}
+            >
+              <Feather
+                name={economyMode === 'none' ? 'alert-circle' : 'package'}
+                size={26}
+                color={economyMode === 'none' ? Colors.paper : Colors.paper}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.economyLabel}>CÓMO SE CONSIGUEN LAS FIGURITAS</Text>
+              <Text
+                style={[
+                  styles.economyValue,
+                  economyMode === 'none' && styles.economyValueWarn,
+                ]}
+                numberOfLines={2}
+              >
+                {economyDescription(packConfig, tradeConfig)}
+              </Text>
+              <Text style={styles.economyAction}>
+                {economyMode === 'none' ? 'Tocá para configurar →' : 'Tocá para editar →'}
+              </Text>
+            </View>
+          </Pressable>
+
+          {/* Desglose de probabilidades por rareza. Se muestra solo si hay
+              figuritas cargadas y la economía tiene sobres (daily o qr) —
+              sino no tiene sentido calcular nada. */}
+          {stickers.length > 0 && economyMode !== 'none' && (
+            <PackProbabilityCard
+              stickers={stickers}
+              packSize={packConfig.pack_size ?? 5}
+            />
+          )}
+        </View>
       </ScrollView>
 
       <PresetPickerModal
@@ -872,7 +893,14 @@ export function OwnerAlbumView({ album, stickers, refetch }: Props) {
         numberStart={numberStart}
         occupiedNumbers={new Set(stickers.map((s) => s.number))}
         onClose={() => setBulkUpload(false)}
-        onFinished={refetch}
+        onFinished={() => {
+          // Acá sí conviene re-bajar la grilla entera (fueron N inserts), pero
+          // el índice del paginador y los conteos de los listados también
+          // quedaron viejos.
+          refetch();
+          qc.invalidateQueries({ queryKey: ['stickers', 'index', album.id] });
+          qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+        }}
       />
 
       <EditPagesModal

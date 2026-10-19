@@ -1023,7 +1023,9 @@ function ColorSwatchDefault({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexShrink: 1 },
+  // minHeight:0 además del shrink: sin él, el flexbox de web impone un piso
+  // min-content y el contenido queda clipeado sin scroll.
+  scroll: { flexShrink: 1, minHeight: 0 },
   scrollContent: { paddingBottom: Spacing.md, gap: Spacing.md },
   // Bloque visual con borde + fondo suave para separar cada sección del modal.
   // Antes las tres secciones (color/textura/hojas) vivían al hilo en el scroll

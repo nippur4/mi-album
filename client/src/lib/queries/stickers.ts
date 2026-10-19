@@ -1,12 +1,12 @@
 // Mutations sobre stickers (RPCs del backend) + hook de lectura.
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { qk } from '@/lib/query-client';
 import { toAppError, type AppError } from '@/lib/errors';
 import type { Database } from '@/lib/database.types';
-import type { Sticker } from '@/lib/queries/albums';
+import type { Album, Sticker } from '@/lib/queries/albums';
 
 export type Rarity = Database['public']['Enums']['sticker_rarity'];
 
@@ -91,6 +91,81 @@ export function useAlbumStickerIndex(albumId: string | undefined) {
     },
   });
   return { index: q.data ?? [], isLoading: q.isLoading };
+}
+
+// ============================================================================
+// Cache: refresco después de mutar figuritas
+// ============================================================================
+//
+// Las mutaciones de figuritas las dispara un formulario (no un useMutation),
+// así que el refresco del cache vive acá y lo comparten los tres callers
+// (alta, edición, borrado). Antes NO se tocaba nada: el owner volvía a la
+// grilla y seguía viendo el estado viejo hasta que venciera el staleTime del
+// detalle (30s en draft) Y la pantalla volviera a recibir foco — como ya
+// estaba enfocada, en la práctica tardaba muchísimo o no pasaba nunca.
+//
+// Parcheamos en memoria en vez de invalidar: el detalle baja el álbum + TODAS
+// sus figuritas (hasta 1001 filas), y re-bajarlo por cada figurita cargada es
+// caro al pedo cuando sabemos exactamente qué cambió. Las RPC devuelven/
+// aceptan justo los campos de la fila, así que el parche es fiel al server
+// (`fn_add_sticker` solo agrega el id y el created_at).
+
+interface AlbumDetailCache {
+  album: Album | null;
+  stickers: Sticker[];
+}
+
+const byNumber = (a: { number: number }, b: { number: number }) => a.number - b.number;
+
+function patchDetail(qc: QueryClient, albumId: string, fn: (list: Sticker[]) => Sticker[]) {
+  qc.setQueryData<AlbumDetailCache>(qk.albums.detail(albumId), (prev) =>
+    prev ? { ...prev, stickers: fn(prev.stickers) } : prev,
+  );
+}
+
+function patchIndex(
+  qc: QueryClient,
+  albumId: string,
+  fn: (list: StickerIndexEntry[]) => StickerIndexEntry[],
+) {
+  qc.setQueryData<StickerIndexEntry[]>(['stickers', 'index', albumId], (prev) =>
+    prev ? fn(prev) : prev,
+  );
+}
+
+// El conteo "X / Y cargadas" de los listados (tab Gestionar) sale de una RPC
+// aparte y liviana: esa sí la invalidamos.
+function invalidateProgress(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ['albums', 'progress'] });
+}
+
+export function cacheStickerAdded(qc: QueryClient, sticker: Sticker) {
+  patchDetail(qc, sticker.album_id, (list) =>
+    [...list.filter((s) => s.id !== sticker.id), sticker].sort(byNumber),
+  );
+  patchIndex(qc, sticker.album_id, (list) =>
+    [...list.filter((s) => s.id !== sticker.id), { id: sticker.id, number: sticker.number }].sort(byNumber),
+  );
+  qc.setQueryData(qk.stickers.one(sticker.id), sticker);
+  invalidateProgress(qc);
+}
+
+export function cacheStickerUpdated(qc: QueryClient, sticker: Sticker) {
+  // El número no se edita (fn_update_sticker no lo toca), así que alcanza con
+  // reemplazar la fila en su lugar — el índice del paginador no cambia.
+  patchDetail(qc, sticker.album_id, (list) =>
+    list.map((s) => (s.id === sticker.id ? sticker : s)),
+  );
+  qc.setQueryData(qk.stickers.one(sticker.id), sticker);
+}
+
+export function cacheStickerRemoved(qc: QueryClient, albumId: string, stickerId: string) {
+  patchDetail(qc, albumId, (list) => list.filter((s) => s.id !== stickerId));
+  patchIndex(qc, albumId, (list) => list.filter((s) => s.id !== stickerId));
+  // removeQueries y no setQueryData(null): la figurita ya no existe, que la
+  // próxima lectura (si queda alguna pantalla apuntando) vaya al server.
+  qc.removeQueries({ queryKey: qk.stickers.one(stickerId) });
+  invalidateProgress(qc);
 }
 
 export function useSticker(id: string | undefined) {

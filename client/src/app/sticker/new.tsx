@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
@@ -19,11 +20,12 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Stepper } from '@/components/stepper';
 import { TextInput } from '@/components/text-input';
 import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
-import { albumNumberStart, useAlbumDetail } from '@/lib/queries/albums';
+import { albumNumberStart, useAlbumDetail, type Sticker } from '@/lib/queries/albums';
 import { cellAspectCrop } from '@/lib/page-config';
-import { addSticker, type Rarity } from '@/lib/queries/stickers';
+import { addSticker, cacheStickerAdded, type Rarity } from '@/lib/queries/stickers';
 import { useIsPro } from '@/lib/queries/subscriptions';
 import { uploadImage, type UploadedKeys } from '@/lib/queries/uploads';
+import { qk } from '@/lib/query-client';
 import { useDesktopCap } from '@/lib/use-is-desktop';
 import { errorMessage } from '@/lib/errors';
 
@@ -34,6 +36,7 @@ export default function NewStickerScreen() {
     number?: string;
   }>();
   const router = useRouter();
+  const qc = useQueryClient();
   const insets = useSafeAreaInsets();
   const { album, stickers } = useAlbumDetail(albumId);
   const { isPro } = useIsPro();
@@ -103,10 +106,11 @@ export default function NewStickerScreen() {
     if (!albumId || !keys) return;
     Keyboard.dismiss();
     setSubmitting(true);
-    const { error } = await addSticker({
+    const trimmed = name.trim();
+    const { data, error } = await addSticker({
       album_id: albumId,
       number,
-      name: name.trim(),
+      name: trimmed,
       rarity,
       thumb_key: keys.thumb_key,
       large_key: keys.large_key,
@@ -115,6 +119,27 @@ export default function NewStickerScreen() {
     if (error) {
       Alert.alert('No se pudo cargar', errorMessage(error));
       return;
+    }
+    // La RPC devuelve el id de la fila nueva: con eso armamos la figurita y la
+    // metemos en el cache de la grilla. Sin esto el owner volvía al álbum y la
+    // figurita no aparecía hasta vencer el staleTime del detalle + re-enfocar.
+    const newId = typeof data === 'string' ? data : null;
+    if (newId) {
+      const row: Sticker = {
+        id: newId,
+        album_id: albumId,
+        number,
+        name: trimmed,
+        rarity,
+        thumb_key: keys.thumb_key,
+        large_key: keys.large_key,
+        traits: {},
+        created_at: new Date().toISOString(),
+      };
+      cacheStickerAdded(qc, row);
+    } else {
+      // Sin id no podemos parchear: que el detalle se re-baje entero.
+      qc.invalidateQueries({ queryKey: qk.albums.detail(albumId) });
     }
     router.back();
   }

@@ -80,7 +80,7 @@ export default function PaywallScreen() {
         <View style={desktopCap}>
           <ScreenHeader title="" close />
         </View>
-        <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scroll, desktopCap]}>
           <View style={styles.confirmHero}>
             <View style={styles.confirmBadge}>
               <Feather name="check" size={40} color={Colors.ink} />
@@ -119,7 +119,7 @@ export default function PaywallScreen() {
         <ScreenHeader title="" close />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scroll, desktopCap]}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scroll, desktopCap]}>
         <View style={styles.hero}>
           <View style={styles.crown}>
             <Feather name="award" size={28} color={Colors.ink} />
@@ -189,6 +189,14 @@ function FeatureList({ compact }: { compact?: boolean }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.paper },
+  // El ScrollView tiene que quedar ACOTADO al espacio entre header y footer.
+  // Sin esto se dimensiona según su contenido, y un pase de layout malo —el que
+  // ocurre al volver del Activity de Google Play tras comprar— lo estira de más
+  // y empuja el footer FUERA de los límites del padre. En Android eso deja el
+  // botón "Listo" dibujado pero NO tocable (las Views no clipean, pero los hijos
+  // fuera de bounds no reciben toques), y se arregla solo al remontar la
+  // pantalla. La X del header sobrevivía por estar arriba, dentro de bounds.
+  scrollView: { flex: 1 },
   scroll: {
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.sm,

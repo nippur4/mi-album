@@ -35,9 +35,15 @@ export function useIsPro() {
         .eq('user_id', session!.user.id)
         .maybeSingle();
       if (error) throw toAppError(error);
+      // Espejo EXACTO de fn_is_pro (migr. 0082). 'cancelled' cuenta como Pro:
+      // en Google Play cancelar = apagar la renovación automática, el acceso
+      // sigue hasta el final del período ya pagado. El corte lo da expires_at.
+      // Si cambia la lista de estados, hay que tocar los DOS lugares.
       return (
         !!data &&
-        (data.status === 'active' || data.status === 'in_grace') &&
+        (data.status === 'active' ||
+          data.status === 'in_grace' ||
+          data.status === 'cancelled') &&
         new Date(data.expires_at) > new Date()
       );
     },

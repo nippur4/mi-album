@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
   Keyboard,
@@ -20,6 +21,8 @@ import { Colors, FontFamily, FontSize, Spacing } from '@/constants/theme';
 import type { Sticker } from '@/lib/queries/albums';
 import type { PackConfig } from '@/lib/queries/economy';
 import {
+  cacheStickerRemoved,
+  cacheStickerUpdated,
   deleteSticker,
   updateSticker,
   type Rarity,
@@ -37,6 +40,7 @@ interface Props {
 // Vista de edición de figurita para el owner del álbum (solo en draft).
 export function EditStickerView({ sticker, packConfig }: Props) {
   const router = useRouter();
+  const qc = useQueryClient();
   const insets = useSafeAreaInsets();
   const desktopCap = useDesktopCap(560);
   const { isPro } = useIsPro();
@@ -79,9 +83,10 @@ export function EditStickerView({ sticker, packConfig }: Props) {
   async function onSave() {
     Keyboard.dismiss();
     setSaving(true);
+    const trimmed = name.trim();
     const { error } = await updateSticker({
       sticker_id: sticker.id,
-      name: name.trim(),
+      name: trimmed,
       rarity,
       thumb_key: pendingKeys?.thumb_key,
       large_key: pendingKeys?.large_key,
@@ -91,6 +96,16 @@ export function EditStickerView({ sticker, packConfig }: Props) {
       Alert.alert('No se pudo guardar', errorMessage(error));
       return;
     }
+    // Parche del cache con lo que acabamos de guardar: si no, al volver la
+    // grilla seguía mostrando el nombre/rareza/imagen viejos hasta que el
+    // detalle venciera su staleTime y la pantalla recuperara el foco.
+    cacheStickerUpdated(qc, {
+      ...sticker,
+      name: trimmed,
+      rarity,
+      thumb_key: pendingKeys?.thumb_key ?? sticker.thumb_key,
+      large_key: pendingKeys?.large_key ?? sticker.large_key,
+    });
     router.back();
   }
 
@@ -104,6 +119,7 @@ export function EditStickerView({ sticker, packConfig }: Props) {
       setDeleteError(errorMessage(error));
       return;
     }
+    cacheStickerRemoved(qc, sticker.album_id, sticker.id);
     router.back();
   }
 
