@@ -249,6 +249,21 @@ export async function unarchiveAlbumByOwner(albumId: string) {
   return supabase.rpc('fn_unarchive_album_by_owner', { p_album_id: albumId });
 }
 
+// El owner free elige cuál de sus álbumes queda activo (migr. 0084). Al vencer
+// el Pro, los gates conservan el publicado más viejo y pausan el resto; esto
+// deja mover esa elección. Solo aplica a los pausados POR LA BAJA — los que el
+// owner cerró a mano (retired_at) se reactivan con unarchiveAlbumByOwner.
+export async function setFreeActiveAlbum(albumId: string) {
+  return supabase.rpc('fn_set_free_active_album', { p_album_id: albumId });
+}
+
+// Pausado por la baja de Pro (reactivable eligiéndolo) vs. cerrado por el
+// owner (retired_at, se reactiva desarchivando). Los dos son `read_only`, y
+// confundirlos fue el bug que arregló la 0080 — por eso el helper.
+export function isPausedByDowngrade(album: Pick<Album, 'status' | 'retired_at'>): boolean {
+  return album.status === 'read_only' && album.retired_at == null;
+}
+
 // Álbumes que NUNCA se pueden eliminar (curados por admin). El botón se oculta
 // en el cliente y el server igual rechaza con P0201. Ver migraciones 0046/0058.
 export const PROTECTED_ALBUM_IDS = new Set<string>([

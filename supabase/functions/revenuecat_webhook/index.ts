@@ -90,10 +90,20 @@ serve(async (req) => {
     return new Response('ok', { status: 200 });
   }
 
+  // El app_user_id tiene que ser el uuid de Supabase (lo setea Purchases.logIn).
+  // Si no lo es —típicamente un `$RCAnonymousID:` de una compra que nunca pasó
+  // por el SDK— el evento no se puede atribuir a ningún usuario, y NUNCA va a
+  // poder: reintentarlo es inútil. Devolvemos 200 para que RevenueCat lo dé por
+  // entregado, igual que con los eventos no-op.
+  //
+  // Los 400 de más abajo se dejan COMO ERROR a propósito: un evento sin
+  // transaction id o sin expiración no es un caso esperado sino un payload
+  // raro, y conviene que figure como entrega fallida en el dashboard de RC en
+  // vez de desaparecer en un log. Son nuestra alarma si RC cambia el formato.
   const userId = event.app_user_id;
   if (!isUuid(userId)) {
-    console.warn('rc_webhook invalid_user_id', { app_user_id: userId });
-    return jsonError('invalid_user_id', 400);
+    console.warn('rc_webhook unmappable_user', { app_user_id: userId });
+    return new Response('ok', { status: 200 });
   }
 
   const status = EVENT_TO_STATUS[event.type]!;

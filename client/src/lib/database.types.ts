@@ -1054,6 +1054,10 @@ export type Database = {
         Args: { p_album_id: string; p_muted: boolean }
         Returns: undefined
       }
+      fn_set_free_active_album: {
+        Args: { p_album_id: string }
+        Returns: undefined
+      }
       fn_set_trade_prefs: {
         Args: {
           p_accept_owned: boolean
